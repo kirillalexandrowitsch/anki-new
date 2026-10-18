@@ -1,0 +1,571 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+		EF0A98CB9111BE8B1C40A8AA = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = App/AnkiNewApp.swift;
+			sourceTree = SOURCE_ROOT;
+		};
+		5DFD40810239C0CA5D1EEA9A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = App/CompositionRoot.swift;
+			sourceTree = SOURCE_ROOT;
+		};
+		8B92D24C6FC34DAA8364AFD2 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.entitlements;
+			path = App/AnkiNew.entitlements;
+			sourceTree = SOURCE_ROOT;
+		};
+		D223A8B58FDE27E15FB294B4 = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.json.xcstrings;
+			path = App/Resources/InfoPlist.xcstrings;
+			sourceTree = SOURCE_ROOT;
+		};
+		D3DFD9A4AC0BA5AEC6B90DA8 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppTests/CompositionRootTests.swift;
+			sourceTree = SOURCE_ROOT;
+		};
+		32516F10D5F42B6208345049 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = UITests/AppShellUITests.swift;
+			sourceTree = SOURCE_ROOT;
+		};
+		A05607CFFBB638C017273B8F = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CardsKit;
+		};
+		3D4CE021D7F7E9E6C231B23B = {
+			isa = XCSwiftPackageProductDependency;
+			package = A05607CFFBB638C017273B8F;
+			productName = CardsCore;
+		};
+		D8D3C31808BE62AD1378759A = {
+			isa = XCSwiftPackageProductDependency;
+			package = A05607CFFBB638C017273B8F;
+			productName = CardsInfrastructure;
+		};
+		A8C3BFA23A689E90D50DB374 = {
+			isa = XCSwiftPackageProductDependency;
+			package = A05607CFFBB638C017273B8F;
+			productName = CardsFeatures;
+		};
+		90268D116E9422790C6CCA11 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			path = AnkiNew.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		41564180B190B3EB09909FEA = {
+			isa = PBXBuildFile;
+			fileRef = EF0A98CB9111BE8B1C40A8AA;
+		};
+		87A11200A55E7D5EC379E801 = {
+			isa = PBXBuildFile;
+			fileRef = 5DFD40810239C0CA5D1EEA9A;
+		};
+		712070094B989708E70D7CA3 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41564180B190B3EB09909FEA,
+				87A11200A55E7D5EC379E801,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2DC36C89C92896FAD85C5C7 = {
+			isa = PBXBuildFile;
+			productRef = 3D4CE021D7F7E9E6C231B23B;
+		};
+		E04B49FDE148D45C322FE98A = {
+			isa = PBXBuildFile;
+			productRef = D8D3C31808BE62AD1378759A;
+		};
+		87E36E58FA3244BF96FA51B0 = {
+			isa = PBXBuildFile;
+			productRef = A8C3BFA23A689E90D50DB374;
+		};
+		FFCC07A5647BF061F449BB10 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2DC36C89C92896FAD85C5C7,
+				E04B49FDE148D45C322FE98A,
+				87E36E58FA3244BF96FA51B0,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1EFDF09C127DC59FAB08A06 = {
+			isa = PBXBuildFile;
+			fileRef = D223A8B58FDE27E15FB294B4;
+		};
+		EE694A915522A7EA6F9C85F1 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1EFDF09C127DC59FAB08A06,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6A264C0989A7D0D4D40A6607 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.app";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				CODE_SIGN_ENTITLEMENTS = App/AnkiNew.entitlements;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				INFOPLIST_KEY_CFBundleDisplayName = "Карточки";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				MARKETING_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+			};
+		};
+		1FFBB22C93D4D1FD4A91B6A3 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.app";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				CODE_SIGN_ENTITLEMENTS = App/AnkiNew.entitlements;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				INFOPLIST_KEY_CFBundleDisplayName = "Карточки";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				MARKETING_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+		};
+		117704BE84B9D4E66FFDBEC0 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6A264C0989A7D0D4D40A6607,
+				1FFBB22C93D4D1FD4A91B6A3,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3576F155DB986D55B94C216E = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 117704BE84B9D4E66FFDBEC0;
+			buildPhases = (
+				712070094B989708E70D7CA3,
+				FFCC07A5647BF061F449BB10,
+				EE694A915522A7EA6F9C85F1,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AnkiNew;
+			productName = AnkiNew;
+			productReference = 90268D116E9422790C6CCA11;
+			productType = "com.apple.product-type.application";
+			packageProductDependencies = (
+				3D4CE021D7F7E9E6C231B23B,
+				D8D3C31808BE62AD1378759A,
+				A8C3BFA23A689E90D50DB374,
+			);
+		};
+		C688542DB8E5B563AF5EDFD7 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			path = AnkiNewTests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		2F3874A93F9A5C9F5748B0B7 = {
+			isa = PBXBuildFile;
+			fileRef = D3DFD9A4AC0BA5AEC6B90DA8;
+		};
+		87A3825814400AB3EF07D7FA = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F3874A93F9A5C9F5748B0B7,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		568B179186886C122A9E431E = {
+			isa = PBXBuildFile;
+			productRef = 3D4CE021D7F7E9E6C231B23B;
+		};
+		B885D5E006B30D8150129233 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				568B179186886C122A9E431E,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2EE058407EB25EC17AD8B4D5 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C696506E64DCF0B7588A6B7A = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 16EEAF57BAFC2A41CAB7C99A;
+			proxyType = 1;
+			remoteGlobalIDString = 3576F155DB986D55B94C216E;
+			remoteInfo = AnkiNew;
+		};
+		303CA4E04D1A4BCEE1B0EB65 = {
+			isa = PBXTargetDependency;
+			target = 3576F155DB986D55B94C216E;
+			targetProxy = C696506E64DCF0B7588A6B7A;
+		};
+		D04DB8BA3BF354B723D7130F = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.AnkiNewTests";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AnkiNew.app/Contents/MacOS/AnkiNew";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+			};
+		};
+		8C8F3036B72966E0DC290637 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.AnkiNewTests";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AnkiNew.app/Contents/MacOS/AnkiNew";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+		};
+		0AB831E20D69D10B5B02CDBA = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D04DB8BA3BF354B723D7130F,
+				8C8F3036B72966E0DC290637,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A9E7F0AF85CE1E72884DFEA5 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0AB831E20D69D10B5B02CDBA;
+			buildPhases = (
+				87A3825814400AB3EF07D7FA,
+				B885D5E006B30D8150129233,
+				2EE058407EB25EC17AD8B4D5,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				303CA4E04D1A4BCEE1B0EB65,
+			);
+			name = AnkiNewTests;
+			productName = AnkiNewTests;
+			productReference = C688542DB8E5B563AF5EDFD7;
+			productType = "com.apple.product-type.bundle.unit-test";
+			packageProductDependencies = (
+				3D4CE021D7F7E9E6C231B23B,
+			);
+		};
+		8C8165F2271B2D9387897B24 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			path = AnkiNewUITests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		C2A6EF6889F77D2EFEACEBA2 = {
+			isa = PBXBuildFile;
+			fileRef = 32516F10D5F42B6208345049;
+		};
+		E23D9BB831E06A767AFDE074 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C2A6EF6889F77D2EFEACEBA2,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		92343FA817EF799BC490B3F1 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		053287363B1C27945E88E1A9 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF520017CD449BED9BA0335C = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 16EEAF57BAFC2A41CAB7C99A;
+			proxyType = 1;
+			remoteGlobalIDString = 3576F155DB986D55B94C216E;
+			remoteInfo = AnkiNew;
+		};
+		2D027B22950E022A0B264D46 = {
+			isa = PBXTargetDependency;
+			target = 3576F155DB986D55B94C216E;
+			targetProxy = BF520017CD449BED9BA0335C;
+		};
+		1B119F1D59E9F6781926E110 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.AnkiNewUITests";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				TEST_TARGET_NAME = AnkiNew;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+			};
+		};
+		E8772E503865F13E3715C01D = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "local.anki-new.AnkiNewUITests";
+				GENERATE_INFOPLIST_FILE = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				TEST_TARGET_NAME = AnkiNew;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+		};
+		33D1206253E3F742203E9798 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1B119F1D59E9F6781926E110,
+				E8772E503865F13E3715C01D,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		873DD58A0B660205BE1802EA = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 33D1206253E3F742203E9798;
+			buildPhases = (
+				E23D9BB831E06A767AFDE074,
+				92343FA817EF799BC490B3F1,
+				053287363B1C27945E88E1A9,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2D027B22950E022A0B264D46,
+			);
+			name = AnkiNewUITests;
+			productName = AnkiNewUITests;
+			productReference = 8C8165F2271B2D9387897B24;
+			productType = "com.apple.product-type.bundle.ui-testing";
+			packageProductDependencies = (
+			);
+		};
+		FE0A091FDBFB3E9C31B7A1BD = {
+			isa = PBXGroup;
+			children = (
+				90268D116E9422790C6CCA11,
+				C688542DB8E5B563AF5EDFD7,
+				8C8165F2271B2D9387897B24,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E40150FB513E58A20FB9D5D2 = {
+			isa = PBXGroup;
+			children = (
+				EF0A98CB9111BE8B1C40A8AA,
+				5DFD40810239C0CA5D1EEA9A,
+				8B92D24C6FC34DAA8364AFD2,
+				D223A8B58FDE27E15FB294B4,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+		48D605E8148E4E780382F343 = {
+			isa = PBXGroup;
+			children = (
+				D3DFD9A4AC0BA5AEC6B90DA8,
+			);
+			name = AppTests;
+			sourceTree = "<group>";
+		};
+		FE96645A71F2670CFE2246D3 = {
+			isa = PBXGroup;
+			children = (
+				32516F10D5F42B6208345049,
+			);
+			name = UITests;
+			sourceTree = "<group>";
+		};
+		2EB2D8158FC6EF9EB19CB439 = {
+			isa = PBXGroup;
+			children = (
+				E40150FB513E58A20FB9D5D2,
+				48D605E8148E4E780382F343,
+				FE96645A71F2670CFE2246D3,
+				FE0A091FDBFB3E9C31B7A1BD,
+			);
+			sourceTree = "<group>";
+		};
+		BFD315016DE16320F7E2120C = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SDKROOT = macosx;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				ARCHS = arm64;
+				SWIFT_VERSION = 6.0;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "-";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+			};
+		};
+		1D8C0C6B1D22EA8C7669B263 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SDKROOT = macosx;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				ARCHS = arm64;
+				SWIFT_VERSION = 6.0;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "-";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+		};
+		128D1971520EF7E0088A5374 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BFD315016DE16320F7E2120C,
+				1D8C0C6B1D22EA8C7669B263,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		16EEAF57BAFC2A41CAB7C99A = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					3576F155DB986D55B94C216E = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					A9E7F0AF85CE1E72884DFEA5 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 3576F155DB986D55B94C216E;
+					};
+					873DD58A0B660205BE1802EA = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 3576F155DB986D55B94C216E;
+					};
+				};
+			};
+			buildConfigurationList = 128D1971520EF7E0088A5374;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ru;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				ru,
+				en,
+				Base,
+			);
+			mainGroup = 2EB2D8158FC6EF9EB19CB439;
+			productRefGroup = FE0A091FDBFB3E9C31B7A1BD;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3576F155DB986D55B94C216E,
+				A9E7F0AF85CE1E72884DFEA5,
+				873DD58A0B660205BE1802EA,
+			);
+			packageReferences = (
+				A05607CFFBB638C017273B8F,
+			);
+		};
+	};
+	rootObject = 16EEAF57BAFC2A41CAB7C99A;
+}

@@ -3,6 +3,9 @@
 DerivedData/
 build/
 dist/
+*.xcresult/
+.swiftpm/
+.local-data/
 *.xcuserstate
 xcuserdata/
 .swiftpm/xcode/package.xcworkspace/xcuserdata/

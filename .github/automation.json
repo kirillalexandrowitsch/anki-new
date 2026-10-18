@@ -8,8 +8,8 @@
   "checkoutSHA": "11d5960a326750d5838078e36cf38b85af677262",
   "maxWaitSeconds": 1800,
   "app": {
-    "project": null,
-    "scheme": null,
-    "packagePaths": []
+    "project": "AnkiNew.xcodeproj",
+    "scheme": "AnkiNew",
+    "packagePaths": ["Packages/CardsKit"]
   }
 }
