@@ -26,6 +26,8 @@ Caches/<bundle>/                  # превью, пересоздаваемые
 
 В одной БД — одна коллекция. Пользовательские тексты в UTF-8, UUID как TEXT, даты как UTC epoch milliseconds в INTEGER; длительности в milliseconds, интервалы scheduler в явно обозначенных units. JSON имеет `schemaVersion`. Числовые значения проверяются на finite и допустимый диапазон до SQL-записи. Файловый формат и версия схемы SQLite — разные версии.
 
+Независимые от SQL типы и явные преобразования единиц зафиксированы в [DOMAIN_TYPES.md](DOMAIN_TYPES.md); UTC timestamp и elapsed duration представлены разными Swift-типами.
+
 ## Связи
 
 ```mermaid

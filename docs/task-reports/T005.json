@@ -1,0 +1,45 @@
+{
+  "taskID": "T005",
+  "summary": "Введены Foundation-only доменные UUID IDs, revision, неизменяемые Note/Card/Deck DTO, Grade и schedule phases, нормализованные имена и типизированные validation errors. Добавлены явные timestamp/duration/scheduler units и детерминированный StudyDayCalculator с timezone/rollover, DST gap/fold и календарными границами. Контракты и ограничения записаны в DOMAIN_TYPES.md; новых зависимостей и дополнительных платежей нет.",
+  "criteria": [
+    {
+      "text": "Учебный день корректно вычисляется на границе 04:00 и при DST.",
+      "passed": true,
+      "evidence": "StudyDayTests: 14 независимых UTC fixtures для 04:00 в UTC/Moscow/Kathmandu/New York/Berlin/Lord Howe и високосного дня; проверены start/end и [start,end), ровная граница и -1 ms, дни 23/25 и 23.5/24.5 часа. Отдельно 3 DST-gap и 4 DST-fold значения, пропущенная дата Apia, midnight rollover и пропущенная полночь São Paulo. Все прошли в фактическом swift test; календарный расчёт не сдвигает now фиксированными 86400 секундами. Clock передаётся извне."
+    },
+    {
+      "text": "Даты, миллисекунды и интервалы не смешиваются неявно.",
+      "passed": true,
+      "evidence": "Date, EpochMilliseconds, DurationMilliseconds, SchedulerIntervalDays и StudyDayKey — разные типы без implicit conversions/общих операторов. Standalone xcrun swiftc собрал CardsCore без UI/GRDB/FSRS; пять отдельных -typecheck probes отвергли NoteID→CardID, epoch→duration, days→duration, Date→StudyDayKey и Int→Revision. Unit tests проверили finite/range/overflow, отрицательные durations/revisions, явный Date round trip 4000 последовательных milliseconds около epoch и современных дат, Codable validation."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "26 Swift Testing tests: 17 Core, 4 Infrastructure, 3 DesignSystem, 2 Features; ноль failures. Core содержит параметризованные timezone/DST/Unicode NFC/case-folding/empty/duplicate vectors, validated Codable, revision/duration overflow и 4000 millisecond round trips. Финальный локальный лог build/t005-package.log. ZIPFoundation выдаёт прежнее предупреждение о watchOS v4 в своём manifest; pins не менялись."
+    },
+    {
+      "command": "xcrun swiftc -swift-version 6 -emit-module -module-name CardsCore $(rg --files Packages/CardsKit/Sources/CardsCore -g '*.swift') -emit-module-path build/t005-core/CardsCore.swiftmodule; xcrun swiftc -swift-version 6 -typecheck -I build/t005-core build/t005-core/<probe>.swift",
+      "result": "passed",
+      "details": "Foundation-only Core собран отдельным модулем. Пять независимых negative probes (note_as_card, epoch_as_duration, days_as_duration, date_as_day_key, integer_as_revision) ожидаемо завершились compiler cannot convert; аудит импортов нашёл только Foundation. Диагностика сохранена локально в build/t005-core/type-boundaries.log; probes не входят в продукт."
+    },
+    {
+      "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t005-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "TEST SUCCEEDED: 1 app unit и 2 UI tests, 0 failures. Сборка arm64 с deployment 15.0 и локальной ad-hoc подписью, без Apple Account. Проверены navigation/Settings/Command-comma и Design Gallery controls/shortcuts/input/theme/scale. Локальный xcresult: build/t005-app/Logs/Test/Test-AnkiNew-2026.10.18_17-40-18-+0300.xcresult. Wrapper только на время запуска выбрал существующую enabled ABC через системный TIS API и defer восстановил исходную Russian (noErr); повторное чтение HIToolbox подтвердило восстановление."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T005; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T005 done только после фактических критериев/проверок. Проверены 100 задач/174 состояний, graph/report/generated consistency, все 19 Python tests, 2432 локальные ссылки и 48/48 неизменённых PNG hashes. PR checks и post-merge pipeline проверяет отдельно штатный deliver.py."
+    }
+  ],
+  "limitations": [
+    "Note/Card/Deck — начальные transfer DTO; rich content/media, полный scheduler snapshot, SQL schema и сценарии записи относятся к последующим задачам. Codable snapshots не объявляются persisted backup format; проверка имён в памяти не заменяет будущий UNIQUE constraint.",
+    "Системная timezone database задаёт правила переходов. Локальный runtime macOS 27.0.1 arm64 / Xcode 27.1; macOS 15 отдельно проверяется обязательным hosted macos-15 CI при доставке.",
+    "Date — floating point; произвольные крайние Int64 timestamps не гарантируют точность миллисекунды после преобразования в Date. Исходный EpochMilliseconds хранится и кодируется как integer; конверсия явная и округляет к ближайшей миллисекунде. StudyDayCalculator принимает конечные моменты в UTC годах 1–9999.",
+    "Новых библиотек, paid services, trial, API keys, capabilities/provisioning, CI artifacts/cache uploads нет. Все данные синтетические; личная коллекция, credentials и записи микрофона не использовались. Логи, probes и xcresult остаются в игнорируемой build/.",
+    "Два первоначальных локальных xcodebuild test с текущей Russian раскладкой провалили Command-R и Command-W в существующих UI tests. Причина воспроизведена и изолирована сменой input source: с ABC та же неизменённая suite полностью прошла. Tests/product code не ослаблялись; wrapper и логи локальные, список раскладок и настройки пользователя не менялись, исходная раскладка восстановлена."
+  ]
+}
