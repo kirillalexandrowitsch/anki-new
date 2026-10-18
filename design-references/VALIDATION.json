@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-18",
+  "result": "passed",
+  "counts": {
+    "base": 6,
+    "coreSheets": 24,
+    "extensionSheets": 18,
+    "sheets": 42,
+    "panels": 168,
+    "pngFiles": 48
+  },
+  "png": {
+    "sourceFilesExist": 48,
+    "signaturesCRCAndDecode": "passed",
+    "copiedBytesAndSHA256": "48/48 match",
+    "dimensions": "6 × 1586×992; 41 × 1536×1024; 1 × 1535×1024 (sheet-22)"
+  },
+  "panels": {
+    "metadata": "42/42 sheets have exactly 4 unique panel IDs",
+    "visualCheck": "All 42 sheets inspected via 7 contact sheets; each has 4 numbered top-level panels in a 2×2 layout. Some panels contain before/after pairs or component samples.",
+    "textAccuracy": "Raster text not fully OCR-proofread; FLOWS.md resolves behavioral inconsistencies."
+  },
+  "links": {
+    "htmlRelativeLinks": 374,
+    "markdownRelativeLinks": 511,
+    "result": "all local targets and HTML fragments resolve; no external HTML links"
+  },
+  "browser": {
+    "method": "Headless Chromium; file URL; 1440px and 390px viewport",
+    "result": {
+      "errors": [],
+      "network": [],
+      "overflow": false,
+      "imageFailures": [],
+      "checks": [
+        "48 images in gallery",
+        "6/24/18 filters",
+        "panel ID search",
+        "panel name search",
+        "empty and reset",
+        "image dialog",
+        "Escape and arrow navigation",
+        "390px viewport without overflow",
+        "all images decoded from file URL"
+      ]
+    }
+  },
+  "archive": {
+    "file": "design-references.zip",
+    "method": "Python zipfile.testzip() plus exact member list and byte comparison with package",
+    "result": "passed"
+  },
+  "limitations": [
+    "Static raster concepts, not a working application or layered design source.",
+    "Actual resolution is recorded, not the ideal resolution mentioned in prompts.",
+    "Educational data and spacing/accessibility values are illustrative/proposed.",
+    "Sheet 39 is a static storyboard; no animation files.",
+    "Application tests are not applicable to this reference-only package."
+  ]
+}

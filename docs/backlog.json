@@ -1,0 +1,4991 @@
+{
+  "schemaVersion": 2,
+  "date": "2026-10-18",
+  "project": "Карточки / Anki New",
+  "status": "planning-complete; implementation-not-started",
+  "assumptions": {
+    "minimumMacOS": "15.0",
+    "architecture": "arm64",
+    "languageMode": "Swift 6",
+    "storage": "SQLite + GRDB",
+    "scheduler": "FSRS-6 through validated pinned adapter",
+    "networkRequired": false,
+    "distribution": "personal local app only",
+    "paidDeveloperProgramRequired": false
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Фундамент",
+      "firstTask": "T001",
+      "lastTask": "T012",
+      "result": "Воспроизводимая сборка, схема, изолированные сервисы и fixtures."
+    },
+    {
+      "id": "M1",
+      "title": "Первая рабочая вертикаль",
+      "firstTask": "T013",
+      "lastTask": "T030",
+      "result": "Создание → повторение → статистика → перезапуск → backup/restore."
+    },
+    {
+      "id": "M2",
+      "title": "Полный основной интерфейс",
+      "firstTask": "T031",
+      "lastTask": "T052",
+      "result": "Сценарии и компоненты листов 01–24; APKG ещё проходит отдельную приёмку."
+    },
+    {
+      "id": "M3",
+      "title": "Основная бета и перенос данных",
+      "firstTask": "T053",
+      "lastTask": "T068",
+      "result": "Сохранность, миграции, совместимость APKG, доступность и core acceptance."
+    },
+    {
+      "id": "M4",
+      "title": "Расширенный дизайн-проект",
+      "firstTask": "T069",
+      "lastTask": "T092",
+      "result": "Предложения листов 25–42, интеграция и трассировка всех состояний."
+    },
+    {
+      "id": "M5",
+      "title": "Личная установка и завершение",
+      "firstTask": "T093",
+      "lastTask": "T100",
+      "result": "Проверка на ноутбуке владельца, локальная .app, обновление и восстановление без публичного выпуска."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Подготовить Xcode и окружение",
+      "dependencies": [],
+      "references": [],
+      "area": "Окружение и docs",
+      "goal": "Получить воспроизводимое окружение сборки приложения arm64 на macOS 15+.",
+      "implementation": [
+        "Проверить наличие полного Xcode и выбрать developer directory; сохранить версию Xcode/Swift/SDK.",
+        "Зафиксировать deployment target 15.0, язык Swift 6 и arm64; выбрать временный bundle ID без требования платной подписи для первых запусков.",
+        "Описать запуск тестов на минимальной и текущей системе; записать ограничения доступного Mac."
+      ],
+      "acceptance": [
+        "xcodebuild -version работает через выбранный Xcode.",
+        "Документированы toolchain и способ локального запуска без сертификата релиза."
+      ],
+      "verification": "Собрать и запустить временный пустой macOS app target; не изменять пользовательские данные.",
+      "size": "S",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T002",
+      "title": "Создать каркас приложения и модулей",
+      "dependencies": [
+        "T001"
+      ],
+      "references": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05"
+      ],
+      "area": "App/ и Packages/CardsKit/",
+      "goal": "Создать Xcode-проект и границы модулей из ARCHITECTURE.md.",
+      "implementation": [
+        "Создать App target, CardsCore/Infrastructure/DesignSystem/Features и тестовые targets.",
+        "Подключить локальный пакет, shared schemes, ресурсы локализации и composition root без singleton базы.",
+        "Добавить пять разделов, Settings scene, базовый App Sandbox и начальные file-selection capabilities; настроить Git локально и исключения build/cache/личных коллекций."
+      ],
+      "acceptance": [
+        "Приложение запускается на arm64; циклов зависимостей нет.",
+        "Core компилируется без SwiftUI/GRDB; дизайн-PNG не копируются в bundle."
+      ],
+      "verification": "Clean build приложения и swift test каркаса; проверить build settings в shared scheme.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05"
+      ]
+    },
+    {
+      "id": "T003",
+      "title": "Проверить и закрепить зависимости",
+      "dependencies": [
+        "T002"
+      ],
+      "references": [],
+      "area": "Package.swift, Package.resolved, docs/DEPENDENCIES.md",
+      "goal": "Подтвердить совместимость GRDB, FSRS-6 и ZIPFoundation до использования в продукте.",
+      "implementation": [
+        "Проверить GRDB 7.11.1 как первоначальный pin, async read/write и FTS5 на минимальной ОС.",
+        "Зафиксировать ревизию swift-fsrs, включить FSRS-6 явно, получить контрольные outputs четырёх оценок и сравнить с независимым reference fixture.",
+        "Проверить ZIP round trip, Swift 6 concurrency, лицензии и ресурсы privacy manifest; сохранить точные versions/commits."
+      ],
+      "acceptance": [
+        "Нет зависимостей от плавающей main/latest.",
+        "FSRS-6, архивы и FTS5 имеют воспроизводимый smoke result; ограничения записаны."
+      ],
+      "verification": "Минимальная интеграционная сборка и чтение/запись временной БД; не объявлять FSRS готовым только по README.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T004",
+      "title": "Реализовать дизайн-систему",
+      "dependencies": [
+        "T002"
+      ],
+      "references": [
+        "19",
+        "40"
+      ],
+      "area": "CardsDesignSystem/",
+      "goal": "Перевести визуальные правила в переиспользуемые нативные компоненты.",
+      "implementation": [
+        "Создать semantic colors, type scale, spacing и radii из DESIGN.md со светлой/тёмной темой.",
+        "Добавить primary/secondary/destructive buttons, labelled field, panel, banner, empty/loading и focus states.",
+        "Создать preview gallery для normal/hover/pressed/disabled/error; применить системные SF Symbols и размер текста."
+      ],
+      "acceptance": [
+        "Компоненты не знают о моделях коллекции.",
+        "Ошибка, disabled и focus различимы без одного только цвета."
+      ],
+      "verification": "Визуально проверить previews в двух темах и с крупным текстом; выборочные snapshots только стабильных элементов.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "19.1",
+        "19.2",
+        "19.3",
+        "19.4",
+        "40.1",
+        "40.2",
+        "40.3",
+        "40.4"
+      ]
+    },
+    {
+      "id": "T005",
+      "title": "Ввести доменные типы и учебное время",
+      "dependencies": [
+        "T002"
+      ],
+      "references": [],
+      "area": "CardsCore/Models/, Ports/Clock.swift",
+      "goal": "Задать единый словарь типов и детерминированное время.",
+      "implementation": [
+        "Добавить UUID wrappers, revision, Note/Card/Deck DTO, Grade и schedule phases.",
+        "Ввести Clock и StudyDayCalculator с timezone/rollover и duration units.",
+        "Реализовать нормализацию имён и типизированные validation errors; не связывать домен с SQL records."
+      ],
+      "acceptance": [
+        "Учебный день корректно вычисляется на границе 04:00 и при DST.",
+        "Даты, миллисекунды и интервалы не смешиваются неявно."
+      ],
+      "verification": "Параметризованные проверки timezone, DST, Unicode NFC, пустых и совпадающих названий.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T006",
+      "title": "Создать схему SQLite и миграции",
+      "dependencies": [
+        "T003",
+        "T005"
+      ],
+      "references": [],
+      "area": "Infrastructure/Persistence/, Migrations/",
+      "goal": "Поднять versioned хранилище первоначальных сущностей.",
+      "implementation": [
+        "Создать таблицы DATA_MODEL.md для коллекции, колод, Notes/Cards, расписания, сессий, журнала и медиа.",
+        "Настроить DatabasePool, foreign keys, индексы, частичную уникальность и метаданные схемы.",
+        "Добавить migrator с запретом записи неизвестной более новой схемы; пока без пользовательских операций миграции UI."
+      ],
+      "acceptance": [
+        "Пустая БД создаётся повторяемо, целостность и ограничения проверяются.",
+        "Ошибка миграции не маркируется успешной версией."
+      ],
+      "verification": "Создание/reopen временной file-БД, constraint tests и намеренно оборванная тестовая миграция.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T007",
+      "title": "Управлять открытием и блокировкой коллекции",
+      "dependencies": [
+        "T006"
+      ],
+      "references": [
+        "26.4"
+      ],
+      "area": "App/CollectionCoordinator; Infrastructure/Collections/",
+      "goal": "Создавать одну активную коллекцию с безопасным владением.",
+      "implementation": [
+        "Создать папку контейнера, manifest и registry с UUID.",
+        "Получать advisory lock до записи, различать занятость процесса и устаревший файл lock.",
+        "Реализовать open/close с generation token и остановкой наблюдений; смена произвольных коллекций добавится позднее."
+      ],
+      "acceptance": [
+        "Второй процесс не открывает тот же контейнер на запись.",
+        "Запоздавший результат закрытого контекста не меняет новое окно."
+      ],
+      "verification": "Два тестовых владельца, завершение процесса и повторное открытие; сверка manifest UUID с БД.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "26.4"
+      ]
+    },
+    {
+      "id": "T008",
+      "title": "Создать команды записи и репозитории",
+      "dependencies": [
+        "T006",
+        "T007"
+      ],
+      "references": [],
+      "area": "Core/Ports/; Infrastructure/Repositories/",
+      "goal": "Обеспечить единый путь изменения коллекции.",
+      "implementation": [
+        "Реализовать CollectionWriter и короткие транзакции без await внутри closure.",
+        "Ввести expectedRevision, commandID, processed_commands и типизированные errors.",
+        "Разделить repository ports по предметным сценариям; возвращать Sendable DTO, не GRDB connection."
+      ],
+      "acceptance": [
+        "Повтор commandID не применяет операцию второй раз.",
+        "Конфликт revision возвращается вызывающему коду без молчаливой перезаписи."
+      ],
+      "verification": "Транзакционный rollback, duplicate command и конкурентные попытки сохранения одной сущности.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T009",
+      "title": "Создать хранилище медиа со staging",
+      "dependencies": [
+        "T007",
+        "T008"
+      ],
+      "references": [
+        "09.4",
+        "22.3"
+      ],
+      "area": "Infrastructure/Media/",
+      "goal": "Хранить вложения без сломанных ссылок после сбоя.",
+      "implementation": [
+        "Добавить проверку UTI/размера, hash naming и immutable Media files.",
+        "Реализовать journal стадий prepare/publish/commit/cleanup с восстановлением при запуске.",
+        "Создавать thumbnails ImageIO вне main thread; не удалять orphan files до проверки активных операций."
+      ],
+      "acceptance": [
+        "В БД не появляется ссылка на ещё не опубликованный файл.",
+        "Один и тот же файл дедуплицируется по SHA-256."
+      ],
+      "verification": "Fault injection между publish и commit, повреждённое изображение и повторное добавление.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "09.4",
+        "22.3"
+      ]
+    },
+    {
+      "id": "T010",
+      "title": "Добавить наблюдаемые запросы и поиск",
+      "dependencies": [
+        "T006",
+        "T008"
+      ],
+      "references": [
+        "02.1",
+        "02.2",
+        "20.3"
+      ],
+      "area": "Core/Queries/; Infrastructure/Queries/",
+      "goal": "Получать актуальные списки без загрузки всей коллекции.",
+      "implementation": [
+        "Создать query DTO для колод, библиотеки, Today и счётчиков.",
+        "Поднять FTS5 front/back/examples, параметризованные запросы, pagination и стабильный tie-breaker.",
+        "Связать GRDB observation с async snapshots и отменой по lifecycle/generation."
+      ],
+      "acceptance": [
+        "Сохранение Note обновляет список и индекс.",
+        "Закрытый экран не оставляет бесконечное наблюдение или N+1 query на строку."
+      ],
+      "verification": "Сверить результаты фильтра, пагинации и FTS после изменения; проверить отмену observation.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "02.1",
+        "02.2",
+        "20.3"
+      ]
+    },
+    {
+      "id": "T011",
+      "title": "Сделать базовый backup и restore service",
+      "dependencies": [
+        "T007",
+        "T008",
+        "T009"
+      ],
+      "references": [
+        "17.4",
+        "23.4"
+      ],
+      "area": "Infrastructure/Backup/",
+      "goal": "Получить восстанавливаемую копию до появления важных пользовательских данных.",
+      "implementation": [
+        "Снять согласованный SQLite snapshot и список immutable media под operation lease.",
+        "Создать versioned manifest с hash и архив без WAL/locks/cache.",
+        "Проверять восстановление в staging, делать swap с внешним rollback journal и recovery при старте."
+      ],
+      "acceptance": [
+        "Точная копия восстанавливается в другой контейнер.",
+        "Повреждённый архив не заменяет текущую коллекцию."
+      ],
+      "verification": "Round trip Notes/Cards/log/media и падение между двумя rename; сравнить содержимое после recovery.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": [
+        "17.4",
+        "23.4"
+      ]
+    },
+    {
+      "id": "T012",
+      "title": "Подготовить тестовые данные и проверку сборки",
+      "dependencies": [
+        "T002",
+        "T005",
+        "T006"
+      ],
+      "references": [],
+      "area": "Tests/Fixtures/ и scripts/",
+      "goal": "Сделать проверки воспроизводимыми с начала разработки.",
+      "implementation": [
+        "Создать synthetic fixtures с кириллицей, несколькими колодами, расписаниями и медиа.",
+        "Ввести TestClock, временную file-БД, isolated temp directories и fault injection hooks.",
+        "Добавить локальный check script с package tests и app build; сохранить seed и команды запуска."
+      ],
+      "acceptance": [
+        "Проверки не читают личную коллекцию и не требуют сети после resolve.",
+        "Падение теста сохраняет полезную диагностику без пользовательских текстов."
+      ],
+      "verification": "Запустить check script дважды на чистом fixture; результаты детерминированы.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M0",
+      "stateIDs": []
+    },
+    {
+      "id": "T013",
+      "title": "Реализовать создание и редактирование колод",
+      "dependencies": [
+        "T004",
+        "T008",
+        "T010",
+        "T012"
+      ],
+      "references": [
+        "04.1",
+        "04.2"
+      ],
+      "area": "Core/UseCases/Decks; Features/Decks/",
+      "goal": "Пользователь создаёт и изменяет простую колоду.",
+      "implementation": [
+        "Добавить CreateDeck/UpdateDeck с именем, описанием, иконкой и цветом.",
+        "Связать модальные drafts с явными Create/Save и revision проверкой.",
+        "Показать обязательность имени, duplicate validation и возврат фокуса при Cancel/Escape."
+      ],
+      "acceptance": [
+        "Колода появляется в списке после commit и после перезапуска.",
+        "Cancel не сохраняет правки, конфликт не теряет исходное имя."
+      ],
+      "verification": "Проверить создание, duplicate name, Escape и reopen приложения.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "04.1",
+        "04.2"
+      ]
+    },
+    {
+      "id": "T014",
+      "title": "Сохранять словарные записи и Basic Card",
+      "dependencies": [
+        "T005",
+        "T008",
+        "T013"
+      ],
+      "references": [
+        "09.1"
+      ],
+      "area": "Core/UseCases/Notes; Infrastructure/Repositories/",
+      "goal": "Связать содержимое записи с независимой учебной карточкой.",
+      "implementation": [
+        "Создать встроенный Basic NoteType со стабильными field/template IDs.",
+        "Реализовать SaveNote: поля, теги/медиа refs и генерация basic.forward в одной транзакции.",
+        "При повторном Save сохранять CardID/schedule, учитывать suppressed variant."
+      ],
+      "acceptance": [
+        "Одна Note создаёт одну Basic Card с новым расписанием.",
+        "Редактирование перевода не сбрасывает прогресс и не создаёт дубликат."
+      ],
+      "verification": "Create/edit/reopen и повторный Save после suppression; проверить ID и schedule revision.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "09.1"
+      ]
+    },
+    {
+      "id": "T015",
+      "title": "Сделать базовый редактор карточки",
+      "dependencies": [
+        "T004",
+        "T010",
+        "T014"
+      ],
+      "references": [
+        "09.1",
+        "09.2",
+        "18.4",
+        "22.4"
+      ],
+      "area": "Features/Editor/",
+      "goal": "Создавать и изменять содержимое через явный редактор.",
+      "implementation": [
+        "Добавить EditorDraft, выбор колоды, front/back/example/pronunciation и preview.",
+        "Разделить empty/valid/invalid/saving/conflict states; Save вызывает один use case.",
+        "Показывать unsaved warning при уходе и не перехватывать текстовые клавиши навигацией."
+      ],
+      "acceptance": [
+        "Невалидный front/back не сохраняется.",
+        "Save/Discard/Cancel при закрытии имеют разные проверяемые результаты."
+      ],
+      "verification": "UI-сценарий создания и изменения; конфликт двух drafts и ошибка диска.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "09.1",
+        "09.2",
+        "18.4",
+        "22.4"
+      ]
+    },
+    {
+      "id": "T016",
+      "title": "Сделать базовую библиотеку",
+      "dependencies": [
+        "T004",
+        "T010",
+        "T015"
+      ],
+      "references": [
+        "base-04",
+        "18.1"
+      ],
+      "area": "Features/Library/",
+      "goal": "Показывать реальные карточки коллекции и открывать редактор.",
+      "implementation": [
+        "Построить table/list по query snapshots со стабильной selection.",
+        "Добавить поиск, базовый empty state, Add/Edit и инспектор содержимого.",
+        "Различать Card count и Note count; показывать направление варианта."
+      ],
+      "acceptance": [
+        "Новые и изменённые записи появляются без ручной перезагрузки.",
+        "Пустая библиотека предлагает создание или импорт."
+      ],
+      "verification": "Создать запись из пустого состояния, выбрать строку и изменить её; проверить reopen.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-04",
+        "18.1"
+      ]
+    },
+    {
+      "id": "T017",
+      "title": "Реализовать адаптер FSRS и learning policy",
+      "dependencies": [
+        "T003",
+        "T005",
+        "T012"
+      ],
+      "references": [
+        "06"
+      ],
+      "area": "Core/Study; Infrastructure/Scheduling/",
+      "goal": "Рассчитывать расписание по проверенному контракту без участия UI.",
+      "implementation": [
+        "Оборачивать pinned FSRS-6 и переводить Grade/phase/parameter sets.",
+        "Зафиксировать точную таблицу переходов learning/relearning для шагов профиля; исключить двойное применение коротких шагов.",
+        "Сделать preview чистым, проверить now/seed, finite values и versioned snapshots."
+      ],
+      "acceptance": [
+        "Все четыре оценки на контрольных входах дают ожидаемые dueAt и memory state.",
+        "Повтор вычисления с теми же параметрами воспроизводим; UI не задаёт интервалы."
+      ],
+      "verification": "Reference vectors для new/review/relearning, Same-day, Again и ошибочных параметров.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "06.1",
+        "06.2",
+        "06.3",
+        "06.4"
+      ]
+    },
+    {
+      "id": "T018",
+      "title": "Собрать учебную очередь и квоты",
+      "dependencies": [
+        "T005",
+        "T010",
+        "T014",
+        "T017"
+      ],
+      "references": [
+        "05.2",
+        "18.2"
+      ],
+      "area": "Core/Study/QueueBuilder/",
+      "goal": "Выбирать действительно доступные карточки без дублирования квот.",
+      "implementation": [
+        "Реализовать scope с потомками, learning/review/new priority и исключения suspend/bury/delete.",
+        "Добавить study day, уникальные new/review quota, session limit и sibling policy.",
+        "Возвращать ready, futureDue и empty причины отдельно; пересверять eligibility перед показом."
+      ],
+      "acceptance": [
+        "Parent scope не дублирует CardID из дочерних колод.",
+        "Future learning не показывается раньше времени, пустота не маскирует ошибку."
+      ],
+      "verification": "Fixtures на DST/rollover, siblings, исчерпанный лимит, повторный Again и reset той же Card.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "05.2",
+        "18.2"
+      ]
+    },
+    {
+      "id": "T019",
+      "title": "Сделать экран занятия и автомат состояний",
+      "dependencies": [
+        "T004",
+        "T018"
+      ],
+      "references": [
+        "base-06",
+        "06.1",
+        "07.1",
+        "07.2",
+        "07.3"
+      ],
+      "area": "Features/Study/",
+      "goal": "Показать скрытый вопрос и корректно раскрывать ответ.",
+      "implementation": [
+        "Реализовать loading/question/answer/committing/paused/completed с явными допустимыми событиями.",
+        "В question оставить Показать ответ, пропуск и звук; после reveal показать ровно четыре оценки.",
+        "Настроить keyboard routing Space/1–4 вне текстовых полей, pause и exit confirmation."
+      ],
+      "acceptance": [
+        "Оценка недоступна до reveal и повторно во время committing.",
+        "Следующий вопрос скрыт; Escape отменяет подтверждение выхода."
+      ],
+      "verification": "UI-тест скрытых/раскрытых контролов, клавиш и возврата из pause.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-06",
+        "06.1",
+        "07.1",
+        "07.2",
+        "07.3"
+      ]
+    },
+    {
+      "id": "T020",
+      "title": "Атомарно сохранять оценку и Undo",
+      "dependencies": [
+        "T008",
+        "T017",
+        "T018",
+        "T019"
+      ],
+      "references": [
+        "06",
+        "28.1"
+      ],
+      "area": "Core/UseCases/Review; Infrastructure/Repositories/",
+      "goal": "Не терять и не дублировать оценку при сбоях.",
+      "implementation": [
+        "RateCard проверяет commandID и schedule revision, пишет schedule/log/session queue атомарно.",
+        "Возвращать сохранённый результат повторной команды и показывать ошибку без перехода к следующей Card.",
+        "Добавить guarded Undo с компенсацией, voided log, восстановлением schedule и пересчётом квот."
+      ],
+      "acceptance": [
+        "Двойное нажатие даёт одну эффективную оценку.",
+        "Undo не перезаписывает последующую несовместимую revision и исключает отменённое из статистики."
+      ],
+      "verification": "Падение до/после commit, replay commandID, конфликт revision и Undo после следующего изменения.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "06.1",
+        "06.2",
+        "06.3",
+        "06.4",
+        "28.1"
+      ]
+    },
+    {
+      "id": "T021",
+      "title": "Добавить воспроизведение и системное произношение",
+      "dependencies": [
+        "T009",
+        "T019"
+      ],
+      "references": [
+        "09.3",
+        "18.3",
+        "23.2"
+      ],
+      "area": "Infrastructure/Media; Features/Study/Editor",
+      "goal": "Слушать локальное аудио и доступный голос без блокирования занятия.",
+      "implementation": [
+        "Создать playback coordinator для attached audio и доступных en-GB/en-US voices.",
+        "Добавить stop/replay и прекращение старого звука при смене карточки/коллекции.",
+        "Показать missing file/voice/error и уважать настройку автоматического воспроизведения."
+      ],
+      "acceptance": [
+        "Один источник звучит в каждый момент; ошибка не блокирует reveal/rating.",
+        "Отсутствующий голос не выдаётся за успешно воспроизведённый."
+      ],
+      "verification": "Файлы good/missing/corrupt, смена Card во время playback и offline с установленным голосом.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "09.3",
+        "18.3",
+        "23.2"
+      ]
+    },
+    {
+      "id": "T022",
+      "title": "Сохранять паузу, прогресс сессии и итоги",
+      "dependencies": [
+        "T019",
+        "T020"
+      ],
+      "references": [
+        "07",
+        "18.2"
+      ],
+      "area": "Core/Study/SessionService; Features/Study/",
+      "goal": "Продолжать занятие после паузы и перезапуска без повторных оценок.",
+      "implementation": [
+        "Сохранять checkpoint после действий и состояние prior-to-pause.",
+        "Реализовать Skip без ReviewLog, early finish confirmation и completed summary.",
+        "Считать active duration без pause/sleep/idle; восстановление открывает неоценённый вопрос скрытым."
+      ],
+      "acceptance": [
+        "Пауза возвращает тот же текущий вопрос/ответ до перезапуска.",
+        "Перезапуск не создаёт повторных log и не теряет подтверждённые оценки."
+      ],
+      "verification": "Пауза, сон, force quit после оценки, Skip всех доступных Card и досрочный выход.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "07.1",
+        "07.2",
+        "07.3",
+        "07.4",
+        "18.2"
+      ]
+    },
+    {
+      "id": "T023",
+      "title": "Сделать Сегодня на реальных данных",
+      "dependencies": [
+        "T004",
+        "T010",
+        "T018",
+        "T022"
+      ],
+      "references": [
+        "base-01",
+        "18.2"
+      ],
+      "area": "Features/Today/",
+      "goal": "Дать понятную точку старта и продолжения занятий.",
+      "implementation": [
+        "Показать due/new counts, доступные колоды и Resume/Start из общих query services.",
+        "Добавить реальные краткие метрики без демонстрационных подстановок.",
+        "Разделить no-decks, all-done, future-learning и loading/error states."
+      ],
+      "acceptance": [
+        "Счётчики согласованы с QueueBuilder.",
+        "После оценки/перезапуска кнопка ведёт в корректную сессию."
+      ],
+      "verification": "Пустая, новая и завершённая коллекция; изменение Card в библиотеке обновляет Today.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-01",
+        "18.2"
+      ]
+    },
+    {
+      "id": "T024",
+      "title": "Реализовать первый запуск",
+      "dependencies": [
+        "T013",
+        "T014",
+        "T015",
+        "T023"
+      ],
+      "references": [
+        "01"
+      ],
+      "area": "Features/Onboarding/",
+      "goal": "Провести пользователя к первой колоде без навязанного наполнения.",
+      "implementation": [
+        "Добавить welcome, create/import выбор и короткий ввод названия.",
+        "Демо-три записи добавлять только по выбранному сценарию, записывать onboarding completion.",
+        "По успеху показать первую колоду и Start, по Cancel оставить пустое состояние; импортную ветку включить после готовности мастера T051."
+      ],
+      "acceptance": [
+        "Повторный запуск не размножает demo Notes.",
+        "До T051 импортная ветка явно недоступна; после подключения открывает мастер и не создаёт скрытую пустую колоду."
+      ],
+      "verification": "Первый/повторный запуск, отмена и сбой создания между шагами.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "01.1",
+        "01.2",
+        "01.3",
+        "01.4"
+      ]
+    },
+    {
+      "id": "T025",
+      "title": "Сделать четыре вкладки настроек и autosave",
+      "dependencies": [
+        "T004",
+        "T008",
+        "T023"
+      ],
+      "references": [
+        "base-05",
+        "16.1",
+        "16.2",
+        "16.3",
+        "17.1",
+        "17.2"
+      ],
+      "area": "Features/Settings; Infrastructure/Preferences/",
+      "goal": "Разделить app preferences, collection settings и модальные drafts.",
+      "implementation": [
+        "Создать Основные/Повторение/Карточки/Данные, без пятой вкладки hotkeys.",
+        "Добавить тему/язык и начальные учебные параметры с валидируемым autosave.",
+        "Хранить внешний вид в UserDefaults, учебные настройки в SQLite; на ошибке показывать сохранённое значение."
+      ],
+      "acceptance": [
+        "Настройки переживают перезапуск и не смешиваются с editor drafts.",
+        "Невалидное промежуточное число не фиксируется."
+      ],
+      "verification": "Изменение темы/лимита, недопустимый ввод и эмуляция ошибки сохранения.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-05",
+        "16.1",
+        "16.2",
+        "16.3",
+        "17.1",
+        "17.2"
+      ]
+    },
+    {
+      "id": "T026",
+      "title": "Добавить главные команды и keyboard routing",
+      "dependencies": [
+        "T002",
+        "T019",
+        "T025"
+      ],
+      "references": [
+        "20.4",
+        "16.4"
+      ],
+      "area": "App/Commands/; Features/Navigation/",
+      "goal": "Использовать одни действия из меню, кнопок и клавиш.",
+      "implementation": [
+        "Завести command IDs, focused context и маршруты главных разделов.",
+        "Добавить стандартные create/edit/import/settings действия с disabled conditions.",
+        "Для Study маршрутизировать Space/1–4 по состоянию и не перехватывать ввод текста/модальный диалог."
+      ],
+      "acceptance": [
+        "Одна команда имеет одинаковый результат из разных точек входа.",
+        "В активном поле Space и цифры вводятся, а не ставят оценку."
+      ],
+      "verification": "Клавиатурный проход Today → study → editor и проверка отключённых menu items.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "20.4",
+        "16.4"
+      ]
+    },
+    {
+      "id": "T027",
+      "title": "Сделать CSV и собственный экспорт данных",
+      "dependencies": [
+        "T009",
+        "T011",
+        "T014",
+        "T016"
+      ],
+      "references": [
+        "12.1",
+        "13.3",
+        "13.4",
+        "24.2",
+        "24.3"
+      ],
+      "area": "Infrastructure/ImportExport/",
+      "goal": "Дать начальный перенос содержимого и родную точную копию.",
+      "implementation": [
+        "Написать потоковый CSV/TSV parser с quoted multiline, Unicode и diagnostics.",
+        "Экспортировать согласованный CSV и versioned cardsdeck через save panel.",
+        "Разделить format capabilities: CSV без progress/media payload, точная backup-копия отдельным форматом."
+      ],
+      "acceptance": [
+        "Файл с кавычками и переносами не ломает строки.",
+        "Собственные архивы не выдаются за APKG, неподдержанные опции неактивны."
+      ],
+      "verification": "Round trip текста, повреждённая кодировка, отмена панели и запись в недоступную папку.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "12.1",
+        "13.3",
+        "13.4",
+        "24.2",
+        "24.3"
+      ]
+    },
+    {
+      "id": "T028",
+      "title": "Реализовать первичную статистику",
+      "dependencies": [
+        "T010",
+        "T020",
+        "T022"
+      ],
+      "references": [
+        "base-03",
+        "14.4"
+      ],
+      "area": "Core/Queries/Stats; Features/Statistics/",
+      "goal": "Показывать измерения из журнала оценок.",
+      "implementation": [
+        "Создать StatsQueryService с effective events и едиными day keys.",
+        "Показать количества, grade breakdown, active duration и простую активность Swift Charts.",
+        "Нулевые данные отличать от 0%/100%; подписи объясняют оценки против уникальных Card."
+      ],
+      "acceptance": [
+        "Undo меняет все связанные метрики согласованно.",
+        "Графики не используют числа из PNG вместо реальных запросов."
+      ],
+      "verification": "Сверка ручного fixture log со всеми показателями, пустой период и отменённая оценка.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-03",
+        "14.4"
+      ]
+    },
+    {
+      "id": "T029",
+      "title": "Сделать удаление карточки с отменой 5 секунд",
+      "dependencies": [
+        "T008",
+        "T014",
+        "T016",
+        "T020"
+      ],
+      "references": [
+        "11.4"
+      ],
+      "area": "Core/UseCases/Delete; Features/Library/",
+      "goal": "Удалять выбранную Card без мгновенной потери содержимого.",
+      "implementation": [
+        "Показать подтверждение с областью удаления и связанной Note.",
+        "Записать tombstone/suppression/deletion batch, исключить из queue/list.",
+        "Показать Undo на 5 секунд; delayed purge не удаляет media активного undo."
+      ],
+      "acceptance": [
+        "Cancel не меняет данные; Undo возвращает Card и её прогресс.",
+        "Поздний Save Note не создаёт удалённый вариант снова."
+      ],
+      "verification": "Cancel/delete/undo/timeout и restart во время окна отмены; fake monotonic clock.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "11.4"
+      ]
+    },
+    {
+      "id": "T030",
+      "title": "Принять первую рабочую вертикаль",
+      "dependencies": [
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T012"
+      ],
+      "references": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06",
+        "01",
+        "06",
+        "07",
+        "09"
+      ],
+      "area": "UITests/ и docs/acceptance/",
+      "goal": "Проверить реальное приложение до расширения объёма.",
+      "implementation": [
+        "Пройти create deck → create Note → study → reveal → четыре grade paths → stats → reopen.",
+        "Проверить CSV export и точное восстановление native backup в отдельную коллекцию.",
+        "Зафиксировать visual differences и оставшиеся функции, не объявляя MVP полным дизайном."
+      ],
+      "acceptance": [
+        "Сквозной сценарий работает offline и сохраняет данные.",
+        "Нет незакрытых дефектов потери данных или двойной оценки."
+      ],
+      "verification": "XCUITest smoke плюс ручной запуск Release arm64; приложить протокол и screenshots.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M1",
+      "stateIDs": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06",
+        "01.1",
+        "01.2",
+        "01.3",
+        "01.4",
+        "06.1",
+        "06.2",
+        "06.3",
+        "06.4",
+        "07.1",
+        "07.2",
+        "07.3",
+        "07.4",
+        "09.1",
+        "09.2",
+        "09.3",
+        "09.4"
+      ]
+    },
+    {
+      "id": "T031",
+      "title": "Добавить дерево, сетку и перемещение колод",
+      "dependencies": [
+        "T013",
+        "T030"
+      ],
+      "references": [
+        "base-02",
+        "03",
+        "04.3",
+        "21.4"
+      ],
+      "area": "Features/Decks; Core/UseCases/Decks",
+      "goal": "Организовать вложенные колоды и альтернативные виды списка.",
+      "implementation": [
+        "Добавить parent/child query, disclosure, grid/list toggle и favorite filter.",
+        "Реализовать MoveDeck с проверкой циклов и собственного поддерева.",
+        "Сохранять выбранный вид/раскрытие как UI preferences, при пустом фильтре предлагать reset."
+      ],
+      "acceptance": [
+        "Нельзя создать цикл или переместить колоду в себя.",
+        "Сетка и дерево показывают согласованные счётчики и избранное."
+      ],
+      "verification": "Дерево глубиной несколько уровней, move/undo при поддержке команды и пустой фильтр.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "base-02",
+        "03.1",
+        "03.2",
+        "03.3",
+        "03.4",
+        "04.3",
+        "21.4"
+      ]
+    },
+    {
+      "id": "T032",
+      "title": "Сделать меню, свойства и настройку занятия",
+      "dependencies": [
+        "T018",
+        "T023",
+        "T031"
+      ],
+      "references": [
+        "05.1",
+        "05.2",
+        "05.3"
+      ],
+      "area": "Features/Decks/Inspectors; Features/Study/Setup",
+      "goal": "Связать действия колоды с понятным запуском занятия.",
+      "implementation": [
+        "Добавить overflow menu с доступностью команд по контексту.",
+        "Сделать inspector свойств и настройку new/review/session limits без изменения постоянного preset.",
+        "Начинать сессию из validated scope; показать точные значения и причину недоступности Start."
+      ],
+      "acceptance": [
+        "Меню не предлагает активных пустых заглушек.",
+        "Настройка сессии влияет на выбранное занятие, не скрыто меняет лимиты навсегда."
+      ],
+      "verification": "Все menu routes, пустая колода, child scope и сохранение постоянных настроек после Cancel.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "05.1",
+        "05.2",
+        "05.3"
+      ]
+    },
+    {
+      "id": "T033",
+      "title": "Удалять колоды с явной областью последствий",
+      "dependencies": [
+        "T029",
+        "T031"
+      ],
+      "references": [
+        "04.4"
+      ],
+      "area": "Core/UseCases/Decks/Delete; Features/Decks",
+      "goal": "Безопасно удалить колоду, её потомков и входящие Card.",
+      "implementation": [
+        "Собрать affected IDs, количество Card/Notes и вложенных колод до подтверждения.",
+        "Применить tombstones одной командой, общие Notes не удалять при живых вариантах в других колодах.",
+        "Перевести открытые экраны и очередь в корректное состояние после commit."
+      ],
+      "acceptance": [
+        "Подтверждение называет колоду и объём удаления.",
+        "Связанные варианты за пределами выбранного поддерева остаются доступны."
+      ],
+      "verification": "Cancel, вложенное удаление, общая Note в двух колодах и сбой транзакции.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "04.4"
+      ]
+    },
+    {
+      "id": "T034",
+      "title": "Сделать глобальный поиск и слово дня",
+      "dependencies": [
+        "T010",
+        "T016",
+        "T021",
+        "T023"
+      ],
+      "references": [
+        "02.1",
+        "02.2",
+        "02.4"
+      ],
+      "area": "Features/Today/Search; Core/Queries",
+      "goal": "Находить карточки/колоды и показывать локальное слово дня.",
+      "implementation": [
+        "Добавить toolbar search popover с группами Card/Deck, keyboard selection и empty action.",
+        "Выбор результата открывает существующий route, не создаёт копию Note.",
+        "Выбирать слово дня из локальной коллекции детерминированно по дню; Другое слово исключает текущее, озвучивание общее."
+      ],
+      "acceptance": [
+        "Поиск по panel-like special symbols безопасен и не блокирует UI.",
+        "Без подходящих локальных слов показывается пустое состояние без внешнего запроса."
+      ],
+      "verification": "Keyboard поиск/переход, zero results, коллекция из одной записи и смена дня.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "02.1",
+        "02.2",
+        "02.4"
+      ]
+    },
+    {
+      "id": "T035",
+      "title": "Сделать внутренний центр уведомлений",
+      "dependencies": [
+        "T008",
+        "T011",
+        "T023"
+      ],
+      "references": [
+        "02.3"
+      ],
+      "area": "Features/Today/Notifications; Core/UseCases",
+      "goal": "Показывать результаты локальных операций и напоминания внутри приложения.",
+      "implementation": [
+        "Ввести notification kinds, read/unread и ограничение истории сообщений.",
+        "Публиковать backup success/error только по фактическому результату.",
+        "Сделать popover с Mark all read и переходом к связанному разделу."
+      ],
+      "acceptance": [
+        "Read state сохраняется между запусками.",
+        "Сообщение о запланированном reminder не утверждает доставку системного баннера."
+      ],
+      "verification": "Пустой/наполненный popover, операция с ошибкой, mark read и reopen.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "02.3"
+      ]
+    },
+    {
+      "id": "T036",
+      "title": "Доработать редактор и вложения",
+      "dependencies": [
+        "T009",
+        "T015",
+        "T021"
+      ],
+      "references": [
+        "09.3",
+        "09.4",
+        "22.2",
+        "22.3"
+      ],
+      "area": "Features/Editor; DesignSystem/RichText",
+      "goal": "Добавить управляемое форматирование и медиа в EditorDraft.",
+      "implementation": [
+        "Реализовать ограниченный rich text AST и toolbar bold/italic/underline.",
+        "Добавить выбор изображения/аудио, preview и подтверждение удаления attachment.",
+        "Разделить Apply в медиа-диалоге и Save Note; Cancel очищает временный staging без правки сохранённой Note."
+      ],
+      "acceptance": [
+        "Форматирование сохраняется в структурированном виде и восстанавливается.",
+        "Удаление вложения не удаляет общий файл другой записи."
+      ],
+      "verification": "Открыть/применить/отменить вложение, invalid media и round trip formatting.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "09.3",
+        "09.4",
+        "22.2",
+        "22.3"
+      ]
+    },
+    {
+      "id": "T037",
+      "title": "Добавить Reverse, Cloze и Typed варианты",
+      "dependencies": [
+        "T014",
+        "T015",
+        "T017",
+        "T019",
+        "T036"
+      ],
+      "references": [
+        "08",
+        "22.1"
+      ],
+      "area": "Core/Study/Variants; Features/Editor/Study",
+      "goal": "Реализовать типы учебных карточек из основного набора.",
+      "implementation": [
+        "Определить стабильные variant keys и генерацию нескольких Cards без смены ID существующих.",
+        "Показывать обратное направление и cloze скрытие через общую render model.",
+        "Typed draft раскрывается Показать ответ; сравнение grapheme-aware, оценку пользователь выбирает сам."
+      ],
+      "acceptance": [
+        "Каждый вариант имеет независимое расписание.",
+        "Изменение текста не сбрасывает прогресс; 1–4 не вводят оценку из активного поля."
+      ],
+      "verification": "Многословный ввод, Unicode, добавление/удаление cloze и сохранность existing schedule.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "08.1",
+        "08.2",
+        "08.3",
+        "08.4",
+        "22.1"
+      ]
+    },
+    {
+      "id": "T038",
+      "title": "Добавить теги и массовое назначение",
+      "dependencies": [
+        "T008",
+        "T015",
+        "T016"
+      ],
+      "references": [
+        "21.1",
+        "21.2",
+        "21.3"
+      ],
+      "area": "Core/UseCases/Tags; Features/Library/Editor",
+      "goal": "Организовать Note через единые теги.",
+      "implementation": [
+        "Сделать picker существующих тегов, create с цветом и duplicate validation.",
+        "В editor хранить выбор в draft, в bulk dialog явно разделить add/remove sets.",
+        "Дедуплицировать выбранные NoteID, если отмечены несколько Cards одной записи."
+      ],
+      "acceptance": [
+        "Теги одинаковы у связанных вариантов Note.",
+        "Массовое действие показывает число Card и уникальных Notes, без двойных изменений."
+      ],
+      "verification": "Duplicate tag, mixed selection и Cancel массового диалога.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "21.1",
+        "21.2",
+        "21.3"
+      ]
+    },
+    {
+      "id": "T039",
+      "title": "Расширить библиотеку фильтрами и страницами",
+      "dependencies": [
+        "T010",
+        "T016",
+        "T031",
+        "T037",
+        "T038"
+      ],
+      "references": [
+        "10.1",
+        "20.1",
+        "20.2",
+        "20.3"
+      ],
+      "area": "Features/Library; Core/Queries",
+      "goal": "Поддержать реальные фильтры и устойчивую сортировку больших списков.",
+      "implementation": [
+        "Добавить deck/subtree, status, type, tag filters и reset chips.",
+        "Сортировать по доступным whitelist полям; сохранять selection по CardID.",
+        "Показать pagination/count и корректировать страницу после удаления последней строки."
+      ],
+      "acceptance": [
+        "Пустой результат отличается от пустой коллекции.",
+        "Поиск, фильтры и сортировка выполняются на SQL-уровне, не в загруженном массиве."
+      ],
+      "verification": "Комбинации фильтров и границы страниц на synthetic 50k Cards.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "10.1",
+        "20.1",
+        "20.2",
+        "20.3"
+      ]
+    },
+    {
+      "id": "T040",
+      "title": "Реализовать массовый выбор и перенос Card",
+      "dependencies": [
+        "T031",
+        "T038",
+        "T039"
+      ],
+      "references": [
+        "10.2",
+        "10.3",
+        "10.4"
+      ],
+      "area": "Features/Library/Bulk; Core/UseCases",
+      "goal": "Применять команды к явному набору выбранных карточек.",
+      "implementation": [
+        "Добавить selection toolbar и контекстное меню одинаковых действий.",
+        "Реализовать MoveCards с preview количества, destination validation и revision проверки.",
+        "Определить Select all: текущая страница либо все результаты отдельным подтверждённым query snapshot."
+      ],
+      "acceptance": [
+        "Выбор не расширяется незаметно при смене фильтра.",
+        "При конфликте показана причина, не получается половина незаявленного переноса."
+      ],
+      "verification": "Перенос нескольких вариантов общей Note, смена фильтра и конфликт revision.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "10.2",
+        "10.3",
+        "10.4"
+      ]
+    },
+    {
+      "id": "T041",
+      "title": "Сделать историю, приостановку и сброс прогресса",
+      "dependencies": [
+        "T020",
+        "T029",
+        "T039"
+      ],
+      "references": [
+        "11.1",
+        "11.2",
+        "11.3"
+      ],
+      "area": "Features/Library/History; Core/UseCases",
+      "goal": "Показывать и изменять учебное состояние без подмены истории.",
+      "implementation": [
+        "Добавить history inspector с grade/date/interval и отметкой voided.",
+        "Suspend/resume исключает/возвращает Card в очередь без смены расписания.",
+        "Reset после подтверждения создаёт новую epoch и fresh schedule; текущая сессия обновляет eligibility."
+      ],
+      "acceptance": [
+        "Старая активность остаётся исторической после reset.",
+        "Suspend не удаляет Note и не считается оценкой."
+      ],
+      "verification": "Suspend во время занятия, reset с отменой и сравнение исторических метрик.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "11.1",
+        "11.2",
+        "11.3"
+      ]
+    },
+    {
+      "id": "T042",
+      "title": "Добавить фильтры и детали статистики",
+      "dependencies": [
+        "T028",
+        "T031"
+      ],
+      "references": [
+        "14"
+      ],
+      "area": "Features/Statistics; Core/Queries/Stats",
+      "goal": "Изучать выбранный период и колоду на согласованных данных.",
+      "implementation": [
+        "Добавить date-range picker, deck scope и day tooltip/inspector.",
+        "Использовать полуоткрытые границы периода и исторический deck snapshot.",
+        "Разделить loading/error/no-data и сохранить фильтр при переходе в детали."
+      ],
+      "acceptance": [
+        "Сумма дневных значений совпадает с итогом периода.",
+        "Перенос Card сегодня не меняет прошлую активность выбранной колоды."
+      ],
+      "verification": "DST-период, удалённая колода, пустой интервал и Undo в выбранном дне.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "14.1",
+        "14.2",
+        "14.3",
+        "14.4"
+      ]
+    },
+    {
+      "id": "T043",
+      "title": "Сделать удержание, прогноз и календарь",
+      "dependencies": [
+        "T017",
+        "T028",
+        "T042"
+      ],
+      "references": [
+        "15"
+      ],
+      "area": "Features/Statistics/Details; Core/Queries/Stats",
+      "goal": "Добавить подробные разрезы без ложной точности.",
+      "implementation": [
+        "Разделить success ratio и model retrievability с пояснениями.",
+        "Прогноз строить по текущим dueAt, сравнение периодов нормализовать по выбранной длине.",
+        "Построить годовой календарь с текстовыми подробностями дня и легендой."
+      ],
+      "acceptance": [
+        "Forecast явно обозначает допущения и не выдаёт будущие оценки за данные.",
+        "Нулевой denominator отображается как отсутствие данных."
+      ],
+      "verification": "Проверка формул на ручном журнале и доступного текстового эквивалента графиков.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "15.1",
+        "15.2",
+        "15.3",
+        "15.4"
+      ]
+    },
+    {
+      "id": "T044",
+      "title": "Доработать настройки повторения и карточек",
+      "dependencies": [
+        "T021",
+        "T025",
+        "T037"
+      ],
+      "references": [
+        "16.1",
+        "16.2",
+        "17.1",
+        "17.2",
+        "23.1",
+        "23.2",
+        "23.3"
+      ],
+      "area": "Features/Settings/",
+      "goal": "Связать все основные настройки с реальным поведением.",
+      "implementation": [
+        "Реализовать limits, desired retention и параметры вида Card с валидируемым autosave.",
+        "Добавить text size, examples/pronunciation и UK/US preview.",
+        "Локализовать interface strings и форматирование чисел; изменение учебной policy версионировать, не переписывать прошлое."
+      ],
+      "acceptance": [
+        "Изменение параметра отражается в preview и следующем допустимом сценарии.",
+        "Ни одно изменение темы/языка не меняет Notes или историю."
+      ],
+      "verification": "Границы чисел, перезапуск, два окна настроек и unavailable voice.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "16.1",
+        "16.2",
+        "17.1",
+        "17.2",
+        "23.1",
+        "23.2",
+        "23.3"
+      ]
+    },
+    {
+      "id": "T045",
+      "title": "Настроить системные напоминания и разрешения",
+      "dependencies": [
+        "T025",
+        "T035",
+        "T044"
+      ],
+      "references": [
+        "17.3",
+        "23.3",
+        "24.4",
+        "42.2"
+      ],
+      "area": "Infrastructure/Platform/Notifications; Features/Settings",
+      "goal": "Планировать локальные reminders по выбору пользователя.",
+      "implementation": [
+        "Запрашивать notification authorization при включении, не при первом запуске приложения.",
+        "Хранить время/дни, обновлять и отменять системные requests без дублей.",
+        "Показывать denied/restricted состояние, сохранять выбранное время и открывать системные настройки."
+      ],
+      "acceptance": [
+        "Выключение удаляет соответствующие pending requests.",
+        "Отказ не блокирует настройки и не выдаётся за разрешение."
+      ],
+      "verification": "Allowed/denied, смена времени, timezone и запуск без ожидаемого системного баннера.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "17.3",
+        "23.3",
+        "24.4",
+        "42.2"
+      ]
+    },
+    {
+      "id": "T046",
+      "title": "Сделать UI копий и восстановления",
+      "dependencies": [
+        "T011",
+        "T025",
+        "T035"
+      ],
+      "references": [
+        "16.3",
+        "17.4",
+        "23.4",
+        "24.4"
+      ],
+      "area": "Features/Settings/Data/",
+      "goal": "Дать пользователю контроль резервных копий.",
+      "implementation": [
+        "Показать список, дату, размер, состояние проверки и создание копии с прогрессом.",
+        "Восстановление подтверждает замену и вызывает staging/swap service.",
+        "Удаление копии отдельно подтверждается, default retention не удаляет pinned backups."
+      ],
+      "acceptance": [
+        "Ошибка создания не показывает success и не удаляет предыдущую копию.",
+        "Cancel восстановления сохраняет текущую коллекцию."
+      ],
+      "verification": "Создание/удаление/восстановление, corrupt backup и отказ доступа папке.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "16.3",
+        "17.4",
+        "23.4",
+        "24.4"
+      ]
+    },
+    {
+      "id": "T047",
+      "title": "Сделать редактируемые горячие клавиши",
+      "dependencies": [
+        "T025",
+        "T026"
+      ],
+      "references": [
+        "16.4"
+      ],
+      "area": "Features/Settings/Hotkeys; App/Commands",
+      "goal": "Настраивать сочетания через диалог в Основные.",
+      "implementation": [
+        "Создать draft mapping и recorder сочетаний с reserved-key rules.",
+        "Проверять конфликты внутри одного контекста, отдельно учитывать системные/text editing shortcuts.",
+        "Apply сохраняет допустимую конфигурацию, Reset/Cancel имеют явную семантику."
+      ],
+      "acceptance": [
+        "Горячие клавиши не являются главной вкладкой.",
+        "Conflict блокирует Apply, Cancel/Escape оставляет предыдущий mapping."
+      ],
+      "verification": "Записать дубликат, отменить, сбросить и проверить Study shortcuts в текстовом поле.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "16.4"
+      ]
+    },
+    {
+      "id": "T048",
+      "title": "Унифицировать несохранённость и модальные возвраты",
+      "dependencies": [
+        "T015",
+        "T025",
+        "T036",
+        "T040",
+        "T046",
+        "T047"
+      ],
+      "references": [
+        "18.4",
+        "22.4"
+      ],
+      "area": "Features/Common/Dialogs; App/Navigation",
+      "goal": "Предотвращать потерю editor draft при навигации.",
+      "implementation": [
+        "Ввести общий unsaved decision flow для закрытия окна, смены раздела и коллекции.",
+        "Проверить различие editor Save, settings autosave и modal Apply.",
+        "Восстанавливать исходный фокус, не применять draft по Escape и не запускать destructive default Return."
+      ],
+      "acceptance": [
+        "Save/Discard/Cancel имеют одинаковую семантику во всех входах.",
+        "Ошибка Save оставляет editor draft открытым."
+      ],
+      "verification": "Матрица закрытия кнопкой окна, Escape, menu Quit и route change.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "18.4",
+        "22.4"
+      ]
+    },
+    {
+      "id": "T049",
+      "title": "Закрыть пустые, ошибочные и загрузочные состояния",
+      "dependencies": [
+        "T004",
+        "T021",
+        "T023",
+        "T039",
+        "T044",
+        "T046"
+      ],
+      "references": [
+        "18",
+        "19"
+      ],
+      "area": "CardsDesignSystem; CardsFeatures/",
+      "goal": "Применить общие состояния к основным экранам.",
+      "implementation": [
+        "Пройти loading/empty/error/disabled/focus для каждого feature.",
+        "Добавить конкретные next actions вместо технических stack traces.",
+        "Убрать фиктивные проценты прогресса, проверить retry/cancel и повторный запуск операции."
+      ],
+      "acceptance": [
+        "Нет вечного spinner после ошибки.",
+        "Цвет не единственный признак ошибки и недоступности."
+      ],
+      "verification": "Fault-injection walkthrough всех основных экранов; ручной keyboard focus audit.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "18.1",
+        "18.2",
+        "18.3",
+        "18.4",
+        "19.1",
+        "19.2",
+        "19.3",
+        "19.4"
+      ]
+    },
+    {
+      "id": "T050",
+      "title": "Адаптировать окно и системные панели",
+      "dependencies": [
+        "T026",
+        "T036",
+        "T039",
+        "T046",
+        "T048"
+      ],
+      "references": [
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4"
+      ],
+      "area": "App/Windows; Infrastructure/Platform/FilePanels",
+      "goal": "Сохранить работоспособность в компактном окне macOS.",
+      "implementation": [
+        "Скрывать inspector за кнопкой, упрощать второстепенные колонки и сворачивать sidebar.",
+        "Использовать нативные Open/Save, overwrite confirmation и correct content types.",
+        "Проверить размеры/скролл диалогов и доступность основной кнопки при увеличенном тексте."
+      ],
+      "acceptance": [
+        "На предложенном компактном размере нет обрезанных обязательных действий.",
+        "Cancel системной панели не создаёт пустой файл и не меняет draft."
+      ],
+      "verification": "Обычное/компактное окно, крупный текст и sandbox file panel smoke.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4"
+      ]
+    },
+    {
+      "id": "T051",
+      "title": "Закончить мастер CSV импорта",
+      "dependencies": [
+        "T027",
+        "T038",
+        "T039",
+        "T048"
+      ],
+      "references": [
+        "12",
+        "13.1",
+        "13.2",
+        "13.3"
+      ],
+      "area": "Features/Import; Infrastructure/ImportExport",
+      "goal": "Импортировать содержимое через preview и явные решения.",
+      "implementation": [
+        "Сделать шаги file/mapping/preview/staging/apply/result с back/cancel.",
+        "Определять duplicate candidates, сохранять выбранное решение и обязательные поля.",
+        "Считать Notes/Cards отдельно; invalid rows показывать до применения, финальный commit атомарный."
+      ],
+      "acceptance": [
+        "Отмена до commit не оставляет часть колоды.",
+        "Повторный импорт по внешнему источнику управляем, одно слово с другим значением не теряется молча."
+      ],
+      "verification": "Quoted CSV, duplicate policies, invalid mapping и crash before/after final commit.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "12.1",
+        "12.2",
+        "12.3",
+        "12.4",
+        "13.1",
+        "13.2",
+        "13.3"
+      ]
+    },
+    {
+      "id": "T052",
+      "title": "Принять интерфейс основного набора",
+      "dependencies": [
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T030"
+      ],
+      "references": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24"
+      ],
+      "area": "docs/acceptance/core-ui; UITests/",
+      "goal": "Проверить покрытие листов 01–24 без обещания ещё не принятой APKG-совместимости.",
+      "implementation": [
+        "Пройти каждый panel ID по TRACEABILITY и сохранить результат/отличие.",
+        "Проверить main navigation, редактор, Study, settings и errors как связный сценарий.",
+        "Отметить APKG и hardening как следующий milestone, не оставлять доступных заглушек."
+      ],
+      "acceptance": [
+        "Все 96 основных панелей имеют реализованное состояние либо явный открытый дефект.",
+        "Нет нарушения правил reveal/ratings, modal Cancel и autosave."
+      ],
+      "verification": "Ручная state matrix, targeted XCUITests и два theme/window variants.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M2",
+      "stateIDs": [
+        "01.1",
+        "01.2",
+        "01.3",
+        "01.4",
+        "02.1",
+        "02.2",
+        "02.3",
+        "02.4",
+        "03.1",
+        "03.2",
+        "03.3",
+        "03.4",
+        "04.1",
+        "04.2",
+        "04.3",
+        "04.4",
+        "05.1",
+        "05.2",
+        "05.3",
+        "05.4",
+        "06.1",
+        "06.2",
+        "06.3",
+        "06.4",
+        "07.1",
+        "07.2",
+        "07.3",
+        "07.4",
+        "08.1",
+        "08.2",
+        "08.3",
+        "08.4",
+        "09.1",
+        "09.2",
+        "09.3",
+        "09.4",
+        "10.1",
+        "10.2",
+        "10.3",
+        "10.4",
+        "11.1",
+        "11.2",
+        "11.3",
+        "11.4",
+        "12.1",
+        "12.2",
+        "12.3",
+        "12.4",
+        "13.1",
+        "13.2",
+        "13.3",
+        "13.4",
+        "14.1",
+        "14.2",
+        "14.3",
+        "14.4",
+        "15.1",
+        "15.2",
+        "15.3",
+        "15.4",
+        "16.1",
+        "16.2",
+        "16.3",
+        "16.4",
+        "17.1",
+        "17.2",
+        "17.3",
+        "17.4",
+        "18.1",
+        "18.2",
+        "18.3",
+        "18.4",
+        "19.1",
+        "19.2",
+        "19.3",
+        "19.4",
+        "20.1",
+        "20.2",
+        "20.3",
+        "20.4",
+        "21.1",
+        "21.2",
+        "21.3",
+        "21.4",
+        "22.1",
+        "22.2",
+        "22.3",
+        "22.4",
+        "23.1",
+        "23.2",
+        "23.3",
+        "23.4",
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4"
+      ]
+    },
+    {
+      "id": "T053",
+      "title": "Укрепить согласованность backup и медиа",
+      "dependencies": [
+        "T011",
+        "T046",
+        "T052"
+      ],
+      "references": [
+        "23.4",
+        "36.4"
+      ],
+      "area": "Infrastructure/Backup; Tests/FaultInjection",
+      "goal": "Закрыть реальные окна сбоя между БД, файлами и архивом.",
+      "implementation": [
+        "Уточнить snapshot barrier и запрет media GC во время копирования.",
+        "Проверить hash manifest, retention только после успешной проверки и pinned backups.",
+        "Реализовать внешнее swap recovery и cleanup старых staging по безопасным правилам."
+      ],
+      "acceptance": [
+        "Каждая ссылка snapshot ведёт в присутствующий verified файл.",
+        "После crash restore выбирается целая старая или целая новая коллекция."
+      ],
+      "verification": "Fault matrix по каждому checkpoint с concurrent read и недостатком места.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "23.4",
+        "36.4"
+      ]
+    },
+    {
+      "id": "T054",
+      "title": "Проверить миграции и recovery открытия",
+      "dependencies": [
+        "T006",
+        "T007",
+        "T011",
+        "T053"
+      ],
+      "references": [
+        "26.3",
+        "36.1"
+      ],
+      "area": "Infrastructure/Migrations; Features/Onboarding",
+      "goal": "Обновлять пользовательскую коллекцию с проверенной копией.",
+      "implementation": [
+        "Создать fixtures каждой поддержанной старой схемы.",
+        "Перед миграцией проверить место/backup, показывать этап и запретить конкурирующую запись.",
+        "Более новую схему отклонять, повреждённую открывать только диагностическим безопасным путём."
+      ],
+      "acceptance": [
+        "Неудачная миграция сохраняет исходный контейнер и рабочую копию.",
+        "Версия схемы повышается только после commit."
+      ],
+      "verification": "Upgrade всех fixtures, unknown future version и прерывание процесса во время миграции.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "26.3",
+        "36.1"
+      ]
+    },
+    {
+      "id": "T055",
+      "title": "Определить контракт совместимости APKG",
+      "dependencies": [
+        "T003",
+        "T027",
+        "T037",
+        "T051"
+      ],
+      "references": [
+        "05.4",
+        "12.1",
+        "13.3"
+      ],
+      "area": "docs/APKG_COMPATIBILITY.md; Tests/Fixtures/APKG",
+      "goal": "Превратить поддержку Anki в проверяемую матрицу.",
+      "implementation": [
+        "Получить законно созданные собственные fixtures legacy/modern с Basic/Reverse/Cloze/Typed/media/progress.",
+        "Описать container/schema/compression producer/options и supported/rejected поведение.",
+        "Разделить read/write/progress support; утвердить обязательный legacy-compatible профиль и понятные отказы прочих."
+      ],
+      "acceptance": [
+        "Каждый заявленный вариант имеет fixture и ожидаемый результат.",
+        "ZIP parser не объявлен полной поддержкой APKG."
+      ],
+      "verification": "Прочитать manifest/структуру всех fixtures без изменения рабочей коллекции.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "05.4",
+        "12.1",
+        "13.3"
+      ]
+    },
+    {
+      "id": "T056",
+      "title": "Реализовать APKG reader и mapping",
+      "dependencies": [
+        "T037",
+        "T051",
+        "T055"
+      ],
+      "references": [
+        "12.1",
+        "12.2",
+        "12.3"
+      ],
+      "area": "Infrastructure/ImportExport/APKG/",
+      "goal": "Преобразовывать поддержанные пакеты в общий ImportPlan.",
+      "implementation": [
+        "Распознавать вариант до распаковки и применять resource/path limits.",
+        "Читать external Notes/Cards/types/decks и создавать стабильное ID mapping.",
+        "Конвертировать безопасную разметку, отмечать неподдержанные шаблоны/поля в diagnostics."
+      ],
+      "acceptance": [
+        "Неподдержанный формат отклоняется до записи с инструкцией.",
+        "Preview не исполняет JavaScript и не загружает remote media."
+      ],
+      "verification": "Reader fixtures всех supported/rejected rows матрицы, path traversal и corrupt DB.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "12.1",
+        "12.2",
+        "12.3"
+      ]
+    },
+    {
+      "id": "T057",
+      "title": "Добавить APKG медиа и повторный импорт",
+      "dependencies": [
+        "T009",
+        "T038",
+        "T051",
+        "T056"
+      ],
+      "references": [
+        "12.4",
+        "13.1",
+        "13.2"
+      ],
+      "area": "Infrastructure/ImportExport/APKG; Features/Import",
+      "goal": "Включить пакеты Anki в безопасный общий pipeline.",
+      "implementation": [
+        "Разобрать media mapping, проверить hashes/UTI, опубликовать через MediaStore.",
+        "Сохранять external IDs и конфликты local/imported revisions; preview политики дублей.",
+        "Применять staging атомарно, формировать added/updated/skipped/error report."
+      ],
+      "acceptance": [
+        "Повтор одного пакета не размножает внешние записи.",
+        "Cancel и corrupt media не оставляют наполовину импортированную колоду."
+      ],
+      "verification": "Re-import после локальной правки, missing media и fault injection до commit.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "12.4",
+        "13.1",
+        "13.2"
+      ]
+    },
+    {
+      "id": "T058",
+      "title": "Реализовать APKG экспорт содержимого",
+      "dependencies": [
+        "T027",
+        "T037",
+        "T055",
+        "T056"
+      ],
+      "references": [
+        "05.4",
+        "13.4",
+        "24.3"
+      ],
+      "area": "Infrastructure/ImportExport/APKG/",
+      "goal": "Создавать поддержанный Anki deck package без истории.",
+      "implementation": [
+        "Преобразовать собственные поля/варианты в матрицу поддержанных Anki note types.",
+        "Экспортировать deck subtree, tags и media mapping с корректными внешними IDs.",
+        "Записывать временный архив, проверить чтение/целостность, затем replace destination."
+      ],
+      "acceptance": [
+        "Экспорт открывается в чистом профиле тестовой Anki.",
+        "Несовместимый собственный шаблон имеет preview потерь или явный отказ."
+      ],
+      "verification": "Внешний Anki import для Basic/Reverse/Cloze/Typed и медиа; не только self-round-trip.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "05.4",
+        "13.4",
+        "24.3"
+      ]
+    },
+    {
+      "id": "T059",
+      "title": "Конвертировать поддержанный учебный прогресс",
+      "dependencies": [
+        "T017",
+        "T020",
+        "T041",
+        "T055",
+        "T056",
+        "T058"
+      ],
+      "references": [
+        "05.4",
+        "11.1",
+        "12.3"
+      ],
+      "area": "Infrastructure/ImportExport/SchedulingMapping",
+      "goal": "Поддержать progress только там, где доказана семантическая конверсия.",
+      "implementation": [
+        "Описать conversion table фаз, due dates, history и parameter sets для каждого supported fixture.",
+        "При неполных данных предложить fresh schedule либо явно обозначенную реконструкцию.",
+        "Проверить import/export progress и формировать отчёт о потерях; не приравнивать произвольный чужой ease к FSRS memory."
+      ],
+      "acceptance": [
+        "Точная и приближённая конверсия различимы до подтверждения.",
+        "Unsupported progress не включается молча и не повреждает историю."
+      ],
+      "verification": "Сравнение сроков и состояний в обеих программах на фиксированном clock и fixture.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "05.4",
+        "11.1",
+        "12.3"
+      ]
+    },
+    {
+      "id": "T060",
+      "title": "Связать экспортный UI с реальными возможностями",
+      "dependencies": [
+        "T046",
+        "T051",
+        "T057",
+        "T058",
+        "T059"
+      ],
+      "references": [
+        "05.4",
+        "13.4",
+        "24.3"
+      ],
+      "area": "Features/Export; Features/Decks",
+      "goal": "Предлагать только реализованные комбинации формата и опций.",
+      "implementation": [
+        "Добавить filename, destination, format и include media/progress capabilities.",
+        "Показывать недоступность опций с объяснением и preview несовместимых данных.",
+        "Экспорт завершать success только после проверки final file; добавить Show in Finder."
+      ],
+      "acceptance": [
+        "CSV не обещает перенос прогресса.",
+        "Cancel/ошибка destination не оставляет валидно названный неполный файл."
+      ],
+      "verification": "Матрица форматов/options, overwrite confirmation и отказ файловой системы.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "05.4",
+        "13.4",
+        "24.3"
+      ]
+    },
+    {
+      "id": "T061",
+      "title": "Проверять данные, медиа и ошибки места",
+      "dependencies": [
+        "T009",
+        "T046",
+        "T053",
+        "T054"
+      ],
+      "references": [
+        "36.1",
+        "36.2",
+        "36.3",
+        "36.4"
+      ],
+      "area": "Infrastructure/Maintenance; Features/Settings/Data",
+      "goal": "Находить повреждения и предлагать безопасное исправление.",
+      "implementation": [
+        "Добавить integrity/foreign keys/domain checks и разделённый media scan.",
+        "Missing media исправлять выбором файла, unused media удалять после preview с учётом pending operations.",
+        "Недостаток места и corrupt backup показывать без замены текущей коллекции."
+      ],
+      "acceptance": [
+        "Scan не удаляет найденное автоматически.",
+        "Проверка и исправление различаются командами и подтверждением."
+      ],
+      "verification": "Missing/hash-mismatch/unreferenced assets, disk-full и неверная backup schema.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "36.1",
+        "36.2",
+        "36.3",
+        "36.4"
+      ]
+    },
+    {
+      "id": "T062",
+      "title": "Проверить Sandbox и долговременный файловый доступ",
+      "dependencies": [
+        "T027",
+        "T045",
+        "T050",
+        "T060",
+        "T061"
+      ],
+      "references": [
+        "24",
+        "42.3"
+      ],
+      "area": "App/Entitlements; Infrastructure/Platform",
+      "goal": "Обеспечить работу файловых сценариев в реальной sandboxed сборке.",
+      "implementation": [
+        "Добавить минимальные user-selected read/write и bookmark capabilities.",
+        "Проверять stale bookmarks, доступ после перезапуска и корректный stopAccessing scope.",
+        "Запретить рабочую БД в сетевой/синхронизируемой папке; предложить локальное хранилище и экспорт."
+      ],
+      "acceptance": [
+        "Утрата разрешения приводит к повторному выбору, не к зависанию.",
+        "Основной offline сценарий не требует network entitlement."
+      ],
+      "verification": "Sandboxed Release: open/import/export/backup в выбранной внешней папке и revoke access.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4",
+        "42.3"
+      ]
+    },
+    {
+      "id": "T063",
+      "title": "Проверить пределы импорта и больших запросов",
+      "dependencies": [
+        "T039",
+        "T051",
+        "T053",
+        "T057",
+        "T061",
+        "T062"
+      ],
+      "references": [
+        "12.4",
+        "18",
+        "36.3"
+      ],
+      "area": "Tests/Performance; Infrastructure/ImportExport",
+      "goal": "Не блокировать Mac на больших или недоверенных данных.",
+      "implementation": [
+        "Измерить parsing/apply/peak memory на предельном synthetic наборе.",
+        "Проверить ZIP entry/size limits, decode bounds, cancellation и краткость writer barrier.",
+        "Оптимизировать запросы/индексы или документировать shadow-database activation, сохранив атомарность."
+      ],
+      "acceptance": [
+        "Данные выше лимита получают контролируемый отказ.",
+        "Во время разрешённого импорта UI отвечает, частичный результат не публикуется."
+      ],
+      "verification": "Большая легальная коллекция, zip bomb fixture малого размера и отмена анализа.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "12.4",
+        "18.1",
+        "18.2",
+        "18.3",
+        "18.4",
+        "36.3"
+      ]
+    },
+    {
+      "id": "T064",
+      "title": "Принять APKG совместимость на внешнем Anki",
+      "dependencies": [
+        "T055",
+        "T056",
+        "T057",
+        "T058",
+        "T059",
+        "T060",
+        "T063"
+      ],
+      "references": [
+        "05.4",
+        "12",
+        "13"
+      ],
+      "area": "docs/APKG_COMPATIBILITY.md; Tests/Acceptance",
+      "goal": "Подтвердить заявленный объём совместимости независимо от собственного reader.",
+      "implementation": [
+        "Пройти матрицу supported/rejected на конкретной тестовой версии Anki.",
+        "Сверить Note/Card counts, поля, медиа, tags, directions, scheduling и повторный импорт.",
+        "Опубликовать ограничения и воспроизводимые steps рядом с форматом; убрать неподтверждённые обещания UI."
+      ],
+      "acceptance": [
+        "Каждая supported строка имеет pass evidence.",
+        "Rejected варианты распознаны до записи и дают полезное действие."
+      ],
+      "verification": "Двусторонний обмен в чистых профилях с сохранением fixture hashes.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "05.4",
+        "12.1",
+        "12.2",
+        "12.3",
+        "12.4",
+        "13.1",
+        "13.2",
+        "13.3",
+        "13.4"
+      ]
+    },
+    {
+      "id": "T065",
+      "title": "Защитить полный сброс учебных данных",
+      "dependencies": [
+        "T011",
+        "T048",
+        "T061",
+        "T062"
+      ],
+      "references": [
+        "42.4"
+      ],
+      "area": "Features/Settings/Data; Core/UseCases/ResetCollection",
+      "goal": "Отделить полный сброс от удаления карточек и reset настроек.",
+      "implementation": [
+        "Показать имя коллекции, состав потери данных и предложение backup.",
+        "Требовать точное имя в пустом confirmation field; destructive button до совпадения disabled.",
+        "Применять через safe container replacement с recovery, пересоздать контекст без старых callbacks."
+      ],
+      "acceptance": [
+        "Cancel и пустой/неверный текст ничего не удаляют.",
+        "После подтверждения не остаётся старой истории в активной коллекции."
+      ],
+      "verification": "Неверное/точное имя, backup failure, crash swap и stale window callback.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "42.4"
+      ]
+    },
+    {
+      "id": "T066",
+      "title": "Сверить статистику и журнал после всех команд",
+      "dependencies": [
+        "T020",
+        "T028",
+        "T041",
+        "T043",
+        "T059",
+        "T065"
+      ],
+      "references": [
+        "14",
+        "15",
+        "07.4"
+      ],
+      "area": "Tests/Integration/Statistics",
+      "goal": "Убедиться, что измерения не расходятся между экранами.",
+      "implementation": [
+        "Составить reference log с Undo/reset/move/delete/import/progress events.",
+        "Сверить Today, session summary и Statistics по единым определениям.",
+        "Проверить исторические deck snapshots, timezone, zero denominators и rebuild кэша."
+      ],
+      "acceptance": [
+        "Итоги соответствуют эффективным log events, не текущему числу строк Cards.",
+        "Кэш пересоздаётся без потери источника данных."
+      ],
+      "verification": "Параметризованная контрольная таблица метрик до/после каждой команды.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "14.1",
+        "14.2",
+        "14.3",
+        "14.4",
+        "15.1",
+        "15.2",
+        "15.3",
+        "15.4",
+        "07.4"
+      ]
+    },
+    {
+      "id": "T067",
+      "title": "Принять доступность и локализацию основы",
+      "dependencies": [
+        "T044",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T052"
+      ],
+      "references": [
+        "19",
+        "20.4",
+        "23.1",
+        "37.3"
+      ],
+      "area": "CardsFeatures; Resources/Localizable.xcstrings",
+      "goal": "Сделать главные сценарии пригодными для клавиатуры и VoiceOver.",
+      "implementation": [
+        "Пройти основной путь без мыши, назначить labels/values/states и объявления ошибок.",
+        "Проверить plural rules, интервалы и английскую локаль без обрезания строк.",
+        "Проверить контраст реальных цветов, большой текст и reduced motion; записать нерешённые defects."
+      ],
+      "acceptance": [
+        "Пользователь может создать и повторить Card клавиатурой.",
+        "Ни ошибка, ни статистический статус не требуют различения только цвета."
+      ],
+      "verification": "Ручной VoiceOver и keyboard audit плюс targeted UI regression.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "19.1",
+        "19.2",
+        "19.3",
+        "19.4",
+        "20.4",
+        "23.1",
+        "37.3"
+      ]
+    },
+    {
+      "id": "T068",
+      "title": "Принять основную бета-версию",
+      "dependencies": [
+        "T053",
+        "T054",
+        "T055",
+        "T056",
+        "T057",
+        "T058",
+        "T059",
+        "T060",
+        "T061",
+        "T062",
+        "T063",
+        "T064",
+        "T065",
+        "T066",
+        "T067",
+        "T052"
+      ],
+      "references": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24"
+      ],
+      "area": "docs/acceptance/core-beta",
+      "goal": "Закрыть первоначальный объём дизайна с реальным сохранением и переносом данных.",
+      "implementation": [
+        "Пройти state matrix 01–24 и обязательные failure scenarios QUALITY.md.",
+        "Подготовить локальный arm64 Release build и документ с known limitations/APKG matrix.",
+        "Разделить блокирующие дефекты данных от косметических; не называть unsigned beta подписанным релизом."
+      ],
+      "acceptance": [
+        "Основной дизайн реализован и проверен; нет потери данных.",
+        "Backup/restore, импорт/экспорт и accessibility core имеют evidence."
+      ],
+      "verification": "Полный core acceptance на чистой тестовой коллекции и повторном запуске.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M3",
+      "stateIDs": [
+        "01.1",
+        "01.2",
+        "01.3",
+        "01.4",
+        "02.1",
+        "02.2",
+        "02.3",
+        "02.4",
+        "03.1",
+        "03.2",
+        "03.3",
+        "03.4",
+        "04.1",
+        "04.2",
+        "04.3",
+        "04.4",
+        "05.1",
+        "05.2",
+        "05.3",
+        "05.4",
+        "06.1",
+        "06.2",
+        "06.3",
+        "06.4",
+        "07.1",
+        "07.2",
+        "07.3",
+        "07.4",
+        "08.1",
+        "08.2",
+        "08.3",
+        "08.4",
+        "09.1",
+        "09.2",
+        "09.3",
+        "09.4",
+        "10.1",
+        "10.2",
+        "10.3",
+        "10.4",
+        "11.1",
+        "11.2",
+        "11.3",
+        "11.4",
+        "12.1",
+        "12.2",
+        "12.3",
+        "12.4",
+        "13.1",
+        "13.2",
+        "13.3",
+        "13.4",
+        "14.1",
+        "14.2",
+        "14.3",
+        "14.4",
+        "15.1",
+        "15.2",
+        "15.3",
+        "15.4",
+        "16.1",
+        "16.2",
+        "16.3",
+        "16.4",
+        "17.1",
+        "17.2",
+        "17.3",
+        "17.4",
+        "18.1",
+        "18.2",
+        "18.3",
+        "18.4",
+        "19.1",
+        "19.2",
+        "19.3",
+        "19.4",
+        "20.1",
+        "20.2",
+        "20.3",
+        "20.4",
+        "21.1",
+        "21.2",
+        "21.3",
+        "21.4",
+        "22.1",
+        "22.2",
+        "22.3",
+        "22.4",
+        "23.1",
+        "23.2",
+        "23.3",
+        "23.4",
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4"
+      ]
+    },
+    {
+      "id": "T069",
+      "title": "Завершить системные меню, Справку и About",
+      "dependencies": [
+        "T026",
+        "T047",
+        "T068"
+      ],
+      "references": [
+        "25"
+      ],
+      "area": "App/Commands; Features/Help",
+      "goal": "Сделать полноценную интеграцию команд в меню macOS.",
+      "implementation": [
+        "Заполнить App/File/Edit/View/Window/Help реальными actions и стандартными shortcuts.",
+        "Добавить About с версией из bundle и локальную Help по занятиям/файлам.",
+        "Доступность Undo/Redo и Edit-команд определять по активному редактору или session context."
+      ],
+      "acceptance": [
+        "Команды меню совпадают с экранными действиями.",
+        "About не показывает фиктивную версию, Help доступна offline."
+      ],
+      "verification": "Проверить меню в Today, Editor, Study, modal и без активного документа.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "25.1",
+        "25.2",
+        "25.3",
+        "25.4"
+      ]
+    },
+    {
+      "id": "T070",
+      "title": "Добавить обзор интерфейса и состояния запуска",
+      "dependencies": [
+        "T024",
+        "T054",
+        "T068"
+      ],
+      "references": [
+        "26"
+      ],
+      "area": "Features/Onboarding; App/CollectionCoordinator",
+      "goal": "Закрыть расширенные сценарии первого открытия и владения коллекцией.",
+      "implementation": [
+        "Сделать пропускаемый короткий tour с устойчивыми anchors.",
+        "Дать выбор empty/demo/import, не повторяя onboarding после успешного завершения.",
+        "Показать migration progress и collection already open с переходом к владельцу/другому выбору без force overwrite."
+      ],
+      "acceptance": [
+        "Skip tour не теряет работу и не создаёт демонстрационные данные.",
+        "Занятая коллекция никогда не предлагается к принудительной записи."
+      ],
+      "verification": "Миграционный fixture, занятый lock, повторный запуск и недоступная tour anchor.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "26.1",
+        "26.2",
+        "26.3",
+        "26.4"
+      ]
+    },
+    {
+      "id": "T071",
+      "title": "Сделать свободное повторение и временные колоды",
+      "dependencies": [
+        "T018",
+        "T032",
+        "T038",
+        "T068"
+      ],
+      "references": [
+        "27"
+      ],
+      "area": "Core/Study/CustomSession; Features/Study/Setup",
+      "goal": "Проводить занятия по ошибкам, тегам и фильтрам без перемещения оригиналов.",
+      "implementation": [
+        "Ввести versioned SessionMode: scheduled/custom-reschedule/preview-no-reschedule.",
+        "Сделать include/exclude tags, count preview и temporary deck как query definition.",
+        "Добавить day-limit override и явный выбор Finish/Increase; пояснять влияет ли занятие на расписание."
+      ],
+      "acceptance": [
+        "Временная колода сохраняет original deckID всех Card.",
+        "Preview mode не создаёт обычные scheduling reviews и не искажает квоты."
+      ],
+      "verification": "Rebuild временной выборки, пустые теги, quota override и одинаковая Card в двух scopes.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "27.1",
+        "27.2",
+        "27.3",
+        "27.4"
+      ]
+    },
+    {
+      "id": "T072",
+      "title": "Доработать действия внутри занятия",
+      "dependencies": [
+        "T020",
+        "T041",
+        "T068"
+      ],
+      "references": [
+        "28"
+      ],
+      "area": "Features/Study/Actions; Core/UseCases",
+      "goal": "Дать Undo, bury, flag и помощь при частых ошибках.",
+      "implementation": [
+        "Подключить готовый Undo к toolbar и доступным shortcuts.",
+        "Bury до следующего StudyDay и flag сохранять отдельными командами без раскрытия ответа.",
+        "Определить leech threshold как настройку, показать Edit/Suspend/Continue без оценочных заявлений о пользователе."
+      ],
+      "acceptance": [
+        "После bury следующая Card скрыта, изменение можно отменить при допустимой revision.",
+        "Флажок не ставит оценку и не раскрывает скрытый текст."
+      ],
+      "verification": "Hidden/revealed контексты, midnight bury и конфликт Undo после новой команды.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "28.1",
+        "28.2",
+        "28.3",
+        "28.4"
+      ]
+    },
+    {
+      "id": "T073",
+      "title": "Сделать условия поиска и сохранённые фильтры",
+      "dependencies": [
+        "T039",
+        "T068"
+      ],
+      "references": [
+        "29.1",
+        "29.2"
+      ],
+      "area": "Core/Queries/SearchAST; Features/Library/Search",
+      "goal": "Составлять сложные запросы без ввода SQL.",
+      "implementation": [
+        "Добавить AST deck/status/tag/word с AND/OR и whitelist операторов.",
+        "Отображать query builder и cancellable preview с debounce.",
+        "Сохранять именованный versioned filter; удалённые deck/tag references показывать как invalid condition."
+      ],
+      "acceptance": [
+        "Saved filter восстанавливает ту же семантику после перезапуска.",
+        "Пользовательский текст не превращается в SQL/FTS control syntax."
+      ],
+      "verification": "Вложенные условия, специальные символы, missing tag и schema migration saved query.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "29.1",
+        "29.2"
+      ]
+    },
+    {
+      "id": "T074",
+      "title": "Добавить массовую правку и поиск дублей",
+      "dependencies": [
+        "T040",
+        "T048",
+        "T051",
+        "T073"
+      ],
+      "references": [
+        "29.3",
+        "29.4"
+      ],
+      "area": "Features/Library/BulkEdit; Core/UseCases/Merge",
+      "goal": "Давать предпросмотр массовых изменений и объединений.",
+      "implementation": [
+        "Построить before/after plan по стабильному набору Notes с revision.",
+        "Сравнивать duplicate candidates по front и содержимому, не удалять автоматически.",
+        "Merge описывает судьбу вариантов, tags, media и отдельных schedules; несовместимое объединение требует выбора, точной истории не выдумывать."
+      ],
+      "acceptance": [
+        "Apply меняет ровно согласованный snapshot.",
+        "Cancel и конфликт revision оставляют исходные записи целыми."
+      ],
+      "verification": "Shared Note selection, неоднозначные значения слова, schedule conflict и rollback.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "29.3",
+        "29.4"
+      ]
+    },
+    {
+      "id": "T075",
+      "title": "Сделать менеджер тегов",
+      "dependencies": [
+        "T038",
+        "T068"
+      ],
+      "references": [
+        "30"
+      ],
+      "area": "Features/Library/Tags; Core/UseCases/Tags",
+      "goal": "Управлять тегами и связями в масштабе коллекции.",
+      "implementation": [
+        "Добавить searchable list, card/note counts, цвет и rename validation.",
+        "Объединять source→target с preview affected Notes и дедупликацией связей.",
+        "Удалять тег после подтверждения, сохраняя сами Notes/Cards; saved filters получают missing-condition state."
+      ],
+      "acceptance": [
+        "Rename сохраняет tagID и фильтры не ломаются по одному имени.",
+        "Delete удаляет associations, а не учебный материал."
+      ],
+      "verification": "Merge одного и нескольких тегов, duplicate name и filter после удаления.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "30.1",
+        "30.2",
+        "30.3",
+        "30.4"
+      ]
+    },
+    {
+      "id": "T076",
+      "title": "Сделать типы записей и редактор полей",
+      "dependencies": [
+        "T014",
+        "T037",
+        "T068"
+      ],
+      "references": [
+        "31.1",
+        "31.2"
+      ],
+      "area": "Features/Types; Core/UseCases/NoteTypes",
+      "goal": "Развить встроенные типы в управляемые схемы.",
+      "implementation": [
+        "Добавить список типов, duplicate и immutable stable IDs полей.",
+        "Редактировать required/optional, order и добавление field без потери старых values.",
+        "Отдельно анализировать удаление используемого поля и затронутые templates/Notes до Apply."
+      ],
+      "acceptance": [
+        "Переименование поля не меняет ключ сохранённых данных.",
+        "Опасное изменение имеет preview и проверенную копию."
+      ],
+      "verification": "Тип с несколькими Notes, rename/reorder и отказ удаления обязательного используемого поля.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "31.1",
+        "31.2"
+      ]
+    },
+    {
+      "id": "T077",
+      "title": "Сделать визуальный редактор шаблона",
+      "dependencies": [
+        "T036",
+        "T076"
+      ],
+      "references": [
+        "31.3",
+        "31.4"
+      ],
+      "area": "Features/Types/Templates; Core/Rendering",
+      "goal": "Настраивать лицевую и обратную стороны декларативно.",
+      "implementation": [
+        "Создать field blocks и ограниченные style controls с front/back preview.",
+        "Валидировать required references, missing field и устойчивую render model.",
+        "Сохранять versioned template revision; никакого JavaScript/произвольной HTML-страницы."
+      ],
+      "acceptance": [
+        "Невалидный шаблон не сохраняется и показывает точное поле.",
+        "Existing Cards продолжают использовать объяснимую revision до подтверждённого обновления."
+      ],
+      "verification": "Missing required field, invalid style value, preview в двух темах и Cancel.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "31.3",
+        "31.4"
+      ]
+    },
+    {
+      "id": "T078",
+      "title": "Мигрировать типы и наборы вариантов",
+      "dependencies": [
+        "T011",
+        "T037",
+        "T076",
+        "T077"
+      ],
+      "references": [
+        "22.1",
+        "31"
+      ],
+      "area": "Core/UseCases/ChangeNoteType; Infrastructure/Migrations",
+      "goal": "Безопасно применять изменение схемы к существующему материалу.",
+      "implementation": [
+        "Строить field mapping и before/after variants с количеством новых/сохраняемых/orphaned Card.",
+        "Сохранять schedule стабильных variants, новые делать fresh, suppressed не воскрешать.",
+        "Применять под operation lease после backup и preview; versioned operation journal обеспечивает recovery."
+      ],
+      "acceptance": [
+        "Пользователь видит потенциальную потерю поля/варианта до подтверждения.",
+        "Ошибка не оставляет половину Notes на другой схеме."
+      ],
+      "verification": "Basic→Reverse/Cloze, удалённые variants, разные schedules и fault injection.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "22.1",
+        "31.1",
+        "31.2",
+        "31.3",
+        "31.4"
+      ]
+    },
+    {
+      "id": "T079",
+      "title": "Расширить редактор примерами, drag-and-drop и добавлением",
+      "dependencies": [
+        "T036",
+        "T037",
+        "T048",
+        "T078"
+      ],
+      "references": [
+        "32"
+      ],
+      "area": "Features/Editor/",
+      "goal": "Ускорить наполнение без нарушения explicit save.",
+      "implementation": [
+        "Добавить несколько example pairs с порядком и удалением.",
+        "Создавать stable cloze из выделения, принимать локальный drag-and-drop через MediaStore.",
+        "Save and add another сохраняет одну Note, удерживает deck/type и очищает новые поля после commit; duplicate warning не блокирует разные смыслы молча."
+      ],
+      "acceptance": [
+        "Ошибка Save сохраняет весь текущий draft.",
+        "Новая пустая форма появляется только после успешной записи предыдущей."
+      ],
+      "verification": "Drag corrupt file, reorder примеров, overlapping cloze selection и повторный клик Save.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "32.1",
+        "32.2",
+        "32.3",
+        "32.4"
+      ]
+    },
+    {
+      "id": "T080",
+      "title": "Создавать карточки из вставленного текста",
+      "dependencies": [
+        "T015",
+        "T038",
+        "T074",
+        "T079"
+      ],
+      "references": [
+        "34"
+      ],
+      "area": "Features/Library/TextToCards/",
+      "goal": "Превращать выделенные слова в вручную заполненные записи.",
+      "implementation": [
+        "Создать локальный text workspace и выделение слов с Create Card.",
+        "Подставлять исходное предложение как example, перевод оставлять ручным полем.",
+        "Массовый список валидировать до Add и применять через общий import/save plan."
+      ],
+      "acceptance": [
+        "Нет скрытого API перевода и сетевой отправки текста.",
+        "Missing translation видна до commit, нельзя молча добавить пустые обязательные поля."
+      ],
+      "verification": "Unicode selection, одинаковые слова, несколько терминов и Cancel batch draft.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "34.1",
+        "34.2",
+        "34.3",
+        "34.4"
+      ]
+    },
+    {
+      "id": "T081",
+      "title": "Добавить карточку на слух и скорость воспроизведения",
+      "dependencies": [
+        "T021",
+        "T037",
+        "T078"
+      ],
+      "references": [
+        "33.1",
+        "33.2"
+      ],
+      "area": "Core/Rendering; Features/Study/Audio",
+      "goal": "Поддержать аудиовопрос и управление локальным звуком.",
+      "implementation": [
+        "Добавить audio variant с hidden word и Show answer.",
+        "Для файлов сделать seek/rate 0.75×/1×/1.25×; для TTS указать поддерживаемую семантику rate без ложного seek.",
+        "Сохранять настройку скорости отдельно от оценки и обрабатывать interruption."
+      ],
+      "acceptance": [
+        "Hidden word не раскрывается через подписи/VoiceOver раньше действия.",
+        "Playback control не ставит оценку и не смешивает разные audio sources."
+      ],
+      "verification": "Audio-only Card, missing attachment, смена скорости, pause/replay и Reveal.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "33.1",
+        "33.2"
+      ]
+    },
+    {
+      "id": "T082",
+      "title": "Добавить локальную запись произношения",
+      "dependencies": [
+        "T009",
+        "T021",
+        "T062",
+        "T081"
+      ],
+      "references": [
+        "33.3",
+        "33.4"
+      ],
+      "area": "Infrastructure/Media/Recording; Features/Editor",
+      "goal": "Записывать и прослушивать себя без автоматической оценки.",
+      "implementation": [
+        "Добавить purpose string, microphone capability и разрешение непосредственно перед записью.",
+        "Записывать в staging, показывать waveform и воспроизведение своей/референсной записи.",
+        "Re-record/Delete/Attach имеют явную семантику, Cancel очищает неприменённый файл."
+      ],
+      "acceptance": [
+        "Отказ разрешения позволяет вернуться к карточке.",
+        "Attach создаёт обычный media reference; никаких придуманных accuracy scores."
+      ],
+      "verification": "Allowed/denied mic, interrupted recording, Cancel и повторное воспроизведение offline.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "33.3",
+        "33.4"
+      ]
+    },
+    {
+      "id": "T083",
+      "title": "Сделать выбор и смену коллекций",
+      "dependencies": [
+        "T007",
+        "T048",
+        "T054",
+        "T068"
+      ],
+      "references": [
+        "35.1",
+        "35.2",
+        "35.3"
+      ],
+      "area": "Features/Collections; App/CollectionCoordinator",
+      "goal": "Открывать разные локальные коллекции без смешивания контекстов.",
+      "implementation": [
+        "Добавить registry chooser, create empty/import и last-opened metadata.",
+        "Перед switch решить unsaved editor, закрыть session/audio/observers и получить новый lock.",
+        "Внешние папки открывать через bookmark; generation invalidates старые callbacks."
+      ],
+      "acceptance": [
+        "В каждый момент одна активная коллекция на app context.",
+        "Отмена switch сохраняет старую коллекцию и draft."
+      ],
+      "verification": "Две коллекции с одинаковыми NoteIDs в fixtures, blocked lock, stale bookmark и slow callback.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "35.1",
+        "35.2",
+        "35.3"
+      ]
+    },
+    {
+      "id": "T084",
+      "title": "Переименовывать и удалять коллекции",
+      "dependencies": [
+        "T065",
+        "T083"
+      ],
+      "references": [
+        "35.4"
+      ],
+      "area": "Features/Collections/Management; Infrastructure/Collections",
+      "goal": "Чётко разделить удаление из списка и уничтожение данных.",
+      "implementation": [
+        "Rename обновляет registry/manifest/meta без изменения UUID.",
+        "Remove from list — default безопасная команда, папка остаётся.",
+        "Delete local data — отдельное подтверждение с точным именем, backup option и проверкой активного lock/окон."
+      ],
+      "acceptance": [
+        "Удаление записи registry не удаляет файлы.",
+        "Активный контейнер не уничтожается мимо lifecycle/recovery flow."
+      ],
+      "verification": "Rename, remove/reopen same folder, Cancel delete и занятая коллекция.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "35.4"
+      ]
+    },
+    {
+      "id": "T085",
+      "title": "Доработать расширенное обслуживание данных",
+      "dependencies": [
+        "T053",
+        "T061",
+        "T083"
+      ],
+      "references": [
+        "36"
+      ],
+      "area": "Features/Settings/Data/Maintenance",
+      "goal": "Сделать понятные диагностику и исправление коллекции.",
+      "implementation": [
+        "Добавить summary integrity scan и отдельные missing/unused media lists.",
+        "Repair by locating file проверяет тип/hash и обновляет refs только после подтверждения.",
+        "Доработать disk-full/corrupt-copy paths и Retry/Choose another folder без ложного успеха."
+      ],
+      "acceptance": [
+        "Удаление unused не затрагивает другие коллекции или активный staging.",
+        "Ошибка restore оставляет текущую коллекцию открываемой."
+      ],
+      "verification": "Подготовленный damaged fixture, недостаток места и восстановление после прерванного repair.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "36.1",
+        "36.2",
+        "36.3",
+        "36.4"
+      ]
+    },
+    {
+      "id": "T086",
+      "title": "Добавить расширенные настройки доступности",
+      "dependencies": [
+        "T004",
+        "T044",
+        "T067",
+        "T068"
+      ],
+      "references": [
+        "37"
+      ],
+      "area": "Features/Settings/Accessibility; DesignSystem",
+      "goal": "Системно поддержать большой текст, контраст и Reduce Motion.",
+      "implementation": [
+        "Проверить/добавить app overrides только там, где они не дублируют недоступно системные настройки.",
+        "Адаптировать row heights, borders и labels, не прятать обязательные действия.",
+        "Определить focus order всех новых managers и announce errors без перехвата фокуса."
+      ],
+      "acceptance": [
+        "Настройки действуют последовательно на Library/Editor/Study.",
+        "Нет обрезания переводов и focus trap."
+      ],
+      "verification": "Ручной VoiceOver и keyboard audit расширений с максимальным поддержанным text size.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "37.1",
+        "37.2",
+        "37.3",
+        "37.4"
+      ]
+    },
+    {
+      "id": "T087",
+      "title": "Поддержать несколько окон и полноэкранное занятие",
+      "dependencies": [
+        "T048",
+        "T050",
+        "T083",
+        "T086"
+      ],
+      "references": [
+        "38"
+      ],
+      "area": "App/Windows; Features/Editor/Study",
+      "goal": "Открывать редактор отдельно и адаптировать рабочее пространство.",
+      "implementation": [
+        "Сделать отдельный Editor window с собственным draft/revision и общей коллекцией.",
+        "Определить поведение одновременных правок, одного активного Study и Close/Quit.",
+        "Проверить обычное/компактное/fullscreen, скрываемый inspector и системные Window commands."
+      ],
+      "acceptance": [
+        "Окна не теряют drafts и не перезаписывают изменения молча.",
+        "Смена коллекции проходит unsaved flow для всех затронутых окон."
+      ],
+      "verification": "Два редактора одной Note, конфликт Save, fullscreen exit и collection switch.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "38.1",
+        "38.2",
+        "38.3",
+        "38.4"
+      ]
+    },
+    {
+      "id": "T088",
+      "title": "Реализовать переходы из раскадровки",
+      "dependencies": [
+        "T019",
+        "T049",
+        "T086",
+        "T087"
+      ],
+      "references": [
+        "39"
+      ],
+      "area": "DesignSystem/Motion; Features/Common",
+      "goal": "Добавить короткую обратную связь без изменения логики.",
+      "implementation": [
+        "Ввести motion tokens для reveal/next/modal/toast по предложенным временам.",
+        "Связать смену UI с commit, не скрывать ошибку завершённой анимацией.",
+        "Reduce Motion использует мгновенную смену/спокойный fade, focus сохраняется."
+      ],
+      "acceptance": [
+        "Во время перехода нельзя оценить скрытую или уже обработанную Card.",
+        "Скорость анимации не меняет расписание и длительность хранения данных."
+      ],
+      "verification": "Быстрые клики, Reduce Motion, UI interruption и ошибка commit во время visual transition.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "39.1",
+        "39.2",
+        "39.3",
+        "39.4"
+      ]
+    },
+    {
+      "id": "T089",
+      "title": "Добавить расширенные разрезы аналитики",
+      "dependencies": [
+        "T043",
+        "T066",
+        "T071",
+        "T072"
+      ],
+      "references": [
+        "41"
+      ],
+      "area": "Core/Queries/Stats; Features/Statistics/Advanced",
+      "goal": "Показать интервалы, сложность, время и историю сессий.",
+      "implementation": [
+        "Гистограмма интервалов и difficulty distribution используют определённые единицы/параметры.",
+        "Heatmap времени считает реальные active intervals, session list раскрывает breakdown.",
+        "Drill-down hard cards открывает Library filter; preview sessions отделяются от scheduling statistics."
+      ],
+      "acceptance": [
+        "Новый график не вводит неопределённое значение «сложность».",
+        "Каждый график имеет текстовые данные и корректное no-data состояние."
+      ],
+      "verification": "Reference fixture с разными эпохами, режимами сессии, Undo и timezone.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "41.1",
+        "41.2",
+        "41.3",
+        "41.4"
+      ]
+    },
+    {
+      "id": "T090",
+      "title": "Доработать подтверждения и permission errors",
+      "dependencies": [
+        "T045",
+        "T048",
+        "T062",
+        "T065",
+        "T084",
+        "T085"
+      ],
+      "references": [
+        "42"
+      ],
+      "area": "Features/Common/Confirmations; Settings",
+      "goal": "Согласовать смысл всех опасных и запрещённых действий.",
+      "implementation": [
+        "Reset settings действует только на выбранный раздел и не удаляет материал.",
+        "Denied notifications и file access показывают сохранённый выбор и конкретный путь исправления.",
+        "Повторно проверить typed collection confirmation, disabled state и backup-before-delete."
+      ],
+      "acceptance": [
+        "Все четыре состояния листа 42 воспроизводимы без настоящего удаления личных данных.",
+        "Escape не выполняет действие и возвращает фокус."
+      ],
+      "verification": "Permission fixtures, empty/mismatch/exact confirmation, reset scope и Cancel.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "42.1",
+        "42.2",
+        "42.3",
+        "42.4"
+      ]
+    },
+    {
+      "id": "T091",
+      "title": "Принять интеграцию расширенных функций",
+      "dependencies": [
+        "T069",
+        "T070",
+        "T071",
+        "T072",
+        "T073",
+        "T074",
+        "T075",
+        "T076",
+        "T077",
+        "T078",
+        "T079",
+        "T080",
+        "T081",
+        "T082",
+        "T083",
+        "T084",
+        "T085",
+        "T086",
+        "T087",
+        "T088",
+        "T089",
+        "T090",
+        "T068"
+      ],
+      "references": [
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "40",
+        "41",
+        "42"
+      ],
+      "area": "UITests/; docs/acceptance/extensions",
+      "goal": "Убедиться, что расширения работают как часть одного приложения.",
+      "implementation": [
+        "Пройти путь text→Note→custom template→custom study→recording→stats→backup→switch collection.",
+        "Проверить migration, undo и constraints на новых схемах.",
+        "Сверить keyboard routes/menus и отсутствие вторых несовместимых реализаций медиа/данных."
+      ],
+      "acceptance": [
+        "Каждая новая функция пользуется общим Core/Store и правилами сохранения.",
+        "Нет утечки контекста между коллекциями и окнами."
+      ],
+      "verification": "End-to-end расширенный fixture и fault injection на batch/type operations.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "25.1",
+        "25.2",
+        "25.3",
+        "25.4",
+        "26.1",
+        "26.2",
+        "26.3",
+        "26.4",
+        "27.1",
+        "27.2",
+        "27.3",
+        "27.4",
+        "28.1",
+        "28.2",
+        "28.3",
+        "28.4",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "30.1",
+        "30.2",
+        "30.3",
+        "30.4",
+        "31.1",
+        "31.2",
+        "31.3",
+        "31.4",
+        "32.1",
+        "32.2",
+        "32.3",
+        "32.4",
+        "33.1",
+        "33.2",
+        "33.3",
+        "33.4",
+        "34.1",
+        "34.2",
+        "34.3",
+        "34.4",
+        "35.1",
+        "35.2",
+        "35.3",
+        "35.4",
+        "36.1",
+        "36.2",
+        "36.3",
+        "36.4",
+        "37.1",
+        "37.2",
+        "37.3",
+        "37.4",
+        "38.1",
+        "38.2",
+        "38.3",
+        "38.4",
+        "39.1",
+        "39.2",
+        "39.3",
+        "39.4",
+        "40.1",
+        "40.2",
+        "40.3",
+        "40.4",
+        "41.1",
+        "41.2",
+        "41.3",
+        "41.4",
+        "42.1",
+        "42.2",
+        "42.3",
+        "42.4"
+      ]
+    },
+    {
+      "id": "T092",
+      "title": "Закрыть трассировку всего дизайн-проекта",
+      "dependencies": [
+        "T052",
+        "T068",
+        "T091"
+      ],
+      "references": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "40",
+        "41",
+        "42"
+      ],
+      "area": "docs/TRACEABILITY.md; docs/acceptance/full",
+      "goal": "Проверить все 174 позиции, не ограничившись общими названиями разделов.",
+      "implementation": [
+        "Для каждого base/panel ID записать реализацию, evidence и намеренное отклонение.",
+        "Все agreed changes обновить в PRODUCT/FLOWS/задачах; не считать визуальный вариант отдельной работающей функцией автоматически.",
+        "Незакрытые блокеры вернуть в конкретную task card с зависимостями."
+      ],
+      "acceptance": [
+        "Нет состояния без владельца и результата проверки.",
+        "Предложенные расширения реализованы к полному milestone либо их изменение явно согласовано."
+      ],
+      "verification": "Автоматический coverage check плюс ручной проход TRACEABILITY.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M4",
+      "stateIDs": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06",
+        "25.1",
+        "25.2",
+        "25.3",
+        "25.4",
+        "26.1",
+        "26.2",
+        "26.3",
+        "26.4",
+        "27.1",
+        "27.2",
+        "27.3",
+        "27.4",
+        "28.1",
+        "28.2",
+        "28.3",
+        "28.4",
+        "29.1",
+        "29.2",
+        "29.3",
+        "29.4",
+        "30.1",
+        "30.2",
+        "30.3",
+        "30.4",
+        "31.1",
+        "31.2",
+        "31.3",
+        "31.4",
+        "32.1",
+        "32.2",
+        "32.3",
+        "32.4",
+        "33.1",
+        "33.2",
+        "33.3",
+        "33.4",
+        "34.1",
+        "34.2",
+        "34.3",
+        "34.4",
+        "35.1",
+        "35.2",
+        "35.3",
+        "35.4",
+        "36.1",
+        "36.2",
+        "36.3",
+        "36.4",
+        "37.1",
+        "37.2",
+        "37.3",
+        "37.4",
+        "38.1",
+        "38.2",
+        "38.3",
+        "38.4",
+        "39.1",
+        "39.2",
+        "39.3",
+        "39.4",
+        "40.1",
+        "40.2",
+        "40.3",
+        "40.4",
+        "41.1",
+        "41.2",
+        "41.3",
+        "41.4",
+        "42.1",
+        "42.2",
+        "42.3",
+        "42.4"
+      ]
+    },
+    {
+      "id": "T093",
+      "title": "Измерить скорость, память и энергопотребление",
+      "dependencies": [
+        "T063",
+        "T089",
+        "T092"
+      ],
+      "references": [
+        "38",
+        "41"
+      ],
+      "area": "Tests/Performance; docs/BENCHMARKS.md",
+      "goal": "Подтвердить пригодность на реальном Apple Silicon MacBook.",
+      "implementation": [
+        "Запустить Release benchmarks QUALITY.md и записать hardware/OS/dataset.",
+        "Профилировать Instruments Time Profiler, Allocations, hangs и energy idle.",
+        "Устранить N+1, лишние observations, decode spikes и утечки; повторять только изменённые измерения."
+      ],
+      "acceptance": [
+        "Есть p95/peak measurements, а не обещания скорости без данных.",
+        "Нет постоянного polling/CPU в idle и неограниченного роста памяти."
+      ],
+      "verification": "50k Cards/1M reviews fixture, длительный study/editor cycle и cold launch.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": [
+        "38.1",
+        "38.2",
+        "38.3",
+        "38.4",
+        "41.1",
+        "41.2",
+        "41.3",
+        "41.4"
+      ]
+    },
+    {
+      "id": "T094",
+      "title": "Проверить приложение на ноутбуке владельца",
+      "dependencies": [
+        "T067",
+        "T086",
+        "T087",
+        "T092"
+      ],
+      "references": [
+        "24",
+        "37",
+        "38"
+      ],
+      "area": "docs/acceptance/local-platform",
+      "goal": "Подтвердить работу на конкретном MacBook и установленной macOS.",
+      "implementation": [
+        "Зафиксировать модель, arm64, установленную macOS, Xcode/SDK и версии зависимостей.",
+        "Пройти светлую/тёмную тему, разные размеры окна, keyboard/VoiceOver, файлы и аудио на этом Mac.",
+        "Проверку других macOS и Mac сделать необязательным расширением; не заявлять проверенную совместимость вне выполненных проверок."
+      ],
+      "acceptance": [
+        "Основной и расширенный сценарии проходят на ноутбуке владельца.",
+        "Ограничения текущей системы документированы; дополнительные устройства/VM не блокируют личную готовность."
+      ],
+      "verification": "Локальная Release-сборка, отдельная тестовая коллекция и сохранённый протокол.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": [
+        "24.1",
+        "24.2",
+        "24.3",
+        "24.4",
+        "37.1",
+        "37.2",
+        "37.3",
+        "37.4",
+        "38.1",
+        "38.2",
+        "38.3",
+        "38.4"
+      ]
+    },
+    {
+      "id": "T095",
+      "title": "Проверить приватность, зависимости и входные данные",
+      "dependencies": [
+        "T003",
+        "T062",
+        "T064",
+        "T082",
+        "T092"
+      ],
+      "references": [],
+      "area": "docs/SECURITY.md; Resources/PrivacyInfo.xcprivacy",
+      "goal": "Закрыть риски локальных данных и сторонних пакетов.",
+      "implementation": [
+        "Проверить pinned dependencies, лицензии и notices, privacy manifest requirements выбранного SDK.",
+        "Пройти archive traversal/limits, HTML sanitization, bookmark scope и microphone lifecycle.",
+        "Проверить redaction OSLog/diagnostic export и отсутствие незаявленных сетевых запросов."
+      ],
+      "acceptance": [
+        "Нет исполняемого импортированного кода и скрытой отправки содержимого.",
+        "Все сторонние лицензии и требуемые declarations включены корректно."
+      ],
+      "verification": "Offline/network audit, hostile fixtures и просмотр диагностического архива.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": []
+    },
+    {
+      "id": "T096",
+      "title": "Собирать и устанавливать приложение на свой Mac",
+      "dependencies": [
+        "T068",
+        "T092",
+        "T094",
+        "T095"
+      ],
+      "references": [],
+      "area": "scripts/local-build; docs/LOCAL_BUILD.md",
+      "goal": "Получить воспроизводимую Release .app для личного использования.",
+      "implementation": [
+        "Создать команду сборки arm64 .app с постоянным bundle ID, version/build и выбранным Xcode.",
+        "Проверить локальную/ad-hoc подпись и нужные entitlements; Developer ID, notarization и DMG не требовать для этой личной поставки.",
+        "Добавить установку в выбранную папку приложений и запуск; пользовательская коллекция лежит отдельно и не входит в bundle."
+      ],
+      "acceptance": [
+        ".app собирается по инструкции и запускается на ноутбуке владельца.",
+        "Сборка и установка не требуют платной программы разработчика и не удаляют существующую коллекцию."
+      ],
+      "verification": "Локальный build/install/launch, перезапуск, import/export, microphone/bookmark smoke с фактическими разрешениями.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": []
+    },
+    {
+      "id": "T097",
+      "title": "Проверить обновление и аварийный откат",
+      "dependencies": [
+        "T053",
+        "T054",
+        "T083",
+        "T096"
+      ],
+      "references": [],
+      "area": "Tests/Upgrade; docs/UPGRADE.md",
+      "goal": "Обновлять приложение с сохранением коллекций и копий.",
+      "implementation": [
+        "Установить новую сборку поверх тестовой beta со всеми схемами и media.",
+        "Проверить backup-before-migration, registry/bookmarks и контроль unknown newer schema.",
+        "Описать rollback installer+старой копии; не обещать автоматическое чтение новой БД старым бинарником."
+      ],
+      "acceptance": [
+        "После обновления counts/history/media совпадают ожидаемому результату.",
+        "Сбой миграции имеет воспроизводимый путь возврата к копии."
+      ],
+      "verification": "Upgrade fixtures, оборванная миграция, manual reinstall и restore в отдельную папку.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": []
+    },
+    {
+      "id": "T098",
+      "title": "Закончить справку и диагностические инструменты",
+      "dependencies": [
+        "T069",
+        "T090",
+        "T095",
+        "T097"
+      ],
+      "references": [
+        "25.4"
+      ],
+      "area": "Features/Help; docs/user-guide/",
+      "goal": "Дать понятные инструкции установки, работы и восстановления.",
+      "implementation": [
+        "Описать Card/Note, reveal/ratings, CSV/APKG limits, backup и switch collections.",
+        "Сделать явный redacted diagnostic export без текстов/аудио и приватных путей.",
+        "Добавить local Help shortcuts и troubleshooting permissions/disk-full/corrupt backup."
+      ],
+      "acceptance": [
+        "Инструкция соответствует работающим функциям и текущей compatibility matrix.",
+        "Diagnostic export создаётся только по команде и показывает состав."
+      ],
+      "verification": "Новый тестовый пользователь проходит первый study и восстановление по инструкции.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": [
+        "25.4"
+      ]
+    },
+    {
+      "id": "T099",
+      "title": "Принять готовое личное приложение",
+      "dependencies": [
+        "T093",
+        "T094",
+        "T095",
+        "T096",
+        "T097",
+        "T098"
+      ],
+      "references": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06"
+      ],
+      "area": "docs/acceptance/personal-final",
+      "goal": "Проверить полный продукт для повседневного использования владельцем.",
+      "implementation": [
+        "Выполнить QUALITY acceptance и full traceability на локально установленной Release .app.",
+        "Пройти offline использование, backup/restore и обновление на этом ноутбуке.",
+        "Закрыть дефекты данных/запуска/оценок; записать ограничения без требования публичного installer, notarization и других устройств."
+      ],
+      "acceptance": [
+        "Нет открытых блокеров потери данных, неверных оценок или запуска на целевом Mac.",
+        "Все запланированные возможности имеют evidence либо явно согласованное изменение объёма."
+      ],
+      "verification": "Личная финальная приёмка со ссылками на build/commit, проверки и state matrix.",
+      "size": "L",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": [
+        "base-01",
+        "base-02",
+        "base-03",
+        "base-04",
+        "base-05",
+        "base-06"
+      ]
+    },
+    {
+      "id": "T100",
+      "title": "Зафиксировать финальную версию и восстановление",
+      "dependencies": [
+        "T099"
+      ],
+      "references": [],
+      "area": "docs/LOCAL_BUILD.md; docs/UPGRADE.md; Git history",
+      "goal": "Оставить воспроизводимую рабочую версию и понятный способ восстановления.",
+      "implementation": [
+        "Зафиксировать Git tag/commit, точные версии инструментов, локальную .app и инструкцию её пересборки.",
+        "Сверить task statuses, отчёты, roadmap и compatibility limitations; синхронизировать приватный GitHub.",
+        "Описать откат к предыдущей версии кода и отдельно восстановление совместимой базы из backup; публичную публикацию не выполнять."
+      ],
+      "acceptance": [
+        "Владелец может пересобрать и установить приложение по инструкции.",
+        "Есть проверенный путь восстановления приложения и данных; история и отчёты доступны в приватном репозитории."
+      ],
+      "verification": "Пересборка из зафиксированного Git состояния и контрольный restore в отдельную тестовую коллекцию.",
+      "size": "M",
+      "status": "planned",
+      "milestone": "M5",
+      "stateIDs": []
+    }
+  ],
+  "designCoverage": [
+    {
+      "stateID": "base-01",
+      "taskID": "T023",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "base-02",
+      "taskID": "T031",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "base-03",
+      "taskID": "T028",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "base-04",
+      "taskID": "T016",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "base-05",
+      "taskID": "T025",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "base-06",
+      "taskID": "T019",
+      "kind": "base",
+      "status": "planned"
+    },
+    {
+      "stateID": "01.1",
+      "taskID": "T024",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "01.2",
+      "taskID": "T024",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "01.3",
+      "taskID": "T024",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "01.4",
+      "taskID": "T024",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "02.1",
+      "taskID": "T034",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "02.2",
+      "taskID": "T034",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "02.3",
+      "taskID": "T035",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "02.4",
+      "taskID": "T034",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "03.1",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "03.2",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "03.3",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "03.4",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "04.1",
+      "taskID": "T013",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "04.2",
+      "taskID": "T013",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "04.3",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "04.4",
+      "taskID": "T033",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "05.1",
+      "taskID": "T032",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "05.2",
+      "taskID": "T032",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "05.3",
+      "taskID": "T032",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "05.4",
+      "taskID": "T060",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "06.1",
+      "taskID": "T019",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "06.2",
+      "taskID": "T020",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "06.3",
+      "taskID": "T020",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "06.4",
+      "taskID": "T020",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "07.1",
+      "taskID": "T022",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "07.2",
+      "taskID": "T022",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "07.3",
+      "taskID": "T022",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "07.4",
+      "taskID": "T022",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "08.1",
+      "taskID": "T037",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "08.2",
+      "taskID": "T037",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "08.3",
+      "taskID": "T037",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "08.4",
+      "taskID": "T037",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "09.1",
+      "taskID": "T015",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "09.2",
+      "taskID": "T015",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "09.3",
+      "taskID": "T036",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "09.4",
+      "taskID": "T036",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "10.1",
+      "taskID": "T039",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "10.2",
+      "taskID": "T040",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "10.3",
+      "taskID": "T040",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "10.4",
+      "taskID": "T040",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "11.1",
+      "taskID": "T041",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "11.2",
+      "taskID": "T041",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "11.3",
+      "taskID": "T041",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "11.4",
+      "taskID": "T029",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "12.1",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "12.2",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "12.3",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "12.4",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "13.1",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "13.2",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "13.3",
+      "taskID": "T051",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "13.4",
+      "taskID": "T060",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "14.1",
+      "taskID": "T042",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "14.2",
+      "taskID": "T042",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "14.3",
+      "taskID": "T042",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "14.4",
+      "taskID": "T042",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "15.1",
+      "taskID": "T043",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "15.2",
+      "taskID": "T043",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "15.3",
+      "taskID": "T043",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "15.4",
+      "taskID": "T043",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "16.1",
+      "taskID": "T044",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "16.2",
+      "taskID": "T044",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "16.3",
+      "taskID": "T046",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "16.4",
+      "taskID": "T047",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "17.1",
+      "taskID": "T025",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "17.2",
+      "taskID": "T044",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "17.3",
+      "taskID": "T045",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "17.4",
+      "taskID": "T046",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "18.1",
+      "taskID": "T016",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "18.2",
+      "taskID": "T023",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "18.3",
+      "taskID": "T021",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "18.4",
+      "taskID": "T048",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "19.1",
+      "taskID": "T004",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "19.2",
+      "taskID": "T004",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "19.3",
+      "taskID": "T004",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "19.4",
+      "taskID": "T004",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "20.1",
+      "taskID": "T039",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "20.2",
+      "taskID": "T039",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "20.3",
+      "taskID": "T039",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "20.4",
+      "taskID": "T026",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "21.1",
+      "taskID": "T038",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "21.2",
+      "taskID": "T038",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "21.3",
+      "taskID": "T038",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "21.4",
+      "taskID": "T031",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "22.1",
+      "taskID": "T037",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "22.2",
+      "taskID": "T036",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "22.3",
+      "taskID": "T036",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "22.4",
+      "taskID": "T048",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "23.1",
+      "taskID": "T044",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "23.2",
+      "taskID": "T044",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "23.3",
+      "taskID": "T045",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "23.4",
+      "taskID": "T046",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "24.1",
+      "taskID": "T050",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "24.2",
+      "taskID": "T050",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "24.3",
+      "taskID": "T050",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "24.4",
+      "taskID": "T046",
+      "kind": "core",
+      "status": "planned"
+    },
+    {
+      "stateID": "25.1",
+      "taskID": "T069",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "25.2",
+      "taskID": "T069",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "25.3",
+      "taskID": "T069",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "25.4",
+      "taskID": "T069",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "26.1",
+      "taskID": "T070",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "26.2",
+      "taskID": "T070",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "26.3",
+      "taskID": "T070",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "26.4",
+      "taskID": "T070",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "27.1",
+      "taskID": "T071",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "27.2",
+      "taskID": "T071",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "27.3",
+      "taskID": "T071",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "27.4",
+      "taskID": "T071",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "28.1",
+      "taskID": "T072",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "28.2",
+      "taskID": "T072",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "28.3",
+      "taskID": "T072",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "28.4",
+      "taskID": "T072",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "29.1",
+      "taskID": "T073",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "29.2",
+      "taskID": "T073",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "29.3",
+      "taskID": "T074",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "29.4",
+      "taskID": "T074",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "30.1",
+      "taskID": "T075",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "30.2",
+      "taskID": "T075",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "30.3",
+      "taskID": "T075",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "30.4",
+      "taskID": "T075",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "31.1",
+      "taskID": "T076",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "31.2",
+      "taskID": "T076",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "31.3",
+      "taskID": "T077",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "31.4",
+      "taskID": "T077",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "32.1",
+      "taskID": "T079",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "32.2",
+      "taskID": "T079",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "32.3",
+      "taskID": "T079",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "32.4",
+      "taskID": "T079",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "33.1",
+      "taskID": "T081",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "33.2",
+      "taskID": "T081",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "33.3",
+      "taskID": "T082",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "33.4",
+      "taskID": "T082",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "34.1",
+      "taskID": "T080",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "34.2",
+      "taskID": "T080",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "34.3",
+      "taskID": "T080",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "34.4",
+      "taskID": "T080",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "35.1",
+      "taskID": "T083",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "35.2",
+      "taskID": "T083",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "35.3",
+      "taskID": "T083",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "35.4",
+      "taskID": "T084",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "36.1",
+      "taskID": "T085",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "36.2",
+      "taskID": "T085",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "36.3",
+      "taskID": "T085",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "36.4",
+      "taskID": "T085",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "37.1",
+      "taskID": "T086",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "37.2",
+      "taskID": "T086",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "37.3",
+      "taskID": "T086",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "37.4",
+      "taskID": "T086",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "38.1",
+      "taskID": "T087",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "38.2",
+      "taskID": "T087",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "38.3",
+      "taskID": "T087",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "38.4",
+      "taskID": "T087",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "39.1",
+      "taskID": "T088",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "39.2",
+      "taskID": "T088",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "39.3",
+      "taskID": "T088",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "39.4",
+      "taskID": "T088",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "40.1",
+      "taskID": "T004",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "40.2",
+      "taskID": "T004",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "40.3",
+      "taskID": "T004",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "40.4",
+      "taskID": "T004",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "41.1",
+      "taskID": "T089",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "41.2",
+      "taskID": "T089",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "41.3",
+      "taskID": "T089",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "41.4",
+      "taskID": "T089",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "42.1",
+      "taskID": "T090",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "42.2",
+      "taskID": "T090",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "42.3",
+      "taskID": "T090",
+      "kind": "extension",
+      "status": "planned"
+    },
+    {
+      "stateID": "42.4",
+      "taskID": "T090",
+      "kind": "extension",
+      "status": "planned"
+    }
+  ],
+  "workflow": {
+    "instructions": "AGENTS.md",
+    "sourceOfTruth": "docs/backlog.json",
+    "statusSummary": "docs/PROJECT_STATUS.md",
+    "reports": "docs/task-reports/Txxx.json",
+    "command": "python3 scripts/tasks.py",
+    "mode": "one sequential task per chat; commit and push to private origin"
+  }
+}
