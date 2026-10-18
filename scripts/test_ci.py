@@ -12,6 +12,9 @@ import start_task
 class CIPolicyTests(unittest.TestCase):
     def setUp(self):
         self.data = json.loads((ci.ROOT / 'docs/backlog.json').read_text())
+        # Policy scenarios use a planned baseline, not the live completion state.
+        for task in self.data['tasks']:
+            task['status'] = 'planned'
         self.event = {'repository': {'full_name': deliver.REPO, 'owner': {'login': 'kirillalexandrowitsch'}}, 'pull_request': {'user': {'login': 'kirillalexandrowitsch'}, 'head': {'repo': {'full_name': deliver.REPO}, 'ref': 'task/T001'}, 'base': {'ref': 'dev'}}}
 
     def test_task_route_requires_complete_report_and_unchanged_criteria(self):
