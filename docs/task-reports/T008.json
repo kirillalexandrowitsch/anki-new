@@ -17,7 +17,7 @@
     {
       "command": "swift test --package-path Packages/CardsKit",
       "result": "passed",
-      "details": "56 Swift Testing tests: 34 Infrastructure (14 новых тестов writer/repositories и lifecycle), 17 Core, 3 DesignSystem, 2 Features; ноль failures. Финальный repair-прогон: build/t008-package-repair.log. Реальные временные file-backed SQLite/WAL базы, journal count, revisions, rollback. Гонки используют task groups; отмена внутри commit синхронизируется AsyncStream + semaphore без временных задержек. Регрессия выполняет 200 немедленных close/reopen между двумя Store; отдельный тест проверяет release при удерживаемом объекте и повторный release после переиспользования descriptor."
+      "details": "56 Swift Testing tests: 34 Infrastructure (14 новых тестов writer/repositories и lifecycle), 17 Core, 3 DesignSystem, 2 Features; ноль failures. Финальный repair-прогон: build/t008-package-repair.log. Реальные временные file-backed SQLite/WAL базы, journal count, revisions, rollback. Гонки используют task groups; отмена внутри commit синхронизируется AsyncStream + semaphore без временных задержек. Регрессия выполняет 200 немедленных close/reopen между двумя Store; отдельный тест проверяет release при удерживаемом объекте и повторный release после переиспользования descriptor. В цикле close→open нет промежуточного await; все 200 проверок staleContext сохранены и выполняются после цикла."
     },
     {
       "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t008-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
@@ -32,7 +32,7 @@
     {
       "command": "swift test --package-path Packages/CardsKit --skip-build --filter 'collectionRenameUsesOwnRevisionAndPersistsReplayAcrossReopen|immediateReopenAfterAsyncCloseNeverRetainsThePreviousLease|explicitLeaseReleaseIsImmediateAndNeverClosesAReusedDescriptor'",
       "result": "passed",
-      "details": "Python subprocess runner выполнил эту команду 10 раз последовательно: 10/10 успешны, 30 test executions, 2000 немедленных close/reopen плюс проверки rename/replay и descriptor reuse. build/t008-reopen-stress.log. Повтор обоснован нестабильной CI ошибкой lifecycle, а не заменяет исправление кода."
+      "details": "Python subprocess runner выполнил эту команду 10 раз последовательно: 10/10 успешны, 30 test executions, 2000 немедленных close/reopen плюс проверки rename/replay и descriptor reuse. build/t008-reopen-stress.log. Повтор обоснован нестабильной CI ошибкой lifecycle, а не заменяет исправление кода. Финальные 10 прогонов повторены после удаления промежуточного await из цикла; 200 проверок retired repositories сохранены после каждой серии."
     }
   ],
   "limitations": [
