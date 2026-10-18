@@ -219,10 +219,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [19.1 · Состояния кнопок](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Запланировано |
-| [19.2 · Текстовые поля](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Запланировано |
-| [19.3 · Переключатели](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Запланировано |
-| [19.4 · Подсказки](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Запланировано |
+| [19.1 · Состояния кнопок](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Готово |
+| [19.2 · Текстовые поля](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Готово |
+| [19.3 · Переключатели](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Готово |
+| [19.4 · Подсказки](../design-references/sheets/sheet-19.png) | [T004](tasks/T004.md) | Готово |
 
 ## 20 · Выпадающие списки и навигация
 
@@ -450,10 +450,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [40.1 · Цвета](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Запланировано |
-| [40.2 · Типографика](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Запланировано |
-| [40.3 · Сетка и поверхности](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Запланировано |
-| [40.4 · Иконки и сообщения](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Запланировано |
+| [40.1 · Цвета](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Готово |
+| [40.2 · Типографика](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Готово |
+| [40.3 · Сетка и поверхности](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Готово |
+| [40.4 · Иконки и сообщения](../design-references/sheets/sheet-40.png) | [T004](tasks/T004.md) | Готово |
 
 ## 41 · Аналитика — дополнительные разрезы
 

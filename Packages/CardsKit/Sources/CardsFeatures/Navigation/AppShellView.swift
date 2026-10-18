@@ -39,7 +39,7 @@ public struct AppShellView: View {
         } detail: {
             VStack(alignment: .leading, spacing: 12) {
                 Text(model.selection.title)
-                    .font(.largeTitle.weight(.semibold))
+                    .cardsText(.windowTitle)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityLabel(model.selection.title)
                     .accessibilityIdentifier("section.title")
@@ -52,11 +52,11 @@ public struct AppShellView: View {
                                    message: model.selection.message)
             }
             .accessibilityElement(children: .contain)
-            .padding(32)
+            .padding(CardsSpacing.section)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(.background)
+            .background(CardsColor.window.color)
         }
-        .tint(.indigo)
+        .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refreshDate() }
         }

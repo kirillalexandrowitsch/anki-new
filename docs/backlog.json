@@ -174,7 +174,7 @@
       ],
       "verification": "Визуально проверить previews в двух темах и с крупным текстом; выборочные snapshots только стабильных элементов.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "19.1",
@@ -185,7 +185,10 @@
         "40.2",
         "40.3",
         "40.4"
-      ]
+      ],
+      "startedAt": "2026-10-18T13:22:57.104984+00:00",
+      "completedAt": "2026-10-18T13:47:27.397515+00:00",
+      "report": "docs/task-reports/T004.json"
     },
     {
       "id": "T005",
@@ -4419,25 +4422,25 @@
       "stateID": "19.1",
       "taskID": "T004",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "19.2",
       "taskID": "T004",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "19.3",
       "taskID": "T004",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "19.4",
       "taskID": "T004",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "20.1",
@@ -4923,25 +4926,25 @@
       "stateID": "40.1",
       "taskID": "T004",
       "kind": "extension",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "40.2",
       "taskID": "T004",
       "kind": "extension",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "40.3",
       "taskID": "T004",
       "kind": "extension",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "40.4",
       "taskID": "T004",
       "kind": "extension",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "41.1",
