@@ -1,6 +1,6 @@
 {
   "taskID": "T002",
-  "summary": "Создан начальный AnkiNew.xcodeproj со shared scheme AnkiNew, локальным CardsKit (Core/Infrastructure/DesignSystem/Features), composition root, пятью входами навигации и нативной Settings scene с четырьмя вкладками. Добавлены String Catalog ru/en, App Sandbox и user-selected read/write/app-scope bookmark entitlements, app/unit/UI и package tests. Локальные проверки прошли; до завершения критерия CI ожидается workflow_dispatch на стандартном macos-15.",
+  "summary": "Создан начальный AnkiNew.xcodeproj со shared scheme AnkiNew, локальным CardsKit (Core/Infrastructure/DesignSystem/Features), composition root, пятью входами навигации и нативной Settings scene с четырьмя вкладками. Добавлены String Catalog ru/en, App Sandbox и user-selected read/write/app-scope bookmark entitlements, app/unit/UI и package tests. Локальные проверки и предварительный hosted CI на macos-15 прошли; app unit/UI и package tests выполнены на arm64 без Apple Account и дополнительных платежей.",
   "criteria": [
     {
       "text": "Приложение запускается на arm64; циклов зависимостей нет.",
@@ -14,8 +14,8 @@
     },
     {
       "text": "CI знает shared scheme приложения и все локальные Swift packages; xcodebuild test выполняется на macOS runner.",
-      "passed": false,
-      "evidence": "automation.json настроен на AnkiNew.xcodeproj, shared scheme AnkiNew и Packages/CardsKit. Схема включает app unit и UI targets без skipped. Локально xcodebuild test и swift test прошли; подтверждение workflow_dispatch на hosted macos-15 ещё ожидается."
+      "passed": true,
+      "evidence": "automation.json зарегистрировал AnkiNew.xcodeproj, shared scheme AnkiNew и все локальные packages (Packages/CardsKit). Схема включает оба app test targets без skipped. Hosted workflow_dispatch https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39127440428 на source commit 3a4cdc53c4e1fc97b3d09fec326a5179bf1b0553: quality=SUCCESS, macos=SUCCESS; стандартный macos-15-arm64, macOS 15.7.9, Xcode 16.4. В job log реально выполнены xcodebuild test (1 app unit + 1 UI test, TEST SUCCEEDED) и swift test (4 tests passed). Проверки PR и pipeline каждой ветки дополнительно обязательны при deliver.py."
     }
   ],
   "checks": [
@@ -47,13 +47,23 @@
     {
       "command": "python3 scripts/ci.py quality",
       "result": "passed",
-      "details": "Exit 0: 19 Python tests; generated state, граф задач и отчёты, 2413 локальных ссылок и 48/48 PNG hashes проверены. После финального отчёта проверка будет повторена."
+      "details": "Exit 0: все 19 Python tests; generated state, граф задач и отчёты, 2416 локальных ссылок и 48/48 PNG hashes проверены. Финальная проверка после finish также прошла."
+    },
+    {
+      "command": "python3 scripts/ci.py macos",
+      "result": "passed",
+      "details": "Exit 0 на локальном Mac: 19 Python tests, consistency/links/48 PNG hashes, xcodebuild test shared scheme (1 app unit + 1 UI test) и swift test (4 tests) прошли. Фактические build/test logs остались локально вне Git; личные коллекции не используются."
+    },
+    {
+      "command": "gh workflow run ci.yml --ref task/T002; gh run watch 39127440428 --exit-status; gh run view 39127440428 --log --job 117675437774",
+      "result": "passed",
+      "details": "https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39127440428: quality и macos conclusion=success. На стандартном macos-15-arm64 с macOS 15.7.9 и Xcode 16.4 выполнены реальные app/UI и package tests. TEST SUCCEEDED и 4 Swift Testing tests passed; workflow_dispatch проверил исходники до выставления done. Окончательная доставка требует свежих PR checks и post-merge pipelines."
     }
   ],
   "limitations": [
     "Пока реализована техническая оболочка: коллекция, SQL, scheduler, import/export, изменения настроек и полный дизайн экранов остаются будущими задачами. Неработающие контролы и вымышленные учебные данные не добавлены.",
     "File-selection capabilities настроены и проверены в подписанном Release bundle; реальные Open/Save-панели и долговременные bookmarks будут проверяться при реализации файловых сценариев.",
-    "Локальный runtime проверен на macOS 27.0.1 arm64; minos 15.0 не доказывает запуск на macOS 15. Проверка hosted macos-15 пока ожидается.",
+    "Локальная система — macOS 27.0.1 arm64; hosted macos-15-arm64 — macOS 15.7.9 / Xcode 16.4. Runtime ровно macOS 15.0 не проверен. Hosted тесты не заменяют будущие проверки реальных файловых разрешений на ноутбуке владельца.",
     "Новых внешних dependencies, платных API, trial, подписок, Apple Account, provisioning profiles, CI artifact/cache uploads нет. Локальный Git author взят из существующей настройки, личные коллекции и записи не использованы."
   ]
 }

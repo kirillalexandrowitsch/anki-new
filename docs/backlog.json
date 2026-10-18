@@ -110,7 +110,7 @@
       ],
       "verification": "Clean build приложения и swift test каркаса; проверить build settings в shared scheme.",
       "size": "M",
-      "status": "in_progress",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "base-01",
@@ -119,7 +119,9 @@
         "base-04",
         "base-05"
       ],
-      "startedAt": "2026-10-18T12:18:54.346614+00:00"
+      "startedAt": "2026-10-18T12:18:54.346614+00:00",
+      "completedAt": "2026-10-18T12:32:03.502984+00:00",
+      "report": "docs/task-reports/T002.json"
     },
     {
       "id": "T003",
