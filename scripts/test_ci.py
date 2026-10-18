@@ -96,6 +96,20 @@ class CIPolicyTests(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 ci.check_app(root, policy)
 
+    def test_already_merged_task_can_repair_ci_with_fresh_report(self):
+        baseline = copy.deepcopy(self.data)
+        baseline['tasks'][0]['status'] = 'done'
+        current = copy.deepcopy(baseline)
+        files = ['App/Fix.swift', 'docs/task-reports/T001.json']
+        self.assertEqual(ci.validate_pr_route(self.event, current, baseline, files), 'T001 repair')
+        with self.assertRaises(AssertionError):
+            ci.validate_pr_route(self.event, current, baseline, ['App/Fix.swift'])
+
+    def test_next_task_waits_for_all_promotions(self):
+        start_task.require_delivered_trees(['abc', 'abc', 'abc'])
+        with self.assertRaises(AssertionError):
+            start_task.require_delivered_trees(['new', 'old', 'old'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -40,5 +40,33 @@
     "workflowTests": "6 passed",
     "localMarkdownLinksChecked": 2397,
     "applicationTasksCompleted": 0
+  },
+  "publicPipelineBootstrap": {
+    "repositoryVisibility": "public",
+    "actionsEnabled": true,
+    "requiredChecks": [
+      "quality",
+      "macos"
+    ],
+    "protectedBranches": [
+      "dev",
+      "stage",
+      "main"
+    ],
+    "bootstrapPRs": [
+      1,
+      2,
+      3
+    ],
+    "bootstrapCIRuns": [
+      39103344708,
+      39103377539,
+      39103409291,
+      39103441325,
+      39103467125,
+      39103499535
+    ],
+    "bootstrapResults": "all PR and post-merge runs succeeded",
+    "applicationTasksCompleted": 0
   }
 }
