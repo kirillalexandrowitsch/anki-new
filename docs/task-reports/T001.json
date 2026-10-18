@@ -1,0 +1,54 @@
+{
+  "taskID": "T001",
+  "summary": "Проверено локальное окружение Xcode 27.1 / Swift 6.4 / macOS SDK 27.0 на macOS 27.0.1 arm64. Добавлены воспроизводимая сборка и запуск временного пустого macOS app target и docs/ENVIRONMENT.md с настройками macOS 15.0, Swift 6, arm64 и локальной ad-hoc подписью без Apple Account и дополнительных платежей. Исправлена изоляция fixtures тестов процесса: они начинают с planned-состояния во временных данных и больше не зависят от статуса реальной T001; все исходные assertions сохранены.",
+  "criteria": [
+    {
+      "text": "xcodebuild -version работает через выбранный Xcode.",
+      "passed": true,
+      "evidence": "xcode-select -p: /Applications/Xcode.app/Contents/Developer; xcodebuild -version: Xcode 27.1, build 27A9275, exit 0. xcodebuild -checkFirstLaunchStatus: exit 0."
+    },
+    {
+      "text": "Документированы toolchain и способ локального запуска без сертификата релиза.",
+      "passed": true,
+      "evidence": "docs/ENVIRONMENT.md фиксирует выбранные Xcode/Swift/SDK, DEVELOPER_DIR, build settings и команды тестов для текущей и минимальной ОС. scripts/check_environment.py реально выполнил clean build временного app target, codesign strict verify (Signature=adhoc), lipo arm64, запуск окна и exit 0 без development team и сертификата релиза."
+    }
+  ],
+  "checks": [
+    {
+      "command": "xcode-select -p; xcodebuild -version; xcrun swift --version; xcrun --sdk macosx --show-sdk-version; xcodebuild -checkFirstLaunchStatus",
+      "result": "passed",
+      "details": "Полный Xcode 27.1 (27A9275); Swift 6.4 (swiftlang-6.4.0.34.1); SDK 27.0; first launch готов. Все команды exit 0."
+    },
+    {
+      "command": "sw_vers; uname -m; xcodebuild -showsdks",
+      "result": "passed",
+      "details": "macOS 27.0.1 (26A434), arm64; macOS SDK 27.0 доступен в выбранном Xcode."
+    },
+    {
+      "command": "python3 scripts/check_environment.py",
+      "result": "passed",
+      "details": "Exit 0. Временный Xcode target: clean build succeeded; effective MACOSX_DEPLOYMENT_TARGET=15.0, SWIFT_VERSION=6.0, ARCHS=arm64, CODE_SIGN_IDENTITY=-, DEVELOPMENT_TEAM пуст. lipo=arm64; codesign --verify --deep --strict passed, Signature=adhoc. vtool: platform MACOS, minos 15.0, sdk 27.0. AppKit window.isVisible подтверждён маркером ANKI_NEW_WINDOW_VISIBLE; процесс exit 0. Временные файлы удалены."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T001; python3 scripts/tasks.py check",
+      "result": "passed",
+      "details": "T001 done после фактической проверки всех критериев; 100 задач, 174 состояния, зависимости и отчёты корректны."
+    },
+    {
+      "command": "python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "Exit 0 после исправления fixtures, которые ошибочно зависели от незавершённой T001. Все 19 тестов процесса прошли с исходными assertions; generated state синхронизирован; 2408 локальных ссылок проверены; 48/48 PNG hashes совпали. Проверки и критерии не ослаблены."
+    },
+    {
+      "command": "python3 scripts/ci.py macos",
+      "result": "passed",
+      "details": "Exit 0 на локальном Mac; все 19 тестов, состояние, ссылки, PNG hashes и xcodebuild -version прошли. Основного app target ещё нет; его сборка не заявляется."
+    }
+  ],
+  "limitations": [
+    "Реальный запуск выполнен на macOS 27.0.1 arm64. macOS 15 runtime на этом Mac не проверен; minos 15.0 не является такой проверкой. Процедура проверки на отдельной минимальной системе документирована.",
+    "Основной app target, shared scheme и CardsKit ещё не созданы (объём T002); swift test/xcodebuild test основного приложения не заявляются выполненными.",
+    "Smoke target не включает sandbox, provisioning capabilities или hardened runtime. Entitlements основного приложения проверяются в T002 и последующих задачах.",
+    "Дополнительных платежей, новых зависимостей, Apple Account, provisioning profile, платных API и CI uploads не требуется и не добавлено."
+  ]
+}

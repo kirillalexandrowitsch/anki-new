@@ -60,7 +60,7 @@ Russian/English строки в String Catalog. Множественные фо�
 
 ## Сборка и доставка
 
-На момент подготовки документа `xcode-select -p` указывает `/Library/Developer/CommandLineTools`, `swift --version` показывает Swift 6.3.3 и arm64 target. `xcodebuild` недоступен через активный developer directory. Это наблюдение окружения, не утверждение, что Xcode нигде не установлен. T001 выбирает/устанавливает полный Xcode и фиксирует SDK.
+T001 проверяет полный Xcode через `/Applications/Xcode.app/Contents/Developer`: Xcode 27.1, Swift 6.4, SDK macOS 27.0; локальная система macOS 27.0.1 arm64. Команды воспроизведения, настройки Swift 6/macOS 15.0/arm64 и ограничения проверки минимальной ОС — в [ENVIRONMENT.md](ENVIRONMENT.md). `python3 scripts/check_environment.py` собирает и запускает временный пустой app target с локальной ad-hoc подписью; это отдельная проверка окружения до появления основного приложения.
 
 В T002 создаются shared schemes для приложения и тестов. Package tests запускаются из локального CardsKit; UI tests — через app scheme на macOS. Файлы редактируются в Codex/VS Code; полный Xcode необходим для выбранных инструментов xcodebuild и XCUITest, пользоваться его IDE ежедневно не требуется. [Xcode command-line reference](https://developer.apple.com/documentation/xcode/xcode-command-line-tool-reference), [Swift в VS Code](https://docs.swift.org/latest/documentation/userdocs/).
 
