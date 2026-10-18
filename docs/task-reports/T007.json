@@ -1,0 +1,39 @@
+{
+  "taskID": "T007",
+  "summary": "Реализованы одна активная коллекция, UUID registry/manifest/SQLite, создание контейнера и системная advisory-блокировка с crash recovery. Добавлены Core lifecycle port, Infrastructure actor с закрытым pool и App coordinator, который инвалидирует поколения и останавливает наблюдения. App открывает коллекцию из sandbox Application Support; тестовые запуски изолированы во временных контейнерах. Контракты обновлены до реализации; sheet-26.4 просмотрен. Новых зависимостей, платных сервисов и дополнительных платежей нет.",
+  "criteria": [
+    {
+      "text": "Второй процесс не открывает тот же контейнер на запись.",
+      "passed": true,
+      "evidence": "CollectionStoreTests: отдельный Python-процесс с fcntl.flock не получает LOCK_EX|LOCK_NB при открытом Swift CollectionStore; второй Store также получает locked без изменения SQLite. Затем отдельный процесс удерживает тот же inode, Swift open отклоняется; SIGKILL владельца освобождает lease, оставшийся lock-файл не удаляется, повторный open сохраняет UUID. Два одновременных первых open публикуют только один контейнер. Сверены registry/manifest/collection_meta UUID и имя, папки Media/Staging/Trash. Несовпадение UUID БД отклоняется до writable open, байты SQLite не меняются; исправленный fixture повторно открывается, lease не утёк. Future manifest, несовпадение manifest/registry, отсутствующая и пустая существующая БД отклонены без пересоздания. Ошибка первичного создания не публикует registry и допускает retry."
+    },
+    {
+      "text": "Запоздавший результат закрытого контекста не меняет новое окно.",
+      "passed": true,
+      "evidence": "Три CollectionCoordinatorTests прошли в настоящем Xcode app test target: close немедленно инвалидирует контекст и вызывает зарегистрированную отмену; после reopen UUID поколения новый, accept старого callback не меняет значение окна, новый callback применяется. Устаревшая подписка отменяется при регистрации. Управляемые async continuations задерживают первый open за close и начало второго: старый результат не устанавливает context и закрывает своё поколение, второй устанавливает только новый context. Ошибка close сохраняется для cleanup перед следующим open. Infrastructure дополнительно отклоняет metadata старого поколения и игнорирует close старого поколения после reopen."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "42 Swift Testing tests: 20 Infrastructure (6 новых lifecycle/container tests), 17 Core, 3 DesignSystem, 2 Features; ноль failures. Финальный лог build/t007-package-final.log. Только временные синтетические БД; отдельные процессы синхронизируются pipe-handshake, crash проверен SIGKILL."
+    },
+    {
+      "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t007-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "TEST SUCCEEDED: 4 app unit tests и 2 UI tests, ноль failures. Лог build/t007-app-final.log; xcresult build/t007-app/Logs/Test/Test-AnkiNew-2026.10.18_18-45-02-+0300.xcresult. Shared TestAction и UI launches передают Debug-only CollectionTestID, изолируя автозапуск от пользовательского Application Support. Локальный wrapper T005 временно выбрал существующую ABC для Command-shortcuts XCUITest и восстановил исходную Russian (noErr 0). Ad-hoc подпись, Apple Account не нужен."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T007; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "После фактического прохождения критериев статус done. Граф: 100 задач, 174 состояния; generated state и отчёты согласованы, 19 Python tests прошли, 2434 локальные ссылки и 48/48 исходных PNG hashes проверены. quality: passed, git diff --check без ошибок. Лог build/t007-quality.log. PR и post-merge CI проверяются отдельно штатным deliver.py."
+    }
+  ],
+  "limitations": [
+    "Одна встроенная коллекция и общий coordinator на App; выбор внешних папок, bookmarks, registry нескольких коллекций и действие показать другой экземпляр остаются позднейшими задачами. UI занятости следует смыслу sheet-26.4, показывает ошибку и retry без неподключённых действий.",
+    "Advisory flock рассчитан на сотрудничающие процессы на локальном диске. Файл опубликованного lock не удаляется и PID не используется для принудительного снятия блокировки. При падении до публикации registry может остаться невыбранная пустая папка UUID; существующая коллекция не усваивается/не удаляется автоматически.",
+    "Механизм onClose готов для Task.cancel/наблюдений/остановки аудио; предметные query observations и audio ещё не реализованы. Проверка закрытия/позднего результата использует фактические async continuations и тестовые callbacks. Публичный CollectionDatabase остаётся низкоуровневым API миграций T006; app получает только Core port/context и не открывает pool напрямую.",
+    "Локальная macOS 27.0.1 arm64 / Xcode 27.1; минимальная macOS 15 проверяется обязательным hosted macos-15 при доставке. Новые зависимости, API keys, capabilities, платные runners и uploads artifacts/cache не добавлены. Личные данные/коллекции и микрофон не использовались; логи и xcresult остаются в игнорируемой build/."
+  ]
+}
