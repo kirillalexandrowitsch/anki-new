@@ -1,0 +1,27 @@
+{
+  "scope": "Repository workflow setup; no application task completed",
+  "summary": "Configure a public, zero-additional-cost repository with protected dev/stage/main branches, required Linux and macOS checks, task evidence validation and autonomous PR promotion. Keep all 100 application tasks planned.",
+  "checks": [
+    {
+      "command": "python3 -m unittest discover -s scripts -p 'test_*.py' -v",
+      "result": "passed",
+      "details": "17 tests passed locally: task/dependency/report guards, PR routes, paid-runner rejection, strict successful checks and refusal to skip a newly created app build."
+    },
+    {
+      "command": "python3 scripts/tasks.py check",
+      "result": "passed",
+      "details": "100 planned tasks and 174 design states have valid dependencies and ownership. No application task was marked complete."
+    },
+    {
+      "command": "python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "Generated task state, reports, policy, tests, 2402 local documentation links and hashes of all 48 PNG files validated locally. Hosted macOS results are verified separately in PR CI."
+    }
+  ],
+  "limitations": [
+    "There is no Xcode app target yet; this bootstrap checks documentation and automation, not a working application.",
+    "The developer machine still needs T001 to select or install full Xcode. Hosted macOS CI verifies its own Xcode environment.",
+    "Task evidence is required and structurally checked; no script can prove the truth of fabricated reports. Agents must run the stated procedures.",
+    "Changing repository visibility back to private blocks hosted jobs and automatic promotion to prevent paid usage."
+  ]
+}
