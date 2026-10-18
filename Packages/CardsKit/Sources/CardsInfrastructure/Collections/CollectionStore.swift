@@ -57,7 +57,7 @@ public actor CollectionStore: CollectionAccess {
         let files = FileManager.default
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         let registryLease = try CollectionLease(url: root.appendingPathComponent(".registry.lock"))
-        defer { withExtendedLifetime(registryLease) {} }
+        defer { registryLease.release() }
         let registryURL = root.appendingPathComponent("registry.json")
         if files.fileExists(atPath: registryURL.path) {
             let registry = try JSONDecoder().decode(CollectionRegistry.self, from: Data(contentsOf: registryURL))
@@ -153,6 +153,7 @@ public actor CollectionStore: CollectionAccess {
         guard let owned = active, owned.context.generation == generation else { return }
         owned.closing = true
         try await owned.writer.close()
+        owned.lease.release() // async frame destruction need not precede the caller's next open
         if active === owned { active = nil } // release lease only after the pool has closed
     }
 

@@ -265,6 +265,43 @@ private func command(id: DeckID = DeckID(), revision: Revision? = nil, name: Str
     _ = try await fixture.decks.save(request)
 }
 
+@Test func immediateReopenAfterAsyncCloseNeverRetainsThePreviousLease() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let first = CollectionStore(root: root)
+    let second = CollectionStore(root: root)
+    var identity: CollectionID?
+    for _ in 0..<100 {
+        for store in [first, second] {
+            let context = try await store.open()
+            if let identity { #expect(context.id == identity) }
+            else { identity = context.id }
+            let repository = try await store.collectionInfo(generation: context.generation)
+            #expect(try await repository.info().id == context.id)
+            try await store.close(generation: context.generation)
+            await #expect(throws: CollectionRepositoryError.staleContext) { try await repository.info() }
+        }
+    }
+}
+
+@Test func explicitLeaseReleaseIsImmediateAndNeverClosesAReusedDescriptor() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let url = root.appendingPathComponent("collection.lock")
+    let retired = try CollectionLease(url: url)
+    #expect(throws: CollectionAccessError.locked) { try CollectionLease(url: url) }
+    retired.release()
+    let current = try CollectionLease(url: url)
+    retired.release() // must not accidentally close the new owner's potentially reused FD
+    #expect(throws: CollectionAccessError.locked) { try CollectionLease(url: url) }
+    withExtendedLifetime((retired, current)) {}
+    #expect(FileManager.default.fileExists(atPath: url.path))
+    current.release()
+    let next = try CollectionLease(url: url)
+    withExtendedLifetime(next) {}
+}
+
 @Test func cancellationDuringCommitStillReturnsCommittedOutcome() async throws {
     let fixture = try WriterFixture()
     defer { fixture.remove() }
