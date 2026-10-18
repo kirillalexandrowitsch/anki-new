@@ -1,0 +1,20 @@
+{
+  "scope": "Workflow reliability and documentation; no application task completed",
+  "summary": "Keep autonomous delivery resumable after a task has merged into dev, require a fresh repair report without weakening criteria, and refuse to start a new task while dev/stage/main still contain different delivered content. Align remaining repository wording with public visibility.",
+  "checks": [
+    {
+      "command": "python3 -m unittest discover -s scripts -p 'test_*.py' -v",
+      "result": "passed",
+      "details": "19 local tests passed, including repair delivery with a fresh report and prevention of starting the next task before branch promotion completes."
+    },
+    {
+      "command": "gh pr view 1/2/3 and gh run view for the six bootstrap runs",
+      "result": "passed",
+      "details": "The first bootstrap completed all three merges and both required jobs succeeded on every PR and post-merge run. macos-15 used Xcode 16.4; no app target was claimed as built."
+    }
+  ],
+  "limitations": [
+    "All 100 application tasks remain planned. Local Xcode setup remains T001.",
+    "System prompts, unavailable credentials and Codex usage limits remain real external blockers; tests must never be disabled to force delivery."
+  ]
+}
