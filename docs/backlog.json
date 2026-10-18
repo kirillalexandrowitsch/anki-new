@@ -267,11 +267,14 @@
       ],
       "verification": "Два тестовых владельца, завершение процесса и повторное открытие; сверка manifest UUID с БД.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "26.4"
-      ]
+      ],
+      "startedAt": "2026-10-18T15:38:54.675610+00:00",
+      "completedAt": "2026-10-18T15:46:32.301825+00:00",
+      "report": "docs/task-reports/T007.json"
     },
     {
       "id": "T008",
