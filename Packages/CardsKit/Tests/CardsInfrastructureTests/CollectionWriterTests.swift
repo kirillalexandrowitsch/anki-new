@@ -271,6 +271,7 @@ private func command(id: DeckID = DeckID(), revision: Revision? = nil, name: Str
     let first = CollectionStore(root: root)
     let second = CollectionStore(root: root)
     var identity: CollectionID?
+    var retired: [any CollectionInfoRepository] = []
     for _ in 0..<100 {
         for store in [first, second] {
             let context = try await store.open()
@@ -279,8 +280,11 @@ private func command(id: DeckID = DeckID(), revision: Revision? = nil, name: Str
             let repository = try await store.collectionInfo(generation: context.generation)
             #expect(try await repository.info().id == context.id)
             try await store.close(generation: context.generation)
-            await #expect(throws: CollectionRepositoryError.staleContext) { try await repository.info() }
+            retired.append(repository) // no await between close and the very next open
         }
+    }
+    for repository in retired {
+        await #expect(throws: CollectionRepositoryError.staleContext) { try await repository.info() }
     }
 }
 
