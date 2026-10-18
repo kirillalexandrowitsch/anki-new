@@ -25,9 +25,10 @@ let package = Package(
             .product(name: "FSRS", package: "swift-fsrs"),
             .product(name: "ZIPFoundation", package: "ZIPFoundation"),
         ], resources: [.copy("Resources/ThirdPartyNotices.txt")]),
-        .target(name: "CardsDesignSystem"),
+        .target(name: "CardsDesignSystem", resources: [.process("Resources")]),
         .target(name: "CardsFeatures", dependencies: ["CardsCore", "CardsDesignSystem"],
                 resources: [.process("Resources")]),
+        .testTarget(name: "CardsDesignSystemTests", dependencies: ["CardsDesignSystem"]),
         .testTarget(name: "CardsCoreTests", dependencies: ["CardsCore"]),
         .testTarget(name: "CardsInfrastructureTests", dependencies: [
             "CardsInfrastructure",

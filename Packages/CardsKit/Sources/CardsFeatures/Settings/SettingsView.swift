@@ -44,6 +44,6 @@ public struct SettingsView: View {
         }
         .padding(20)
         .frame(width: 640, height: 400)
-        .tint(.indigo)
+        .tint(CardsColor.accent.color)
     }
 }
