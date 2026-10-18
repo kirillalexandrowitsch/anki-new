@@ -4,7 +4,7 @@ import Foundation
 
 /// A persistent inode, not a PID file. Never unlink a published lock, even after a crash.
 final class CollectionLease {
-    private let descriptor: Int32
+    private var descriptor: Int32?
 
     init(url: URL) throws {
         let descriptor = Darwin.open(url.path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0o600)
@@ -18,5 +18,13 @@ final class CollectionLease {
         self.descriptor = descriptor
     }
 
-    deinit { Darwin.close(descriptor) }
+    /// Release at the lifecycle boundary, even if an async frame still retains this object.
+    /// The owner serializes access. Never unlink the inode or close a reused descriptor twice.
+    func release() {
+        guard let descriptor else { return }
+        self.descriptor = nil
+        Darwin.close(descriptor)
+    }
+
+    deinit { release() }
 }

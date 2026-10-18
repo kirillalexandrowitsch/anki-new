@@ -46,7 +46,7 @@ Trash, manifest и SQLite с одним UUID; registry атомарно публ
 
 При существующем контейнере manifest version/UUID, наличие БД и её UUID проверяются
 до writable connection/миграции; mismatch не исправляется молча. Ошибки не меняют
-registry и не удерживают lease. При close сначала закрывается pool, затем lease;
+registry и не удерживают lease. При close сначала закрывается pool, затем явно освобождается lease до возврата close; освобождение не зависит от времени deinit async-frame. Release идемпотентен и не закрывает повторно уже переиспользованный descriptor;
 если close pool не удался, владение сохраняется для повторного close.
 
 Core передаёт `CollectionContext` с уникальным UUID поколения. Store проверяет его
