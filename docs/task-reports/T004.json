@@ -1,0 +1,60 @@
+{
+  "taskID": "T004",
+  "summary": "Реализована независимая нативная дизайн-система: semantic light/dark colors, системная типографика и масштаб 135%, spacing/radii, три вида кнопок, labelled field, панели, четыре вида сообщений, empty/loading и различимые состояния. Добавлены RU/EN preview gallery и Debug-окно; токены применены к оболочке. Локальные package/app/UI tests и Release/ad-hoc проверка прошли; дополнительных платежей и dependencies нет.",
+  "criteria": [
+    {
+      "text": "Компоненты не знают о моделях коллекции.",
+      "passed": true,
+      "evidence": "Package.swift: CardsDesignSystem без target/product dependencies. Фактический swift package describe --type json подтвердил пустой граф dependencies; аудит всех его Swift-файлов нашёл только import SwiftUI/AppKit. Публичные компоненты получают String, Binding и View, не сущности коллекции/SQL/services. App/Features используют компоненты через заданную модульную границу."
+    },
+    {
+      "text": "Ошибка, disabled и focus различимы без одного только цвета.",
+      "passed": true,
+      "evidence": "Ошибка поля — отдельный текст со значком exclamationmark.circle.fill и утолщённая граница; disabled — пунктир плюс nosign/текст Недоступно, реальный ввод блокируется native disabled; focus — отдельная внешняя рамка 3 pt. Просмотрены light/dark rendered previews при 100%/135%, включая 30 button-state PNG и нативные AppKit-hosted поля/сообщения. XCUITest подтвердил disabled, редактирование, видимую ошибку, Tab в обязательное поле и её исчезновение после валидного ввода. Focus-образцы фиксированы только внутри галереи; production читает реальные isFocused/FocusState."
+    }
+  ],
+  "checks": [
+    {
+      "command": "CARDS_DESIGN_SNAPSHOTS=\"$PWD/build/t004-snapshots\" swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "10 Swift Testing tests прошли на macOS 27.0.1 arm64 / Xcode 27.1. Новые проверки: реальные разрешённые semantic color pairs в обеих темах >=4.5:1; 30 различных стабильных button renders. Опциональный local review сохранил 16 изображений четырёх страниц в light/dark, standard/enlarged; native TextField/Toggle/ProgressView сняты через NSHostingView/AppKit, прочие — ImageRenderer."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --build-system native --scratch-path build/t004-native",
+      "result": "passed",
+      "details": "Все 10 tests прошли также с native SwiftPM build engine. Цвета реализованы dynamic NSColor, для их CLI-рендера asset compiler не нужен. Local review renderer при отсутствии CARDS_DESIGN_SNAPSHOTS не создаёт окон/PNG."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t004-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "TEST SUCCEEDED: 1 app unit + 2 UI tests, 0 failures. Проверены прежняя навигация/Settings/Command-comma и новая gallery: click/Command-R/Shift-Command-R, disabled, кириллица/IPA в TextField, ошибка, Tab/ввод/снятие ошибки, theme/text scale/contrast selectors. Последний локальный xcresult: build/t004-app/Logs/Test/Test-AnkiNew-2026.10.18_16-45-16-+0300.xcresult."
+    },
+    {
+      "command": "Визуальное сравнение sheet-19.png / sheet-40.png с rendered CardsGalleryContent previews через view_image",
+      "result": "passed",
+      "details": "Просмотрены normal/hover/pressed/disabled/focus, light/dark и крупный текст; error/icon/text, dashed disabled и отдельная focus-рамка различаются формой. Проверены кириллица, латиница, IPA, читаемость полей и сообщений при ширине 1120/800 pt, переносы и вертикальный рост без обрезки. 46 локальных PNG в build/t004-snapshots не коммитятся; полнооконных pixel baselines нет."
+    },
+    {
+      "command": "xcodebuild build -project AnkiNew.xcodeproj -scheme AnkiNew -configuration Release -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t004-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=; codesign --verify --deep --strict build/t004-app/Build/Products/Release/AnkiNew.app; lipo -archs build/t004-app/Build/Products/Release/AnkiNew.app/Contents/MacOS/AnkiNew",
+      "result": "passed",
+      "details": "BUILD SUCCEEDED, подпись проверена, arm64. Info.plist: deployment 15.0; Release ID local.anki-new.app сохранён, Debug ID local.anki-new.app.debug изолирует тесты от одновременно открытой Release-сборки. Preview Window только под DEBUG. Apple Account/provisioning и paid tools не требуются."
+    },
+    {
+      "command": "swift package --package-path Packages/CardsKit describe --type json; Python Path audit imports",
+      "result": "passed",
+      "details": "CardsDesignSystem имеет ноль target/product dependencies и только SwiftUI/AppKit imports. Новых внешних библиотек, fonts или ресурсов PNG в bundle нет; RU/EN String Catalog содержит общие состояния и gallery strings."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T004; python3 scripts/tasks.py check; python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "Критерии и фактический отчёт заполнены перед finish. Проверены generated state, граф/отчёты задач, 19 Python tests, локальные ссылки и 48/48 исходных PNG hashes. Финальные PR checks и post-merge pipelines остаются обязательной отдельной проверкой deliver.py."
+    }
+  ],
+  "limitations": [
+    "Локальная ОС — macOS 27.0.1; runtime macOS 15 проверяется обязательным hosted macos-15 при доставке. Deployment target 15.0 сам по себе не доказывает запуск на этой ОС.",
+    "Полный VoiceOver-аудит и все будущие экраны не заявляются. Динамическое сообщение использует AccessibilityNotification.Announcement без смены фокуса. Tab/Space у native Buttons следуют системной Keyboard Navigation; системные настройки владельца не менялись. В UI tests используются реальные shortcuts кнопок и Tab между native полями.",
+    "XCUITest на локальном втором мониторе не смог создать полнооконный screenshot. Применён воспроизводимый renderer стабильных кнопок и local-only NSHostingView cache для preview полей/сообщений в неактивном окне; эти native review images не являются pixel baselines. UI behavior проверен отдельно без полнооконного capture. Все PNG/xcresult остаются в игнорируемой build-папке.",
+    "Переиспользуемые компоненты не реализуют Save/import/collection/audio. Валидация, confirmation, cancellation и operation state принадлежат вызывающим экранам. Оболочка сохраняет прежний SectionPlaceholder; новые компоненты представлены в отдельной Debug gallery.",
+    "Новых платежей, подписок, API keys, paid services, trial, dependencies, CI cache/artifact uploads нет. Использованы бесплатные системные SwiftUI/AppKit/SF Symbols/шрифты; личные коллекции, записи и credentials не читались и не добавлялись в Git."
+  ]
+}
