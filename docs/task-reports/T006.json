@@ -1,0 +1,39 @@
+{
+  "taskID": "T006",
+  "summary": "Создана первоначальная SQLite-схема v1: 21 STRICT таблица, WAL DatabasePool, foreign keys на всех соединениях, индексы и частичная уникальность, защита иерархии колод и сохранение истории при purge. Добавлены read-only preflight версий, атомарные GRDB-миграции с integrity gate и проверенная SQLite snapshot-копия перед upgrade. SQL остаётся в Infrastructure, наружу передаётся Sendable metadata. Контракт уточнён в DATA_MODEL.md. Новых зависимостей и дополнительных платежей нет.",
+  "criteria": [
+    {
+      "text": "Пустая БД создаётся повторяемо, целостность и ограничения проверяются.",
+      "passed": true,
+      "evidence": "CollectionDatabaseTests создаёт временную file-БД и повторно открывает её три раза; сверяет все 21 предметную таблицу, STRICT, metadata UUID/name/epoch milliseconds, WAL, schema/user_version и GRDB marker. Синтетический связанный граф заполняет все таблицы, сохраняется после reopen. Проверены integrity_check/foreign_key_check, FK на 10 конкурентных чтениях и writer, root/sibling/tag partial UNIQUE, tombstone/restore collisions, циклы/самоссылки, duplicate Card variants/commands/reviews/queue positions, enum/range/JSON schemaVersion/STRICT ограничения, media path/hash, immutable parameter sets и singleton metadata (включая REPLACE). Purge Card/Session/Note/Deck сохраняет ReviewLog snapshots и parameter sets, очищает schedule/queue/join rows. Все проверки фактически прошли в swift test."
+    },
+    {
+      "text": "Ошибка миграции не маркируется успешной версией.",
+      "passed": true,
+      "evidence": "Fault injection v2 создаёт таблицу и строку, меняет Note и оба version markers, затем бросает ошибку: DDL/data/user_version/collection_meta/grdb_migrations откатываются к v1, reopen успешен. Оборванная первоначальная v1 не оставляет таблиц/ложного marker и допускает retry. Отдельная v2 с нарушением foreign key останавливается integrity gate и не продвигает версию. Успешная тестовая v2 обновляет все маркеры; verified backup содержит прежние Notes/ReviewLog вместе с committed WAL. Недоступный backup destination блокирует upgrade до изменения схемы. Пять incompatible-version fixtures отклонены read-only preflight, байты основной БД и существующего WAL сохранены; чужая непустая БД не усваивается как новая."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "36 Swift Testing tests, ноль failures: 17 Core, 14 Infrastructure (10 новых persistence tests, в том числе 5 parameterized incompatible schema cases), 3 DesignSystem, 2 Features. Итоговый лог build/t006-package.log. Проверки используют только временные синтетические file-БД; намеренные ошибки миграций перехвачены и проверены. Существующее предупреждение ZIPFoundation о watchOS v4 остаётся в стороннем manifest; pins не менялись."
+    },
+    {
+      "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t006-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "Финальная сборка и тесты arm64: TEST SUCCEEDED, 1 app unit test и 2 UI tests, ноль failures. Deployment target 15.0, локальная ad-hoc подпись без Apple Account. Итоговый лог build/t006-app-final.log и xcresult build/t006-app/Logs/Test/Test-AnkiNew-2026.10.18_18-14-44-+0300.xcresult. Применён сохранённый локальный wrapper T005: временно выбрана уже enabled ABC для стабильных Command-shortcuts XCUITest; defer восстановил исходную Russian с noErr (0). Продуктовые UI tests не менялись."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T006; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "Статус done установлен после выполнения критериев. Task graph/reports/generated state: 100 задач, 174 состояния; 19 Python tests, локальные ссылки и 48/48 PNG hashes проверены, quality: passed. Лог build/t006-quality.log. git diff --check без ошибок. Доставку и post-merge pipelines подтверждает отдельно штатный deliver.py."
+    }
+  ],
+  "limitations": [
+    "Это инфраструктура схемы: app shell пока не открывает личную коллекцию. Manifest, advisory lock и lifecycle generation реализуются T007; команды записи/revisions — T008; media publish/recovery — T009; FTS — T010. Инициализацию нужно вызывать вне main actor под эксклюзивным владением коллекцией.",
+    "Production schema начинается с v1, реальных прежних форматов ещё нет. Upgrade/failure/backup path проверен внутренней инъекцией тестовой v2. Копия перед миграцией включает только SQLite; полный backup с media и UI относится к T027/T028. Недоступное назначение backup проверено фактически; реальное заполнение диска владельца не выполнялось.",
+    "UUID и NFC/case-folding валидируются Core-типами до SQL; SELECT/INSERT тестового графа использует синтетические ключи. Семантика содержимого JSON и finite numeric validation до записи остаётся ответственностью будущих typed writers. SQL дополнительно проверяет storage types, JSON/schemaVersion и ranges. SQLite использует SHM для coordination даже при read-only WAL; тест сравнивает main/WAL bytes, а не наличие sidecar файлов.",
+    "Локальное окружение macOS 27.0.1 arm64 / Xcode 27.1; минимальная macOS 15 проверяется обязательным hosted macos-15 CI при доставке. Новых платных сервисов, API keys, capabilities/provisioning, CI artifacts/cache uploads нет. Личная коллекция, credentials и микрофон не использовались. Логи/xcresult остаются локально в игнорируемой build/."
+  ]
+}
