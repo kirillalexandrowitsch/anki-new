@@ -1,0 +1,44 @@
+{
+  "name": "CI",
+  "on": {
+    "pull_request": {
+      "branches": ["dev", "stage", "main"],
+      "types": ["opened", "synchronize", "reopened", "ready_for_review"]
+    },
+    "push": {"branches": ["dev", "stage", "main"]},
+    "workflow_dispatch": {}
+  },
+  "permissions": {"contents": "read"},
+  "concurrency": {
+    "group": "ci-${{ github.event.pull_request.number || github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "quality": {
+      "name": "quality",
+      "if": "${{ !github.event.repository.private }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 15,
+      "steps": [
+        {
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {"fetch-depth": 0, "persist-credentials": false}
+        },
+        {"name": "Validate project, reports, PR route and tests", "run": "python3 scripts/ci.py quality"}
+      ]
+    },
+    "macos": {
+      "name": "macos",
+      "if": "${{ !github.event.repository.private }}",
+      "runs-on": "macos-15",
+      "timeout-minutes": 30,
+      "steps": [
+        {
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {"fetch-depth": 0, "persist-credentials": false}
+        },
+        {"name": "Check on macOS and build configured app", "run": "python3 scripts/ci.py macos"}
+      ]
+    }
+  }
+}

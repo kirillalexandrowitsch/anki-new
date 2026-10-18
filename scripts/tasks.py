@@ -131,13 +131,13 @@ def sync(data, root):
     counts = collections.Counter(t['status'] for t in data['tasks'])
     status = ['# Состояние проекта', '[Задачи](TASKS.md) · [Правила чатов](AI_WORKFLOW.md) · [Архитектура](ARCHITECTURE.md)',
               f'Всего задач: **{len(data["tasks"])}**. Готово: **{counts["done"]}**; в работе: **{counts["in_progress"]}**; заблокировано: **{counts["blocked"]}**; запланировано: **{counts["planned"]}**.',
-              'Продукт: личное приложение для MacBook владельца, arm64. Бюджет: ноль дополнительных платежей сверх существующей подписки Codex; [обязательные ограничения](BUDGET.md). Публичная публикация и платная подпись не нужны. Степень реализации определяется статусами и отчётами ниже.', '## Активные и заблокированные']
+              'Продукт: личное приложение для MacBook владельца, arm64. Бюджет: ноль дополнительных платежей сверх существующей подписки Codex; [обязательные ограничения](BUDGET.md). Репозиторий публичный; доставка через dev → stage → main с обязательным CI. Платная подпись приложения не нужна. Степень реализации определяется статусами и отчётами ниже.', '## Активные и заблокированные']
     active = [t for t in data['tasks'] if t['status'] in ('in_progress', 'blocked')]
     status += [f'- [{t["id"]} · {t["title"]}](tasks/{t["id"]}.md): {LABELS[t["status"]]}. {t.get("blockedReason", "")}' for t in active] or ['Нет.']
     status += ['## Следующие доступные задачи']
     ready = ready_tasks(data)
     status += [f'- [{t["id"]} · {t["title"]}](tasks/{t["id"]}.md)' for t in ready[:5]] or ['Нет новых готовых к старту задач; проверить активные/заблокированные или завершение плана.']
-    status += ['## Контекст передачи', 'Запускать `python3 scripts/tasks.py status` и читать Git log/status перед реализацией. Другая задача in_progress запрещает одновременную правку checkout. Не доверять одному сообщению чата «готово» без отчёта и commit. История настройки репозитория: [PROJECT_SETUP.md](PROJECT_SETUP.md).',
+    status += ['## Контекст передачи', 'Запускать `python3 scripts/tasks.py status` и читать Git log/status перед реализацией. Другая задача in_progress запрещает одновременную правку checkout. Не доверять одному сообщению чата «готово» без отчёта и commit. Начинать из origin/dev через scripts/start_task.py next; завершать через scripts/deliver.py. История настройки: [PROJECT_SETUP.md](PROJECT_SETUP.md).',
                'Этот файл генерирует `scripts/tasks.py sync`; вручную менять backlog.json и контрактные карточки, затем синхронизировать. Commit hash текущей версии смотреть через `git log -1 --oneline`, чтобы сводка не содержала устаревающий собственный hash.']
     (root / 'docs/PROJECT_STATUS.md').write_text('\n\n'.join(status) + '\n')
     save(data, root)
