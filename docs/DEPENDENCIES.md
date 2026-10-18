@@ -55,7 +55,11 @@ python3 scripts/ci.py macos
 стандартном macos-15; только оба SUCCESS позволяют доставку. Локально
 проверено на macOS 27.0.1 arm64 / Xcode 27.1 / Swift 6.4. Runtime ровно
 macOS 15.0 недоступен на этом Mac; проверка ветки macOS 15 выполняется
-на hosted runner, точная версия и run записываются в отчёте T003.
+на hosted runner: macOS 15.7.9 arm64 / Xcode 16.4,
+[run 39129114275](https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39129114275):
+quality и macos SUCCESS, app/UI и все 7 package tests прошли.
+Release bundle локально содержит оба privacy manifests и точный файл notices;
+codesign --verify --deep --strict прошёл, executable arm64.
 
 - `DatabaseCompatibilityTests`: реальный временный file-backed DatabasePool,
   async write/read, WAL, FTS5 unicode61 и кириллический MATCH, rollback при
