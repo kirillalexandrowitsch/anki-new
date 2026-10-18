@@ -1,0 +1,45 @@
+{
+  "taskID": "T008",
+  "summary": "Реализован единый CollectionWriter actor для коротких синхронных транзакций, идемпотентный persisted journal v1, expectedRevision и типизированные Core errors. Предметные Core-порты DeckRepository и CollectionInfoRepository возвращают Sendable DTO; Infrastructure сохраняет простые колоды и переименование коллекции через один writer/pool. CollectionStore выдаёт порты только актуального generation и инвалидирует старые при close. Контракты обновлены до кода. Новых зависимостей, платных сервисов и дополнительных платежей нет. Закрытие pool сопровождается явным идемпотентным release файлового lease до возврата async close.",
+  "criteria": [
+    {
+      "text": "Повтор commandID не применяет операцию второй раз.",
+      "passed": true,
+      "evidence": "CollectionWriterTests: 20 конкурентных повторов одной update-команды возвращают один snapshot, revision повышается ровно один раз, в journal ровно create+update. Повтор create после update возвращает исходный snapshot без перезаписи актуального объекта. Повторы create/update и rename проверены после закрытия и нового открытия file-backed коллекции. Другой payload или другой предметный порт с прежним commandID возвращает commandIDReused. Неизвестная/повреждённая версия journal не выполняет mutation. Ошибка реального SQLite trigger на INSERT processed_commands откатывает предшествующий UPDATE и revision, journal row не остаётся; повтор той же команды после устранения ошибки успешен. Отдельная fault injection после записи двух таблиц откатывает обе."
+    },
+    {
+      "text": "Конфликт revision возвращается вызывающему коду без молчаливой перезаписи.",
+      "passed": true,
+      "evidence": "CollectionWriterTests: 20 одновременных update-команд разных окон с expectedRevision=0 дают одного победителя revision=1 и 19 точных revisionConflict(entity, expected=0, actual=1); итоговый DTO совпадает с победителем, journal содержит только успешные команды. Конфликт переименования коллекции также возвращает ожидаемую/актуальную revision без перезаписи имени. Создание существующего ID и изменение отсутствующего ID дают alreadyExists/notFound. Проверены Unicode duplicate name, несуществующий parent, self-parent и цикл. Старые репозитории отвергают read/write и даже replay после close/reopen как staleContext. Отмена до транзакции не пишет данные/journal, отмена во время commit возвращает committed результат."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "56 Swift Testing tests: 34 Infrastructure (14 новых тестов writer/repositories и lifecycle), 17 Core, 3 DesignSystem, 2 Features; ноль failures. Финальный repair-прогон: build/t008-package-repair.log. Реальные временные file-backed SQLite/WAL базы, journal count, revisions, rollback. Гонки используют task groups; отмена внутри commit синхронизируется AsyncStream + semaphore без временных задержек. Регрессия выполняет 200 немедленных close/reopen между двумя Store; отдельный тест проверяет release при удерживаемом объекте и повторный release после переиспользования descriptor. В цикле close→open нет промежуточного await; все 200 проверок staleContext сохранены и выполняются после цикла."
+    },
+    {
+      "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t008-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "TEST SUCCEEDED: 4 app unit tests и 2 UI tests, ноль failures; повторно после lifecycle repair. build/t008-app-repair.log; build/t008-app/Logs/Test/Test-AnkiNew-2026.10.18_19-49-23-+0300.xcresult. Локальная macOS 27.0.1 arm64 / Xcode 27.1, ad-hoc подпись без Apple Account. Debug CollectionTestID изолирует данные. Существующий локальный wrapper временно выбрал ABC для Command-shortcuts и восстановил исходную Russian (noErr 0). Минимальная macOS 15 проверяется обязательным hosted CI при доставке."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T008; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "После фактического выполнения критериев статус done; 100 задач и 174 состояния, зависимости и отчёты согласованы. 19 Python tests прошли; generated state, 2435 локальных ссылок и 48/48 PNG hashes проверены. quality: passed, git diff --check без ошибок. build/t008-quality.log. PR и каждый post-merge CI проверяются штатным deliver.py. После lifecycle repair повторно прошли tasks.py check, quality (19 Python tests, 2435 links, 48/48 PNG) и git diff --check; финальный лог build/t008-quality-repair.log."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-build --filter 'collectionRenameUsesOwnRevisionAndPersistsReplayAcrossReopen|immediateReopenAfterAsyncCloseNeverRetainsThePreviousLease|explicitLeaseReleaseIsImmediateAndNeverClosesAReusedDescriptor'",
+      "result": "passed",
+      "details": "Python subprocess runner выполнил эту команду 10 раз последовательно: 10/10 успешны, 30 test executions, 2000 немедленных close/reopen плюс проверки rename/replay и descriptor reuse. build/t008-reopen-stress.log. Повтор обоснован нестабильной CI ошибкой lifecycle, а не заменяет исправление кода. Финальные 10 прогонов повторены после удаления промежуточного await из цикла; 200 проверок retired repositories сохранены после каждой серии."
+    }
+  ],
+  "limitations": [
+    "T008 задаёт фундамент и первые предметные порты: простые Deck read/save и CollectionInfo read/rename. UI колод, полный SaveNote/Basic Card, медиа и review-операции остаются профильным задачам; generic SQL-capable execute доступен только внутри Infrastructure. Портов по каждой таблице нет.",
+    "Journal envelope v1 хранит канонический payload и исходный DTO в локальной БД; очистка journal до отдельной безопасной политики не реализована. Старый commandID с иным payload запрещён. Схема v1 и исходные PNG не изменены.",
+    "Commit синхронный на actor writer: отмена до начала останавливает команду, после начала commit завершается определённым outcome. Read использует async GRDB с проверкой lifecycle после await. Переименование меняет SQLite name/settingsRevision, bootstrap manifest сохраняет исходное имя; актуальное имя при reopen берётся из SQLite.",
+    "Личные коллекции, секреты и записи микрофона не используются. Зависимости, capabilities, платные runners, API и artifact/cache uploads не добавлены; локальные логи/xcresult остаются в игнорируемой build/.",
+    "Первый macOS CI PR #30 (run 39146172308) обнаружил нестабильный locked в collectionRenameUsesOwnRevisionAndPersistsReplayAcrossReopen; merge остановлен. gh run view --log-failed сохранён в build/t008-pr30-failed.log. При анализе устранена зависимость освобождения collection/registry lease от ARC deinit (async-frame может жить дольше возврата close): release выполняется явно после успешного pool.close, при ошибке pool владение остаётся. Локально исходная версия прошла 200 reopen, поэтому одни лишь повторы не считались исправлением; добавлены явный lifecycle boundary и две регрессионные проверки. Repair доставляется с task/T008 через новые PR и свежие обязательные CI; критерии и проверки не ослаблены."
+  ]
+}

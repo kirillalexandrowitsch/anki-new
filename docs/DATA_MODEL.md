@@ -46,7 +46,7 @@ Trash, manifest и SQLite с одним UUID; registry атомарно публ
 
 При существующем контейнере manifest version/UUID, наличие БД и её UUID проверяются
 до writable connection/миграции; mismatch не исправляется молча. Ошибки не меняют
-registry и не удерживают lease. При close сначала закрывается pool, затем lease;
+registry и не удерживают lease. При close сначала закрывается pool, затем явно освобождается lease до возврата close; освобождение не зависит от времени deinit async-frame. Release идемпотентен и не закрывает повторно уже переиспользованный descriptor;
 если close pool не удался, владение сохраняется для повторного close.
 
 Core передаёт `CollectionContext` с уникальным UUID поколения. Store проверяет его
@@ -132,6 +132,10 @@ erDiagram
 | ApplyImport | Результат staging с UUID mapping, Notes/Cards/tags/media refs, external IDs, импортный журнал |
 
 Файлы не являются частью SQL-транзакции. Для них используется протокол staging → проверка хеша → immutable publish → SQL commit → mark completed. При сбое до commit остаются только безопасные неиспользуемые файлы; после commit ссылки ведут на уже опубликованное содержимое. Startup recovery сверяет журнал; сборщик мусора не удаляет данные из активных операций и ещё доступных undo batches.
+
+### Идемпотентность команд T008
+
+`processed_commands.resultVersion=1`; `resultJSON` — объект `{schemaVersion:1, kind, request, result}`. `request` — строка канонического JSON команды (sorted keys), `result` — Codable DTO. Идентификатор команды уникален на всю коллекцию, а не на таблицу или открытое окно. Journal и изменения фиксируются одним GRDB write; rollback удаляет оба. Для простой колоды новая revision=0, update проверяет expectedRevision и повышает revision на один. Переименование коллекции использует collection_meta.settingsRevision. Повтор возвращает сохранённый snapshot, даже когда объект уже имеет более новую revision; другой payload с прежним commandID запрещён. Persisted envelope развивается по версиям, а неизвестный resultVersion не разрешает повторно выполнить mutation. Схема v1 не изменена.
 
 ## Удаление и история
 

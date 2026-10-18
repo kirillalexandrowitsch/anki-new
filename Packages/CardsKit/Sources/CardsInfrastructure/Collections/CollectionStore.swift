@@ -24,11 +24,15 @@ public actor CollectionStore: CollectionAccess {
         let context: CollectionContext
         let database: CollectionDatabase
         let lease: CollectionLease
+        let writer: CollectionWriter
+        var closing = false
 
-        init(context: CollectionContext, database: CollectionDatabase, lease: CollectionLease) {
+        init(context: CollectionContext, database: CollectionDatabase, lease: CollectionLease,
+             clock: any CardsCore.Clock) {
             self.context = context
             self.database = database
             self.lease = lease
+            self.writer = CollectionWriter(database: database, clock: clock)
         }
 
         deinit {
@@ -53,7 +57,7 @@ public actor CollectionStore: CollectionAccess {
         let files = FileManager.default
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         let registryLease = try CollectionLease(url: root.appendingPathComponent(".registry.lock"))
-        defer { withExtendedLifetime(registryLease) {} }
+        defer { registryLease.release() }
         let registryURL = root.appendingPathComponent("registry.json")
         if files.fileExists(atPath: registryURL.path) {
             let registry = try JSONDecoder().decode(CollectionRegistry.self, from: Data(contentsOf: registryURL))
@@ -86,7 +90,7 @@ public actor CollectionStore: CollectionAccess {
             guard metadata.id == manifest.id else { throw CollectionDatabaseError.collectionIdentityMismatch }
             let database = try CollectionDatabase(url: databaseURL)
             let context = CollectionContext(id: manifest.id, name: metadata.name)
-            active = OwnedCollection(context: context, database: database, lease: lease)
+            active = OwnedCollection(context: context, database: database, lease: lease, clock: clock)
             return context
         }
 
@@ -109,7 +113,7 @@ public actor CollectionStore: CollectionAccess {
                       to: directory.appendingPathComponent("collection.json"))
             try write(CollectionRegistry(schemaVersion: 1, collections: [id], lastSelected: id), to: registryURL)
             let context = CollectionContext(id: id, name: name)
-            active = OwnedCollection(context: context, database: opened, lease: lease)
+            active = OwnedCollection(context: context, database: opened, lease: lease, clock: clock)
             return context
         } catch {
             try? database?.close()
@@ -120,18 +124,37 @@ public actor CollectionStore: CollectionAccess {
     }
 
     public func metadata(generation: UUID) async throws -> CollectionMetadata {
-        guard let owned = active, owned.context.generation == generation else {
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
             throw CollectionAccessError.staleContext
         }
         let result = try await owned.database.metadata()
-        guard active?.context.generation == generation else { throw CollectionAccessError.staleContext }
+        guard active?.context.generation == generation, active?.closing == false else {
+            throw CollectionAccessError.staleContext
+        }
         return result
     }
 
-    public func close(generation: UUID) throws {
+    public func decks(generation: UUID) throws -> any DeckRepository {
+        SQLiteDeckRepository(writer: try writer(generation: generation))
+    }
+
+    public func collectionInfo(generation: UUID) throws -> any CollectionInfoRepository {
+        SQLiteCollectionInfoRepository(writer: try writer(generation: generation))
+    }
+
+    private func writer(generation: UUID) throws -> CollectionWriter {
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
+            throw CollectionRepositoryError.staleContext
+        }
+        return owned.writer
+    }
+
+    public func close(generation: UUID) async throws {
         guard let owned = active, owned.context.generation == generation else { return }
-        try owned.database.close()
-        active = nil // release lease only after the pool has closed
+        owned.closing = true
+        try await owned.writer.close()
+        owned.lease.release() // async frame destruction need not precede the caller's next open
+        if active === owned { active = nil } // release lease only after the pool has closed
     }
 
     private func containerURL(_ id: CollectionID) -> URL {
