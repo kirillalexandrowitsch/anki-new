@@ -1,4 +1,5 @@
 import CardsDesignSystem
+import CardsCore
 import CardsFeatures
 import SwiftUI
 
@@ -30,13 +31,33 @@ struct AnkiNewApp: App {
 /// Each window owns its navigation state; services come from the application root.
 private struct MainWindow: View {
     @State private var model: AppShellModel
+    private let collections: CollectionCoordinator
 
     init(composition: CompositionRoot) {
         _model = State(initialValue: composition.makeShellModel())
+        collections = composition.collections
     }
 
     var body: some View {
         AppShellView(model: model)
             .frame(minWidth: 800, minHeight: 540)
+            .task { await collections.open() }
+            .overlay {
+                if collections.isOpening {
+                    ProgressView("Открытие коллекции…")
+                        .padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                } else if let error = collections.error {
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.trianglebadge.exclamationmark").font(.largeTitle)
+                        Text(error as? CollectionAccessError == .locked
+                             ? "Коллекция уже открыта" : "Не удалось открыть коллекцию")
+                            .font(.headline)
+                        Text("Закройте коллекцию в другом экземпляре приложения и повторите попытку. Если ошибка сохраняется, проверьте доступ к папке коллекции.")
+                            .multilineTextAlignment(.center)
+                        Button("Повторить") { Task { await collections.open() } }
+                    }
+                    .padding(32).frame(maxWidth: 460).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
+            }
     }
 }

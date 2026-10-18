@@ -5,7 +5,8 @@ final class AppShellUITests: XCTestCase {
         let app = XCUIApplication()
         continueAfterFailure = false
         app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
-                               "-ApplePersistenceIgnoreState", "YES"]
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
         app.launch()
         defer { app.terminate() }
 
@@ -37,7 +38,8 @@ final class AppShellUITests: XCTestCase {
         let app = XCUIApplication()
         continueAfterFailure = false
         app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
-                               "-ApplePersistenceIgnoreState", "YES"]
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.staticTexts["section.title"].waitForExistence(timeout: 10))

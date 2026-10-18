@@ -5,11 +5,15 @@
    <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="3576F155DB986D55B94C216E" BuildableName="AnkiNew.app" BlueprintName="AnkiNew" ReferencedContainer="container:AnkiNew.xcodeproj"/></BuildActionEntry>
   </BuildActionEntries>
  </BuildAction>
- <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
+ <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="NO">
   <Testables>
    <TestableReference skipped="NO" parallelizable="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A9E7F0AF85CE1E72884DFEA5" BuildableName="AnkiNewTests.xctest" BlueprintName="AnkiNewTests" ReferencedContainer="container:AnkiNew.xcodeproj"/></TestableReference>
    <TestableReference skipped="NO" parallelizable="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="873DD58A0B660205BE1802EA" BuildableName="AnkiNewUITests.xctest" BlueprintName="AnkiNewUITests" ReferencedContainer="container:AnkiNew.xcodeproj"/></TestableReference>
   </Testables>
+  <CommandLineArguments>
+   <CommandLineArgument argument="-CollectionTestID" isEnabled="YES"/>
+   <CommandLineArgument argument="00000000-0000-0000-0000-000000000007" isEnabled="YES"/>
+  </CommandLineArguments>
  </TestAction>
  <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
   <BuildableProductRunnable runnableDebuggingMode="0"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="3576F155DB986D55B94C216E" BuildableName="AnkiNew.app" BlueprintName="AnkiNew" ReferencedContainer="container:AnkiNew.xcodeproj"/></BuildableProductRunnable>
