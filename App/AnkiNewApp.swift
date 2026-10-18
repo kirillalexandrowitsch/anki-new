@@ -1,3 +1,4 @@
+import CardsDesignSystem
 import CardsFeatures
 import SwiftUI
 
@@ -10,6 +11,15 @@ struct AnkiNewApp: App {
             MainWindow(composition: composition)
         }
         .defaultSize(width: 1100, height: 760)
+
+        #if DEBUG
+        Window("Дизайн-система", id: "design-system") {
+            CardsGallery().frame(minWidth: 700, minHeight: 540)
+        }
+        .defaultSize(width: 1120, height: 900)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+        #endif
 
         Settings {
             SettingsView()
