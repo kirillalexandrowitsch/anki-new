@@ -297,9 +297,12 @@
       ],
       "verification": "Транзакционный rollback, duplicate command и конкурентные попытки сохранения одной сущности.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
-      "stateIDs": []
+      "stateIDs": [],
+      "startedAt": "2026-10-18T16:14:52.959900+00:00",
+      "completedAt": "2026-10-18T16:21:19.652684+00:00",
+      "report": "docs/task-reports/T008.json"
     },
     {
       "id": "T009",
