@@ -1,0 +1,59 @@
+{
+  "taskID": "T002",
+  "summary": "Создан начальный AnkiNew.xcodeproj со shared scheme AnkiNew, локальным CardsKit (Core/Infrastructure/DesignSystem/Features), composition root, пятью входами навигации и нативной Settings scene с четырьмя вкладками. Добавлены String Catalog ru/en, App Sandbox и user-selected read/write/app-scope bookmark entitlements, app/unit/UI и package tests. Локальные проверки прошли; до завершения критерия CI ожидается workflow_dispatch на стандартном macos-15.",
+  "criteria": [
+    {
+      "text": "Приложение запускается на arm64; циклов зависимостей нет.",
+      "passed": true,
+      "evidence": "На macOS 27.0.1 arm64 выполнен xcodebuild clean test: app unit test и UI test прошли. UI test реально запускает приложение, переключает Today/Decks/Statistics/Library и открывает Settings через sidebar и Command-comma. Release build succeeded; lipo подтверждает arm64. swift package describe и обход графа подтверждают отсутствие циклов и заданные границы модулей."
+    },
+    {
+      "text": "Core компилируется без SwiftUI/GRDB; дизайн-PNG не копируются в bundle.",
+      "passed": true,
+      "evidence": "CardsCore импортирует только Foundation, имеет пустой список target dependencies; отдельно скомпилирован xcrun swiftc -swift-version 6 -parse-as-library -emit-module. Package.swift содержит только локальные targets, внешних зависимостей нет. Shared project resources содержат лишь String Catalog, пакет — лишь локализованные строки. Проверка Release .app не нашла PNG; quality проверила неизменность 48/48 исходных хешей."
+    },
+    {
+      "text": "CI знает shared scheme приложения и все локальные Swift packages; xcodebuild test выполняется на macOS runner.",
+      "passed": false,
+      "evidence": "automation.json настроен на AnkiNew.xcodeproj, shared scheme AnkiNew и Packages/CardsKit. Схема включает app unit и UI targets без skipped. Локально xcodebuild test и swift test прошли; подтверждение workflow_dispatch на hosted macos-15 ещё ожидается."
+    }
+  ],
+  "checks": [
+    {
+      "command": "xcodebuild clean test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/local CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "Xcode 27.1 / macOS 27.0.1 arm64: CLEAN SUCCEEDED, TEST SUCCEEDED; 1 app unit test и 1 UI test, 0 failures. Проверены реальный запуск, четыре главных раздела, sidebar Settings, четыре вкладки и повторное открытие Settings через Command-comma. UI test изолирован от восстановления окон через ApplePersistenceIgnoreState; заголовок имеет явную accessibility label. Test runner без hardened runtime корректно загружает ad-hoc bundle."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "Exit 0: 4 Swift Testing tests в Core/Infrastructure/Features. Проверены подстановка Clock без UI/БД, системное время, независимость навигации окон и стабильные маршруты/локализованные названия."
+    },
+    {
+      "command": "xcodebuild build -project AnkiNew.xcodeproj -scheme AnkiNew -configuration Release -destination 'platform=macOS,arch=arm64' -derivedDataPath build/release CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "BUILD SUCCEEDED. Release app arm64; codesign --verify --deep --strict прошёл, Signature=adhoc, flags=adhoc,runtime, TeamIdentifier отсутствует. Подписанные entitlements содержат sandbox, user-selected read/write и app-scope bookmarks, без сети и микрофона."
+    },
+    {
+      "command": "xcodebuild -showBuildSettings -project AnkiNew.xcodeproj -scheme AnkiNew -json (Debug и Release); swift package --package-path Packages/CardsKit describe --type json; проверка XML shared scheme, dependency graph, entitlements и Release bundle",
+      "result": "passed",
+      "details": "Обе конфигурации: arm64, macOS 15.0, Swift 6.0, CODE_SIGN_IDENTITY=-, пустой DEVELOPMENT_TEAM, ENABLE_APP_SANDBOX=YES. Граф Core=[]; DesignSystem=[]; Infrastructure=[Core]; Features=[Core,DesignSystem], циклов нет. Схема запускает оба app test targets. Внешних packages и PNG в Release bundle нет."
+    },
+    {
+      "command": "xcrun swiftc -swift-version 6 -parse-as-library -emit-module -module-name CardsCore Packages/CardsKit/Sources/CardsCore/Ports/Clock.swift -o build/core-only/CardsCore.swiftmodule",
+      "result": "passed",
+      "details": "Exit 0. Core компилируется самостоятельно, без SwiftUI, GRDB, инфраструктуры и внешних библиотек."
+    },
+    {
+      "command": "python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "Exit 0: 19 Python tests; generated state, граф задач и отчёты, 2413 локальных ссылок и 48/48 PNG hashes проверены. После финального отчёта проверка будет повторена."
+    }
+  ],
+  "limitations": [
+    "Пока реализована техническая оболочка: коллекция, SQL, scheduler, import/export, изменения настроек и полный дизайн экранов остаются будущими задачами. Неработающие контролы и вымышленные учебные данные не добавлены.",
+    "File-selection capabilities настроены и проверены в подписанном Release bundle; реальные Open/Save-панели и долговременные bookmarks будут проверяться при реализации файловых сценариев.",
+    "Локальный runtime проверен на macOS 27.0.1 arm64; minos 15.0 не доказывает запуск на macOS 15. Проверка hosted macos-15 пока ожидается.",
+    "Новых внешних dependencies, платных API, trial, подписок, Apple Account, provisioning profiles, CI artifact/cache uploads нет. Локальный Git author взят из существующей настройки, личные коллекции и записи не использованы."
+  ]
+}

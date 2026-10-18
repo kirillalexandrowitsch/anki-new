@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "date": "2026-10-18",
   "project": "Карточки / Anki New",
-  "status": "planning-complete; implementation-not-started",
+  "status": "planning-complete; implementation-in-progress",
   "assumptions": {
     "minimumMacOS": "15.0",
     "architecture": "arm64",
@@ -110,7 +110,7 @@
       ],
       "verification": "Clean build приложения и swift test каркаса; проверить build settings в shared scheme.",
       "size": "M",
-      "status": "planned",
+      "status": "in_progress",
       "milestone": "M0",
       "stateIDs": [
         "base-01",
@@ -118,7 +118,8 @@
         "base-03",
         "base-04",
         "base-05"
-      ]
+      ],
+      "startedAt": "2026-10-18T12:18:54.346614+00:00"
     },
     {
       "id": "T003",
