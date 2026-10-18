@@ -97,12 +97,13 @@
       "goal": "Создать Xcode-проект и границы модулей из ARCHITECTURE.md.",
       "implementation": [
         "Создать App target, CardsCore/Infrastructure/DesignSystem/Features и тестовые targets.",
-        "Подключить локальный пакет, shared schemes, ресурсы локализации и composition root без singleton базы.",
+        "Подключить локальный пакет, shared schemes, ресурсы локализации и composition root без singleton базы. Задать app.project/app.scheme/packagePaths в .github/automation.json для обязательной сборки и тестов CI.",
         "Добавить пять разделов, Settings scene, базовый App Sandbox и начальные file-selection capabilities; настроить Git локально и исключения build/cache/личных коллекций."
       ],
       "acceptance": [
         "Приложение запускается на arm64; циклов зависимостей нет.",
-        "Core компилируется без SwiftUI/GRDB; дизайн-PNG не копируются в bundle."
+        "Core компилируется без SwiftUI/GRDB; дизайн-PNG не копируются в bundle.",
+        "CI знает shared scheme приложения и все локальные Swift packages; xcodebuild test выполняется на macOS runner."
       ],
       "verification": "Clean build приложения и swift test каркаса; проверить build settings в shared scheme.",
       "size": "M",
@@ -3922,7 +3923,7 @@
       "goal": "Оставить воспроизводимую рабочую версию и понятный способ восстановления.",
       "implementation": [
         "Зафиксировать Git tag/commit, точные версии инструментов, локальную .app и инструкцию её пересборки.",
-        "Сверить task statuses, отчёты, roadmap и compatibility limitations; синхронизировать приватный GitHub.",
+        "Сверить task statuses, отчёты, roadmap и compatibility limitations; синхронизировать GitHub.",
         "Описать откат к предыдущей версии кода и отдельно восстановление совместимой базы из backup; публичную публикацию не выполнять."
       ],
       "acceptance": [
@@ -4988,15 +4989,23 @@
     "statusSummary": "docs/PROJECT_STATUS.md",
     "reports": "docs/task-reports/Txxx.json",
     "command": "python3 scripts/tasks.py",
-    "mode": "one sequential task per chat; commit and push to private origin"
+    "mode": "one autonomous task per chat; task/Txxx -> dev -> stage -> main through strictly green protected PRs",
+    "repositoryVisibility": "public",
+    "startCommand": "python3 scripts/start_task.py next",
+    "deliveryCommand": "python3 scripts/deliver.py --task Txxx",
+    "requiredChecks": [
+      "quality",
+      "macos"
+    ]
   },
   "budget": {
     "additionalPaymentsAllowed": false,
     "onlyExistingExpense": "current Codex subscription",
     "paidAPIsAllowed": false,
     "paidDeveloperProgramRequired": false,
-    "hostedCIAllowed": false,
+    "hostedCIAllowed": "standard public runners only; ubuntu-24.04, macos-15",
     "creditPurchasesAllowed": false,
-    "policy": "docs/BUDGET.md"
+    "policy": "docs/BUDGET.md",
+    "artifactUploadsAllowed": false
   }
 }
