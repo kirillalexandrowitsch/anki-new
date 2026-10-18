@@ -31,5 +31,14 @@
     "localMarkdownLinksChecked": 2386,
     "brokenLinks": 0,
     "statusSource": "docs/backlog.json"
+  },
+  "zeroAdditionalCostPolicy": {
+    "additionalPaymentsAllowed": false,
+    "policy": "docs/BUDGET.md",
+    "githubActionsEnabled": false,
+    "taskLedgerCheck": "passed",
+    "workflowTests": "6 passed",
+    "localMarkdownLinksChecked": 2397,
+    "applicationTasksCompleted": 0
   }
 }

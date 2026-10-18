@@ -67,7 +67,7 @@
       "goal": "Получить воспроизводимое окружение сборки приложения arm64 на macOS 15+.",
       "implementation": [
         "Проверить наличие полного Xcode и выбрать developer directory; сохранить версию Xcode/Swift/SDK.",
-        "Зафиксировать deployment target 15.0, язык Swift 6 и arm64; выбрать временный bundle ID без требования платной подписи для первых запусков.",
+        "Зафиксировать deployment target 15.0, язык Swift 6 и arm64; выбрать временный bundle ID без требования платной подписи для локального использования.",
         "Описать запуск тестов на минимальной и текущей системе; записать ограничения доступного Mac."
       ],
       "acceptance": [
@@ -132,7 +132,8 @@
       ],
       "acceptance": [
         "Нет зависимостей от плавающей main/latest.",
-        "FSRS-6, архивы и FTS5 имеют воспроизводимый smoke result; ограничения записаны."
+        "FSRS-6, архивы и FTS5 имеют воспроизводимый smoke result; ограничения записаны.",
+        "Все зависимости доступны без оплаты, trial и обязательного платного сервиса; условия лицензий записаны."
       ],
       "verification": "Минимальная интеграционная сборка и чтение/запись временной БД; не объявлять FSRS готовым только по README.",
       "size": "L",
@@ -3773,7 +3774,8 @@
       ],
       "acceptance": [
         "Нет исполняемого импортированного кода и скрытой отправки содержимого.",
-        "Все сторонние лицензии и требуемые declarations включены корректно."
+        "Все сторонние лицензии и требуемые declarations включены корректно.",
+        "Проект не требует платежей сверх существующей подписки Codex: сборки локальны, платных API и metered-сервисов нет."
       ],
       "verification": "Offline/network audit, hostile fixtures и просмотр диагностического архива.",
       "size": "L",
@@ -4987,5 +4989,14 @@
     "reports": "docs/task-reports/Txxx.json",
     "command": "python3 scripts/tasks.py",
     "mode": "one sequential task per chat; commit and push to private origin"
+  },
+  "budget": {
+    "additionalPaymentsAllowed": false,
+    "onlyExistingExpense": "current Codex subscription",
+    "paidAPIsAllowed": false,
+    "paidDeveloperProgramRequired": false,
+    "hostedCIAllowed": false,
+    "creditPurchasesAllowed": false,
+    "policy": "docs/BUDGET.md"
   }
 }
