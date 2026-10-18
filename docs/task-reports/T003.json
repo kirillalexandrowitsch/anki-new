@@ -1,0 +1,48 @@
+{
+  "taskID": "T003",
+  "summary": "Закреплены GRDB 7.11.1, swift-fsrs на точной revision и ZIPFoundation 0.9.20 только в Infrastructure. Локально прошли async WAL/FTS5, ZIP round trip и 20 FSRS-6 сравнений с независимым ts-fsrs 5.4.2 oracle. Проверка macOS 15 ещё ожидается; задача пока in_progress.",
+  "criteria": [
+    {
+      "text": "Нет зависимостей от плавающей main/latest.",
+      "passed": true,
+      "evidence": "Package.swift использует exact 7.11.1 / 0.9.20 и revision 4fbaf20184d62f82a9f44f343337c61a2c5483e9. Оба Package.resolved имеют идентичные pins для трёх dependencies без дополнительных remote transitives."
+    },
+    {
+      "text": "FSRS-6, архивы и FTS5 имеют воспроизводимый smoke result; ограничения записаны.",
+      "passed": false,
+      "evidence": "Локальные smoke и app/UI tests прошли; проверка macOS 15 и финальный Release resource audit ещё ожидаются. Подробные процедуры и ограничения: docs/DEPENDENCIES.md."
+    },
+    {
+      "text": "Все зависимости доступны без оплаты, trial и обязательного платного сервиса; условия лицензий записаны.",
+      "passed": true,
+      "evidence": "Проверены LICENSE и manifests точных revisions: три MIT dependencies без платного сервиса/аккаунта/trial; системные SQLite/Compression. Полные notices bundled, первичные ссылки и транзитивный состав в docs/DEPENDENCIES.md. Dev-only ts-fsrs также MIT, без runtime dependencies."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "7 Swift Testing tests: 4 Infrastructure, 2 Features, 1 Core. FSRS: 20 полных card outputs по всем 4 оценкам в 5 состояниях, preview==next и 32 concurrent calls. GRDB: async WAL/FTS5 кириллица, rollback, 12 parallel writes/read, integrity_check, reopen. ZIP: Unicode/binary/empty deflate, CRC и disk round trip."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/dependency-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "На macOS 27.0.1 arm64 / Xcode 27.1: TEST SUCCEEDED, app unit и UI tests без failures. Внешние dependencies собираются в приложении, Core/Features не получают импортов GRDB/FSRS/ZIPFoundation."
+    },
+    {
+      "command": "node scripts/generate_fsrs_fixture.cjs > build/dependency-audit/fsrs6-reference.json; cmp build/dependency-audit/fsrs6-reference.json Packages/CardsKit/Tests/CardsInfrastructureTests/Fixtures/fsrs6-reference.json",
+      "result": "passed",
+      "details": "Exact ts-fsrs 5.4.2 установлен dev-only с --ignore-scripts --no-audit --no-fund; version и npm SHA-512 integrity проверены generator. Повторный oracle побайтно совпадает. Начальное сравнение со старой 5.2.0 выявило upstream изменения learning/hard; причины и changelog записаны в DEPENDENCIES.md, значения Swift не использованы как oracle."
+    },
+    {
+      "command": "python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "19 Python tests, task graph/reports, generated state, 2424 local links и 48/48 неизменных PNG hashes прошли. Повторная проверка обязательна после finish."
+    }
+  ],
+  "limitations": [
+    "Hosted macOS 15 проверка ещё не выполнена; T003 не отмечена done.",
+    "Доменный Scheduler adapter и валидация/learning policy остаются T017; backup/APKG, безопасная распаковка и схема коллекции не реализуются в T003.",
+    "Новых платежей, API keys, trial, subscriptions, CI cache/artifact uploads нет; тесты только на временных данных."
+  ]
+}

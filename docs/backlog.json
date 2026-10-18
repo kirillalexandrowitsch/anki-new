@@ -144,9 +144,10 @@
       ],
       "verification": "Минимальная интеграционная сборка и чтение/запись временной БД; не объявлять FSRS готовым только по README.",
       "size": "L",
-      "status": "planned",
+      "status": "in_progress",
       "milestone": "M0",
-      "stateIDs": []
+      "stateIDs": [],
+      "startedAt": "2026-10-18T12:47:08.088441+00:00"
     },
     {
       "id": "T004",
