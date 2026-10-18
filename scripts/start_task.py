@@ -28,12 +28,17 @@ def select_task(data, requested):
     return byid[requested]
 
 
+def require_delivered_trees(trees):
+    assert len(set(trees)) == 1, 'Finish the pending dev -> stage -> main delivery before starting another task'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('task', nargs='?', default='next')
     args = parser.parse_args()
     assert not git('status', '--porcelain'), 'Save/commit current work before starting another task'
     subprocess.run(['git', 'fetch', 'origin', 'dev', 'stage', 'main'], cwd=ROOT, check=True)
+    require_delivered_trees([git('rev-parse', f'origin/{branch}^{{tree}}') for branch in ('dev', 'stage', 'main')])
     data = json.loads(git('show', 'origin/dev:docs/backlog.json'))
     task = select_task(data, args.task)
     branch = 'task/' + task['id']
