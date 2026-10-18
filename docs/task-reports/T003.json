@@ -1,0 +1,69 @@
+{
+  "taskID": "T003",
+  "summary": "Закреплены и проверены GRDB 7.11.1, swift-fsrs на точной revision с явным FSRS-6 и ZIPFoundation 0.9.20 только в Infrastructure. Async WAL/FTS5, ZIP round trip, 20 FSRS-6 сравнений с независимым ts-fsrs 5.4.2 oracle и app/UI tests прошли локально и на macOS 15. Сохранены оба lockfile, bundled MIT notices и аудит privacy manifests; дополнительных платежей нет.",
+  "criteria": [
+    {
+      "text": "Нет зависимостей от плавающей main/latest.",
+      "passed": true,
+      "evidence": "Package.swift использует exact 7.11.1 / 0.9.20 и revision 4fbaf20184d62f82a9f44f343337c61a2c5483e9. Оба Package.resolved имеют идентичные pins для трёх dependencies без дополнительных remote transitives."
+    },
+    {
+      "text": "FSRS-6, архивы и FTS5 имеют воспроизводимый smoke result; ограничения записаны.",
+      "passed": true,
+      "evidence": "swift test: 20 FSRS outputs (все оценки, new/learning/review/relearning/overdue, допуск 1e-7 для памяти, точные due/state/counters), preview==next и 32 parallel calls; GRDB async WAL/FTS5 кириллица, rollback, 12 parallel writes/read, integrity_check и reopen; ZIP Unicode/binary/empty deflate с CRC и byte equality. Повторный oracle побайтно совпал. Все 7 tests прошли локально и на macOS 15.7.9 arm64 / Xcode 16.4 в https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39129114275 (source 3f06942c25340a16bc3188fa7a89c26e0be10d3f), quality=SUCCESS/macos=SUCCESS. Ограничения записаны в docs/DEPENDENCIES.md."
+    },
+    {
+      "text": "Все зависимости доступны без оплаты, trial и обязательного платного сервиса; условия лицензий записаны.",
+      "passed": true,
+      "evidence": "Проверены LICENSE и manifests точных revisions: три MIT dependencies без платного сервиса/аккаунта/trial; системные SQLite/Compression. Полные notices bundled, первичные ссылки и транзитивный состав в docs/DEPENDENCIES.md. Dev-only ts-fsrs также MIT, без runtime dependencies."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "7 Swift Testing tests: 4 Infrastructure, 2 Features, 1 Core. FSRS: 20 полных card outputs по всем 4 оценкам в 5 состояниях, preview==next и 32 concurrent calls. GRDB: async WAL/FTS5 кириллица, rollback, 12 parallel writes/read, integrity_check, reopen. ZIP: Unicode/binary/empty deflate, CRC и disk round trip."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/dependency-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "На macOS 27.0.1 arm64 / Xcode 27.1: TEST SUCCEEDED, app unit и UI tests без failures. Внешние dependencies собираются в приложении, Core/Features не получают импортов GRDB/FSRS/ZIPFoundation."
+    },
+    {
+      "command": "node scripts/generate_fsrs_fixture.cjs > build/dependency-audit/fsrs6-reference.json; cmp build/dependency-audit/fsrs6-reference.json Packages/CardsKit/Tests/CardsInfrastructureTests/Fixtures/fsrs6-reference.json",
+      "result": "passed",
+      "details": "Exact ts-fsrs 5.4.2 установлен dev-only с --ignore-scripts --no-audit --no-fund; version и npm SHA-512 integrity проверены generator. Повторный oracle побайтно совпадает. Начальное сравнение со старой 5.2.0 выявило upstream изменения learning/hard; причины и changelog записаны в DEPENDENCIES.md, значения Swift не использованы как oracle."
+    },
+    {
+      "command": "python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "19 Python tests, task graph/reports, generated state, 2424 local links и 48/48 неизменных PNG hashes прошли. Повторная проверка обязательна после finish."
+    },
+    {
+      "command": "xcodebuild build -project AnkiNew.xcodeproj -scheme AnkiNew -configuration Release -destination 'platform=macOS,arch=arm64' -derivedDataPath build/dependency-release CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=; codesign --verify --deep --strict build/dependency-release/Build/Products/Release/AnkiNew.app; lipo -archs build/dependency-release/Build/Products/Release/AnkiNew.app/Contents/MacOS/AnkiNew",
+      "result": "passed",
+      "details": "BUILD SUCCEEDED; Release app arm64, подпись проверена. Apple Account, provisioning и платная программа не используются."
+    },
+    {
+      "command": "Python json/plistlib/Path audit обоих Package.resolved, swift package describe --type json и Release AnkiNew.app/Contents/Resources",
+      "result": "passed",
+      "details": "Оба lockfile имеют одинаковые 3 immutable pins, Core без dependencies, Features только Core/DesignSystem. В Release resource tree ровно два PrivacyInfo.xcprivacy: GRDB без collected/accessed types, ZIPFoundation FileTimestamp reason 0A2A.1; tracking=false у обоих. Bundled ThirdPartyNotices.txt побайтно совпал с полными MIT notices исходников. Debug app дополнительно содержит копии ресурсов внутри test plugin; Release audit выполнен на основном app resource tree."
+    },
+    {
+      "command": "python3 scripts/ci.py macos",
+      "result": "passed",
+      "details": "Локальный полный CI: 19 Python tests, generated state, task reports, links/48 PNG hashes, xcodebuild test (1 app unit + 1 UI) и swift test (7 tests) прошли, macos: passed."
+    },
+    {
+      "command": "gh workflow run ci.yml --ref task/T003; gh run watch 39129114275 --exit-status; gh run view 39129114275 --log --job 117680429822",
+      "result": "passed",
+      "details": "Предварительная проверка реализации до finish: https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39129114275, quality=SUCCESS/macos=SUCCESS. Стандартный macos-15-arm64, macOS 15.7.9, Xcode 16.4, target arm64-apple-macos15.0. TEST SUCCEEDED (app unit/UI), все 7 Swift Testing tests включая FSRS, FTS5, ZIP прошли. Свежие PR checks и post-merge CI остаются обязательными при deliver.py."
+    }
+  ],
+  "limitations": [
+    "Runtime ровно macOS 15.0 недоступен: проверены локальная macOS 27.0.1 arm64 и hosted macOS 15.7.9 arm64; target deployment 15.0. GRDB mode 6; FSRS tools 5.10 strict concurrency и ZIPFoundation tools 5.9 mode 5 импортируются из нашего Swift 6 кода без @preconcurrency. Полная миграция upstream исходников в Swift 6 не заявляется.",
+    "FSRS smoke проверяет закреплённый профиль UTC без fuzz и 20 control vectors; это не готовый доменный Scheduler, обработка всех параметров/DST или учебные квоты. T017 реализует адаптер и валидацию. Несовпадения со старым ts-fsrs 5.2.0 разобраны по upstream changelog, oracle выбран по соответствующей версии, допуск не ослаблялся.",
+    "ZIP round trip не реализует безопасный ArchiveService/APKG/backup; GRDB smoke не создаёт схему коллекции. Их последующие задачи не отмечены выполненными.",
+    "Новых платежей, обязательных paid services/accounts, API keys, trial, subscriptions, CI cache/artifact uploads нет. Лицензии MIT записаны и включены в bundle, системные SQLite/Compression поставляются с macOS; тесты только на временных данных."
+  ]
+}
