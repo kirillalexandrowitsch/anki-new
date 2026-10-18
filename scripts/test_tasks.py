@@ -1,6 +1,5 @@
 """Tests of task bookkeeping only; they do not accept any real project task."""
 import contextlib
-import copy
 import importlib.util
 import io
 import json
@@ -21,6 +20,15 @@ class LedgerTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         shutil.copytree(SOURCE / 'docs', self.root / 'docs')
         LEDGER.ROOT = self.root
+        # Each test starts with a fresh ledger, regardless of real project progress.
+        data = LEDGER.load(self.root)
+        for task in data['tasks']:
+            task['status'] = 'planned'
+            for key in ('startedAt', 'updatedAt', 'completedAt', 'blockedReason', 'report'):
+                task.pop(key, None)
+            report = self.root / f'docs/task-reports/{task["id"]}.json'
+            report.unlink(missing_ok=True)
+        LEDGER.sync(data, self.root)
 
     def tearDown(self):
         self.temp.cleanup()
