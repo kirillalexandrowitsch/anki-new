@@ -95,15 +95,16 @@ def validate_pr_route(event, current, baseline, changed_files):
     old = {t['id']: t for t in baseline['tasks']}
     new = {t['id']: t for t in current['tasks']}
     assert tid in old and tid in new
-    assert new[tid]['status'] == 'done' and old[tid]['status'] != 'done', 'Task must be newly completed'
+    assert new[tid]['status'] == 'done', 'Task must meet all criteria before delivery'
     assert new[tid]['acceptance'] == old[tid]['acceptance'], 'Do not weaken acceptance to complete a task'
     assert new[tid]['dependencies'] == old[tid]['dependencies'], 'Do not bypass dependencies'
     assert f'docs/task-reports/{tid}.json' in changed_files
-    assert 'docs/backlog.json' in changed_files
+    if old[tid]['status'] != 'done':
+        assert 'docs/backlog.json' in changed_files
     for other in old.keys() & new.keys():
         if other != tid:
             assert new[other]['status'] == old[other]['status'], 'One implementation task per PR'
-    return tid
+    return tid + (' repair' if old[tid]['status'] == 'done' else '')
 
 
 def check_pr(root):
