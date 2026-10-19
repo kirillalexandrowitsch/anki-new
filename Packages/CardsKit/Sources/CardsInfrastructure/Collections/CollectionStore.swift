@@ -16,7 +16,7 @@ struct CollectionRegistry: Codable {
 }
 
 /// All filesystem/SQLite work runs on this actor, never on the UI actor.
-public actor CollectionStore: CollectionAccess {
+public actor CollectionStore: DeckWorkspaceAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
@@ -171,6 +171,11 @@ public actor CollectionStore: CollectionAccess {
             throw CollectionAccessError.staleContext
         }
         return result
+    }
+
+    public func deckWorkspace(generation: UUID) throws -> DeckWorkspace {
+        try DeckWorkspace(generation: generation, repository: decks(generation: generation),
+                          queries: queries(generation: generation))
     }
 
     public func decks(generation: UUID) throws -> any DeckRepository {
