@@ -135,12 +135,14 @@ def check_app(root, policy):
     if projects or scaffold_done or app['project']:
         assert app['project'] and app['scheme'], 'T002 must configure project and shared scheme in automation.json'
         assert (root / app['project']).is_dir(), 'Configured Xcode project is missing'
-        run('xcodebuild', 'test', '-project', app['project'], '-scheme', app['scheme'], '-destination', 'platform=macOS', '-derivedDataPath', str(root / 'build/ci'), 'CODE_SIGN_IDENTITY=-', 'DEVELOPMENT_TEAM=')
+        # Same synthetic checks as local runs, including app unit/UI tests.
+        # Explicit resolution is the only phase allowed to fetch dependencies.
+        run(sys.executable, 'scripts/check.py', '--resolve', '--app-tests')
     else:
         print('Current scope: documentation/automation; app target does not exist yet. No app-build success claimed.', flush=True)
     for package in app['packagePaths']:
         assert (root / package / 'Package.swift').is_file()
-        run('swift', 'test', cwd=root / package)
+        # check.py already ran every registered package's tests before the app.
     discovered = {str(p.parent.relative_to(root)) for p in (root / 'Packages').glob('*/Package.swift')} if (root / 'Packages').is_dir() else set()
     assert discovered.issubset(set(app['packagePaths'])), 'Register new Swift packages in CI; do not omit tests'
 

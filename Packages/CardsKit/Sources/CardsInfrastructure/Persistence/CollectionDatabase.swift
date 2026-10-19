@@ -117,6 +117,10 @@ public final class CollectionDatabase: Sendable {
     }
 
     public func checkIntegrity() async throws {
+        // A reader that checked an empty FTS5 table before another connection
+        // populated it can retain stale integrity-check state (observed on macOS 27).
+        // Verify on a fresh connection; keep both full integrity and FK checks.
+        pool.invalidateReadOnlyConnections()
         try await pool.read { try Self.checkIntegrity($0) }
     }
 
