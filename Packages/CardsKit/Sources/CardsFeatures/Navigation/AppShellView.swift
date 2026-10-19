@@ -5,8 +5,11 @@ public struct AppShellView: View {
     @Bindable private var model: AppShellModel
     @Environment(\.scenePhase) private var scenePhase
 
-    public init(model: AppShellModel) {
+    private let decks: DecksModel?
+
+    public init(model: AppShellModel, decks: DecksModel? = nil) {
         self.model = model
+        self.decks = decks
     }
 
     public var body: some View {
@@ -47,9 +50,14 @@ public struct AppShellView: View {
                     Text(model.currentDate, format: .dateTime.weekday(.wide).day().month(.wide).year())
                         .foregroundStyle(.secondary)
                 }
-                SectionPlaceholder(title: String(localized: "Ваша коллекция", bundle: .module),
-                                   symbol: model.selection.symbol,
-                                   message: model.selection.message)
+                if model.selection == .decks {
+                    if let decks { DecksView(model: decks) }
+                    else { ProgressView("Открытие колод…") }
+                } else {
+                    SectionPlaceholder(title: String(localized: "Ваша коллекция", bundle: .module),
+                                       symbol: model.selection.symbol,
+                                       message: model.selection.message)
+                }
             }
             .accessibilityElement(children: .contain)
             .padding(CardsSpacing.section)

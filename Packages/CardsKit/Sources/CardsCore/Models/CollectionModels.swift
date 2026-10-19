@@ -18,18 +18,39 @@ public struct Deck: Equatable, Codable, Sendable, Identifiable {
     public let parentID: DeckID?
     public let name: EntityName
     public let description: String
+    public let iconKey: String
+    public let colorKey: String
     public let revision: Revision
     public let deletedAt: Date?
 
     public init(id: DeckID, parentID: DeckID? = nil, name: EntityName,
-                description: String = "", revision: Revision = .initial, deletedAt: Date? = nil) {
+                description: String = "", iconKey: String = "rectangle.stack", colorKey: String = "accent", revision: Revision = .initial, deletedAt: Date? = nil) {
         self.id = id
         self.parentID = parentID
         self.name = name
         self.description = description
+        self.iconKey = iconKey
+        self.colorKey = colorKey
         self.revision = revision
         self.deletedAt = deletedAt
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, parentID, name, description, iconKey, colorKey, revision, deletedAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decode(DeckID.self, forKey: .id),
+                  parentID: try c.decodeIfPresent(DeckID.self, forKey: .parentID),
+                  name: try c.decode(EntityName.self, forKey: .name),
+                  description: try c.decode(String.self, forKey: .description),
+                  iconKey: try c.decodeIfPresent(String.self, forKey: .iconKey) ?? "rectangle.stack",
+                  colorKey: try c.decodeIfPresent(String.self, forKey: .colorKey) ?? "accent",
+                  revision: try c.decode(Revision.self, forKey: .revision),
+                  deletedAt: try c.decodeIfPresent(Date.self, forKey: .deletedAt))
+    }
+
 }
 
 public struct Note: Equatable, Codable, Sendable, Identifiable {

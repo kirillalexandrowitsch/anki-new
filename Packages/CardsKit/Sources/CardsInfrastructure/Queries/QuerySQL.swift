@@ -146,7 +146,7 @@ enum QuerySQL {
             let parent: String? = row["parentID"]
             return try DeckQueryRow(deck: Deck(id: DeckID(uuidString: row["id"]),
                 parentID: parent.map { try DeckID(uuidString: $0) }, name: EntityName(row["name"]),
-                description: row["description"], revision: Revision(row["revision"])), counts: counts(row))
+                description: row["description"], iconKey: row["iconKey"], colorKey: row["colorKey"], revision: Revision(row["revision"])), counts: counts(row))
         }, deckCount: count, page: query.page, asOf: asOf)
     }
 

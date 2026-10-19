@@ -34,6 +34,92 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
     }
 
+    @MainActor func testDeckCreateDuplicateCancelEscapeEditAndRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        func openDecks() {
+            XCTAssertTrue(app.staticTexts["navigation.decks"].waitForExistence(timeout: 10))
+            app.staticTexts["navigation.decks"].click()
+            XCTAssertTrue(app.buttons["decks.create"].waitForExistence(timeout: 10))
+        }
+        func replaceName(_ value: String) {
+            let field = app.textFields["deckEditor.name"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            field.click()
+            field.typeKey("a", modifierFlags: .command)
+            field.typeText(value)
+        }
+        func assertFocused(_ element: XCUIElement) {
+            let focused = NSPredicate { _, _ in element.value(forKey: "hasKeyboardFocus") as? Bool == true }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)],
+                                         timeout: 5), .completed, element.debugDescription)
+        }
+        openDecks()
+        let create = app.buttons["decks.create"]
+        create.click()
+        let save = app.buttons["deckEditor.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertFalse(save.isEnabled)
+        replaceName("English")
+        let description = app.textViews["deckEditor.description"]
+        description.click()
+        description.typeText("Synthetic description")
+        app.popUpButtons["deckEditor.icon"].click()
+        app.menuItems["Книга"].click()
+        app.popUpButtons["deckEditor.color"].click()
+        app.menuItems["Фиолетовый"].click()
+        save.click()
+        let edit = app.buttons["deck.edit.English"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["deckEditor.name"].exists)
+
+        create.click()
+        replaceName(" english ")
+        save.click()
+        XCTAssertTrue(app.staticTexts["deckEditor.nameError"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["deckEditor.name"].exists)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(create.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["deckEditor.name"].exists)
+        assertFocused(create)
+
+        edit.click()
+        XCTAssertEqual(app.textFields["deckEditor.name"].value as? String, "English")
+        XCTAssertEqual(app.textViews["deckEditor.description"].value as? String, "Synthetic description")
+        XCTAssertEqual(app.popUpButtons["deckEditor.icon"].value as? String, "Книга")
+        XCTAssertEqual(app.popUpButtons["deckEditor.color"].value as? String, "Фиолетовый")
+        replaceName("Discarded")
+        app.buttons["deckEditor.cancel"].click()
+        XCTAssertFalse(app.buttons["deck.edit.Discarded"].exists)
+        assertFocused(edit)
+        edit.click()
+        replaceName("Escaped")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertFalse(app.buttons["deck.edit.Escaped"].exists)
+        assertFocused(edit)
+        edit.click()
+        replaceName("Updated")
+        save.click()
+        XCTAssertTrue(app.buttons["deck.edit.Updated"].waitForExistence(timeout: 5))
+        app.terminate()
+        app.launch()
+        openDecks()
+        let updated = app.buttons["deck.edit.Updated"]
+        XCTAssertTrue(updated.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["deck.edit.English"].exists)
+        updated.click()
+        XCTAssertEqual(app.textFields["deckEditor.name"].value as? String, "Updated")
+        XCTAssertEqual(app.textViews["deckEditor.description"].value as? String, "Synthetic description")
+        XCTAssertEqual(app.popUpButtons["deckEditor.icon"].value as? String, "Книга")
+        XCTAssertEqual(app.popUpButtons["deckEditor.color"].value as? String, "Фиолетовый")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+    }
+
     @MainActor func testDesignGalleryNativeControlsAndAppearances() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
