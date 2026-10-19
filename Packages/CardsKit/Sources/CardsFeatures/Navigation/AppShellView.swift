@@ -7,12 +7,12 @@ public struct AppShellView: View {
 
     private let decks: DecksModel?
 
-    private let editorLauncher: EditorLauncherModel?
+    private let library: LibraryModel?
 
-    public init(model: AppShellModel, decks: DecksModel? = nil, editorLauncher: EditorLauncherModel? = nil) {
+    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil) {
         self.model = model
         self.decks = decks
-        self.editorLauncher = editorLauncher
+        self.library = library
     }
 
     public var body: some View {
@@ -57,7 +57,7 @@ public struct AppShellView: View {
                     if let decks { DecksView(model: decks) }
                     else { ProgressView("Открытие колод…") }
                 } else if model.selection == .library {
-                    if let editorLauncher { EditorLauncherView(model: editorLauncher) }
+                    if let library { LibraryView(model: library) }
                     else { ProgressView("Открытие карточек…") }
                 } else {
                     SectionPlaceholder(title: String(localized: "Ваша коллекция", bundle: .module),
