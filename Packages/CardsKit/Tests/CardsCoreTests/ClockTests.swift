@@ -1,14 +1,19 @@
 import CardsCore
+import CardsTestSupport
 import Foundation
 import Testing
 
-private struct FixedClock: CardsCore.Clock {
-    let date: Date
-    func now() -> Date { date }
-}
-
 @Test func clockCanBeImplementedWithoutPlatformOrDatabaseDependencies() {
     let date = Date(timeIntervalSince1970: 1_700_000_000)
-    let clock: any CardsCore.Clock = FixedClock(date: date)
+    let clock: any CardsCore.Clock = TestClock(date: date)
     #expect(clock.now() == date)
+}
+
+@Test func testClockMovesOnlyWhenExplicitlyAdvanced() {
+    let clock = TestClock()
+    let initial = clock.now()
+    clock.advance(by: 86_400)
+    #expect(clock.now() == initial.addingTimeInterval(86_400))
+    clock.set(initial)
+    #expect(clock.now() == initial)
 }

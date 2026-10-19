@@ -117,7 +117,15 @@ public final class CollectionDatabase: Sendable {
     }
 
     public func checkIntegrity() async throws {
-        try await pool.read { try Self.checkIntegrity($0) }
+        // Older system SQLite does not include FTS5 in PRAGMA integrity_check.
+        // Its portable integrity command has INSERT syntax, requiring the writer.
+        // One transaction also avoids stale reader FTS check state on macOS 27.
+        try await pool.write { db in
+            try Self.checkIntegrity(db)
+            if try db.tableExists("notes_fts") {
+                try db.execute(sql: "INSERT INTO notes_fts(notes_fts, rank) VALUES ('integrity-check', 1)")
+            }
+        }
     }
 
     public func close() throws { try pool.close() }

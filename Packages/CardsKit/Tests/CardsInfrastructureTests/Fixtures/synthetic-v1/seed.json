@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "seed": 12,
+  "nowMilliseconds": 1792368000000,
+  "decks": [
+    {
+      "id": 10,
+      "name": "Языки"
+    },
+    {
+      "id": 11,
+      "name": "Английский",
+      "parent": 10
+    },
+    {
+      "id": 12,
+      "name": "Наука"
+    }
+  ],
+  "notes": [
+    {
+      "id": 20,
+      "front": "café",
+      "back": "Кофе",
+      "example": "Учебный синтетический пример"
+    },
+    {
+      "id": 21,
+      "front": "ёж",
+      "back": "hedgehog",
+      "example": "Буква ё"
+    },
+    {
+      "id": 22,
+      "front": "Нейтрон",
+      "back": "neutron",
+      "example": "Частица"
+    },
+    {
+      "id": 23,
+      "front": "Проверка",
+      "back": "test",
+      "example": "Без личных данных"
+    }
+  ],
+  "cards": [
+    {
+      "id": 30,
+      "note": 20,
+      "deck": 11,
+      "variant": "basic.forward",
+      "phase": "new",
+      "dueOffset": 0
+    },
+    {
+      "id": 31,
+      "note": 20,
+      "deck": 11,
+      "variant": "reverse.backward",
+      "phase": "learning",
+      "dueOffset": 1000
+    },
+    {
+      "id": 32,
+      "note": 21,
+      "deck": 11,
+      "variant": "basic.forward",
+      "phase": "review",
+      "dueOffset": -1000
+    },
+    {
+      "id": 33,
+      "note": 22,
+      "deck": 12,
+      "variant": "basic.forward",
+      "phase": "relearning",
+      "dueOffset": 0
+    },
+    {
+      "id": 34,
+      "note": 23,
+      "deck": 12,
+      "variant": "basic.forward",
+      "phase": "review",
+      "dueOffset": 86400000,
+      "suspended": true
+    }
+  ],
+  "media": [
+    {
+      "id": 40,
+      "note": 20,
+      "file": "pixel.png",
+      "uti": "public.png",
+      "role": "image",
+      "sha256": "6b1048f8a6d40bac0b2954c18fefa40c4ea7a96120fc2e54b7317c0e43c2bbec"
+    },
+    {
+      "id": 41,
+      "note": 21,
+      "file": "tone.wav",
+      "uti": "com.microsoft.waveform-audio",
+      "role": "audio",
+      "sha256": "5206b3cffd05733ffee407ff855322c9ecab94e7366830d254940df2f3b7825c"
+    }
+  ]
+}
