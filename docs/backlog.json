@@ -680,7 +680,7 @@
       ],
       "verification": "UI-тест скрытых/раскрытых контролов, клавиш и возврата из pause.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-06",
@@ -688,7 +688,10 @@
         "07.1",
         "07.2",
         "07.3"
-      ]
+      ],
+      "startedAt": "2026-10-19T22:06:13.537699+00:00",
+      "completedAt": "2026-10-19T22:22:07.321187+00:00",
+      "report": "docs/task-reports/T019.json"
     },
     {
       "id": "T020",
@@ -4026,7 +4029,7 @@
       "stateID": "base-06",
       "taskID": "T019",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "01.1",
@@ -4152,7 +4155,7 @@
       "stateID": "06.1",
       "taskID": "T019",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "06.2",
