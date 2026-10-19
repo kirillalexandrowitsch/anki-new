@@ -1,5 +1,6 @@
 import CardsCore
 import Foundation
+import Darwin
 
 struct CollectionManifest: Codable {
     let schemaVersion: Int
@@ -20,20 +21,24 @@ public actor CollectionStore: CollectionAccess {
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
     private let mediaFault: MediaFault?
+    private let backupFault: BackupFault?
+    private var operationInProgress = false
 
     private final class OwnedCollection {
         let context: CollectionContext
         let database: CollectionDatabase
         let lease: CollectionLease
+        let operationLease: CollectionLease
         let writer: CollectionWriter
         let media: CollectionMediaRepository
         var closing = false
 
         init(context: CollectionContext, database: CollectionDatabase, lease: CollectionLease,
-             clock: any CardsCore.Clock, directory: URL, mediaFault: MediaFault?) {
+             clock: any CardsCore.Clock, directory: URL, mediaFault: MediaFault?, operationLease: CollectionLease) {
             self.context = context
             self.database = database
             self.lease = lease
+            self.operationLease = operationLease
             let writer = CollectionWriter(database: database, clock: clock)
             self.writer = writer
             self.media = CollectionMediaRepository(root: directory, writer: writer, fault: mediaFault)
@@ -49,12 +54,21 @@ public actor CollectionStore: CollectionAccess {
         self.root = root.standardizedFileURL.resolvingSymlinksInPath()
         self.clock = clock
         self.mediaFault = nil
+        self.backupFault = nil
     }
 
     init(root: URL, clock: any CardsCore.Clock = SystemClock(), mediaFault: @escaping MediaFault) {
         self.root = root.standardizedFileURL.resolvingSymlinksInPath()
         self.clock = clock
         self.mediaFault = mediaFault
+        self.backupFault = nil
+    }
+
+    init(root: URL, backupFault: @escaping BackupFault) {
+        self.root = root.standardizedFileURL.resolvingSymlinksInPath()
+        self.clock = SystemClock()
+        self.mediaFault = nil
+        self.backupFault = backupFault
     }
 
     public static func applicationSupportRoot(bundleIdentifier: String) throws -> URL {
@@ -67,6 +81,13 @@ public actor CollectionStore: CollectionAccess {
         guard active == nil else { throw CollectionAccessError.alreadyOpen }
         let files = FileManager.default
         try files.createDirectory(at: root, withIntermediateDirectories: true)
+        let operationLease = try CollectionLease(url: root.appendingPathComponent(".operations.lock"))
+        try RestoreJournal.recover(root: root)
+        return try openLocked(operationLease: operationLease)
+    }
+
+    private func openLocked(operationLease: CollectionLease) throws -> CollectionContext {
+        let files = FileManager.default
         let registryLease = try CollectionLease(url: root.appendingPathComponent(".registry.lock"))
         defer { registryLease.release() }
         let registryURL = root.appendingPathComponent("registry.json")
@@ -108,7 +129,7 @@ public actor CollectionStore: CollectionAccess {
                 throw error
             }
             let context = CollectionContext(id: manifest.id, name: metadata.name)
-            active = OwnedCollection(context: context, database: database, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault)
+            active = OwnedCollection(context: context, database: database, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault, operationLease: operationLease)
             return context
         }
 
@@ -131,7 +152,7 @@ public actor CollectionStore: CollectionAccess {
                       to: directory.appendingPathComponent("collection.json"))
             try write(CollectionRegistry(schemaVersion: 1, collections: [id], lastSelected: id), to: registryURL)
             let context = CollectionContext(id: id, name: name)
-            active = OwnedCollection(context: context, database: opened, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault)
+            active = OwnedCollection(context: context, database: opened, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault, operationLease: operationLease)
             return context
         } catch {
             try? database?.close()
@@ -180,11 +201,101 @@ public actor CollectionStore: CollectionAccess {
 
     public func close(generation: UUID) async throws {
         guard let owned = active, owned.context.generation == generation else { return }
+        guard !operationInProgress else { throw CollectionBackupError.operationInProgress }
         owned.closing = true
         await owned.media.close()
         try await owned.writer.close()
         owned.lease.release() // async frame destruction need not precede the caller's next open
+        owned.operationLease.release()
         if active === owned { active = nil } // release lease only after the pool has closed
+    }
+
+    /// Publishes only a verified archive, never replaces an existing backup.
+    public func createBackup(to destination: URL, generation: UUID) async throws {
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
+            throw CollectionBackupError.staleContext
+        }
+        guard !operationInProgress else { throw CollectionBackupError.operationInProgress }
+        guard BackupFiles.outside(destination, root: root),
+              !FileManager.default.fileExists(atPath: destination.path) else {
+            throw CollectionBackupError.invalidDestination
+        }
+        operationInProgress = true
+        defer { operationInProgress = false }
+        let scoped = destination.startAccessingSecurityScopedResource()
+        defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
+        let parent = destination.deletingLastPathComponent()
+        let work = parent.appendingPathComponent(".backup-" + UUID().uuidString.lowercased())
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: work) }
+        let source = containerURL(owned.context.id)
+        let now = clock.now()
+        try await owned.writer.mediaAccess { pool in
+            try BackupArchive.snapshot(pool: pool, source: source, staging: work.appendingPathComponent("snapshot"), now: now)
+        }
+        let archive = work.appendingPathComponent("backup.cardsbackup")
+        try BackupArchive.create(staging: work.appendingPathComponent("snapshot"), archiveURL: archive)
+        _ = try BackupArchive.extract(archive, to: work.appendingPathComponent("verify"))
+        try BackupFiles.syncFile(archive)
+        try Task.checkCancellation()
+        guard Darwin.link(archive.path, destination.path) == 0 else {
+            throw CollectionAccessError.fileSystem(errno)
+        }
+        try MediaFiles.synchronizeDirectory(parent)
+    }
+
+    /// Full validation precedes invalidation of the old generation. Startup recovers any interrupted swap.
+    public func restoreBackup(from archive: URL, generation: UUID) async throws -> CollectionContext {
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
+            throw CollectionBackupError.staleContext
+        }
+        guard !operationInProgress else { throw CollectionBackupError.operationInProgress }
+        operationInProgress = true
+        defer { operationInProgress = false }
+        let scoped = archive.startAccessingSecurityScopedResource()
+        defer { if scoped { archive.stopAccessingSecurityScopedResource() } }
+        let operation = UUID()
+        let previous = CollectionRegistry(schemaVersion: 1, collections: [owned.context.id], lastSelected: owned.context.id)
+        let work = root.appendingPathComponent(".restore-" + operation.uuidString.lowercased())
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: false)
+        defer {
+            if !FileManager.default.fileExists(atPath: RestoreJournal.url(root).path) {
+                try? FileManager.default.removeItem(at: work)
+            }
+        }
+        let staging = work.appendingPathComponent("new")
+        let manifest = try BackupArchive.extract(archive, to: staging)
+        let target = containerURL(manifest.collectionID)
+        guard manifest.collectionID == owned.context.id || !FileManager.default.fileExists(atPath: target.path) else {
+            throw CollectionBackupError.invalidDestination
+        }
+        try FileManager.default.removeItem(at: staging.appendingPathComponent("manifest.json"))
+        for entry in manifest.files where entry.path.hasPrefix("Media/") {
+            try FileManager.default.setAttributes([.posixPermissions: 0o444],
+                ofItemAtPath: staging.appendingPathComponent(entry.path).path)
+        }
+        for name in ["Staging", "Trash"] {
+            try FileManager.default.createDirectory(at: staging.appendingPathComponent(name), withIntermediateDirectories: false)
+        }
+        try RestoreJournal.synchronizeTree(staging)
+        try MediaFiles.synchronizeDirectory(work)
+        try MediaFiles.synchronizeDirectory(root)
+        try Task.checkCancellation()
+        owned.closing = true
+        await owned.media.close()
+        try await owned.writer.close()
+        owned.lease.release()
+        active = nil
+        // Keep the stable external lease throughout both renames, registry commit and reopen.
+        do {
+            let journal = RestoreJournal(version: 1, operation: operation, previous: previous,
+                replacement: manifest.collectionID, committed: false)
+            try journal.install(root: root, fault: backupFault)
+            return try openLocked(operationLease: owned.operationLease)
+        } catch {
+            owned.operationLease.release()
+            throw error
+        }
     }
 
     private func containerURL(_ id: CollectionID) -> URL {

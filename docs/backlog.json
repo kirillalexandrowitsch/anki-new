@@ -399,12 +399,15 @@
       ],
       "verification": "Round trip Notes/Cards/log/media и падение между двумя rename; сравнить содержимое после recovery.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "17.4",
         "23.4"
-      ]
+      ],
+      "startedAt": "2026-10-19T05:52:20.130820+00:00",
+      "completedAt": "2026-10-19T06:02:53.495174+00:00",
+      "report": "docs/task-reports/T011.json"
     },
     {
       "id": "T012",
