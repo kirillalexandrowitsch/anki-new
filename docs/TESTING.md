@@ -84,7 +84,10 @@ ANKI_BACKUP_TEST_ROOT/ARCHIVE за свой контекст. Crash-тест с�
 На локальной macOS 27.0.1 воспроизведён ложный `fts5: checksum mismatch` на reader,
 который проверял пустой индекс до заполнения через writer. Новый reader и writer
 подтверждали целостность тех же байтов. `CollectionDatabase.checkIntegrity()` теперь
-инвалидирует idle reader connections перед полными integrity/foreign key checks.
+выполняет полные integrity/foreign key checks и явную FTS5 `integrity-check` команду
+в одной транзакции на writer: у неё INSERT-синтаксис, хотя данные не меняются.
+На SQLite runner macos-15 PRAGMA ещё не обнаруживает FTS checksum corruption;
+явная команда проверяет индекс и на этой версии.
 Регрессия проверяет новый commit; намеренно повреждённый shadow content через системный
 sqlite3 по-прежнему отклоняется. Схема/migrations не меняются. Контракт FTS consistency:
 [документация SQLite](https://www.sqlite.org/fts5.html#the_integrity_check_command).

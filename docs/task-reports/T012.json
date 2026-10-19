@@ -1,11 +1,11 @@
 {
   "taskID": "T012",
-  "summary": "Добавлены общий TestClock/изолированные temp directories/FaultProbe, версионированный synthetic seed 12 с кириллицей, тремя колодами, пятью расписаниями и PNG/сгенерированным WAV. Единый check.py запускает package tests и ad-hoc app build либо app unit/UI tests; CI использует тот же путь. После явного resolve доступны офлайн-проверки с запретом сети ОС и безопасные JSON diagnostics. Новая регрессия также исправила устаревшее FTS integrity-check state reader connection. Новых зависимостей, платежей, CI uploads или личных данных нет.",
+  "summary": "Добавлены общий TestClock/изолированные temp directories/FaultProbe, версионированный synthetic seed 12 с кириллицей, тремя колодами, пятью расписаниями и PNG/сгенерированным WAV. Единый check.py запускает package tests и ad-hoc app build либо app unit/UI tests; CI использует тот же путь. После явного resolve доступны офлайн-проверки с запретом сети ОС и безопасные JSON diagnostics. Новая регрессия также обеспечила проверку FTS целостности через явную команду на writer для старой SQLite macos-15 и новой локальной SQLite. Новых зависимостей, платежей, CI uploads или личных данных нет.",
   "criteria": [
     {
       "text": "Проверки не читают личную коллекцию и не требуют сети после resolve.",
       "passed": true,
-      "evidence": "python3 scripts/check.py --deny-network выполнен дважды: build/checks/run-_bvq5gue/summary.json и run-0k8735c9/summary.json, оба status=passed, package-tests exit=0, app-build exit=0; networkDenied=true. В каждом 90 package tests (18 Core, 67 Infrastructure, 3 DesignSystem, 2 Features) и SHA-256 fixture b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86. Сравнение status/exit codes/test counts/fingerprint подтвердило одинаковые результаты; UUID temp roots и предупреждения compiler/cache могут различаться. TestDirectory создаёт новые каталоги 0700 вне Application Support; SyntheticFixture применяет настоящие migrations к file-БД, проверяет медиа, два fresh seed/reopen/FTS/clock boundaries. App tests используют CollectionTestID; унаследованные ANKI_* удаляются перед запуском. Caches/HEAD проверены против Package.resolved; сеть разрешена только явной подготовке --resolve, сами два прогона выполнены под внешним OS sandbox deny network* для всего subprocess tree."
+      "evidence": "python3 scripts/check.py --deny-network выполнен дважды: build/checks/run-4sgi25sk/summary.json и run-dtt0edth/summary.json (финальный portable FTS-check), оба status=passed, package-tests exit=0, app-build exit=0; networkDenied=true. В каждом 90 package tests (18 Core, 67 Infrastructure, 3 DesignSystem, 2 Features) и SHA-256 fixture b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86. Сравнение status/exit codes/test counts/fingerprint подтвердило одинаковые результаты; UUID temp roots и предупреждения compiler/cache могут различаться. TestDirectory создаёт новые каталоги 0700 вне Application Support; SyntheticFixture применяет настоящие migrations к file-БД, проверяет медиа, два fresh seed/reopen/FTS/clock boundaries. App tests используют CollectionTestID; унаследованные ANKI_* удаляются перед запуском. Caches/HEAD проверены против Package.resolved; сеть разрешена только явной подготовке --resolve, сами два прогона выполнены под внешним OS sandbox deny network* для всего subprocess tree."
     },
     {
       "text": "Падение теста сохраняет полезную диагностику без пользовательских текстов.",
@@ -22,7 +22,7 @@
     {
       "command": "python3 scripts/check.py --deny-network (дважды)",
       "result": "passed",
-      "details": "Оба полных прогона: build/checks/run-_bvq5gue/summary.json; build/checks/run-0k8735c9/summary.json. 90 package tests + app build arm64/ad-hoc exit0, одинаковый seed fingerprint/результаты. Внешний sandbox запрещает network*; вложенный sandbox manifests/macros выключен только для этого режима, без пропуска package signature/macro validation или тестов. Прочитаны ARCHITECTURE, DATA_MODEL, INTEGRATIONS, DOMAIN_TYPES и каркас; T012 не имеет отдельного PNG, design assets не менялись."
+      "details": "Оба полных прогона: build/checks/run-4sgi25sk/summary.json; build/checks/run-dtt0edth/summary.json (повторены после portable FTS correction). 90 package tests + app build arm64/ad-hoc exit0, одинаковый seed fingerprint/результаты. Внешний sandbox запрещает network*; вложенный sandbox manifests/macros выключен только для этого режима, без пропуска package signature/macro validation или тестов. Прочитаны ARCHITECTURE, DATA_MODEL, INTEGRATIONS, DOMAIN_TYPES и каркас; T012 не имеет отдельного PNG, design assets не менялись."
     },
     {
       "command": "python3 -m unittest discover -s scripts -p test_*.py -v",
@@ -38,14 +38,19 @@
       "command": "python3 scripts/tasks.py finish T012; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "Все acceptance criteria T012 выполнены до finish. 100 задач/174 состояния; зависимости, отчёты и generated docs согласованы. quality: 25 Python tests, 2453 локальные ссылки, хеши 48/48 исходных PNG; build/t012-quality.log. git diff --check чистый. Обязательные quality/macos и post-merge pipelines каждого PR проверяет deliver.py."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (дважды после portable FTS correction); python3 scripts/ci.py quality",
+      "result": "passed",
+      "details": "Финальные run-4sgi25sk и run-dtt0edth: status passed, package exit0/app-build exit0; одинаковые test counts и fingerprint. 90 package tests. Новый checkIntegrity выполняет явную FTS проверку на writer в одной transaction; regression проверяет неизменность seeded content, повтор после commit, reopen, legacy schema v1 без FTS и отказ после настоящего shadow-content corruption. Логи build/t012-offline-final1.log и build/t012-offline-final2.log. quality:25 Python tests/2453 links/48 PNG passed. Повтор remote CI ещё обязателен до merge."
     }
   ],
   "limitations": [
     "Минимальная macOS 15 локально не установлена: локальная проверка на macOS 27.0.1 arm64/Xcode 27.1; обязательный macos-15 runner проверяется при доставке.",
     "Seed — тестовые данные для storage/queries, scheduler parameter row — минимальный storage stub; для FSRS calculations остаётся независимый reference fixture T003. Полные Note/Study use cases и UI не реализуются этой задачей.",
     "Свободный текст ошибок и assertion values намеренно не сохраняются в summary; расследование начинается с phase/exit code/source location и повторения теста на fixture. Локальные build intermediates игнорируются Git и не публикуются.",
-    "Полная проверка integrity и foreign keys сохранена. invalidateReadOnlyConnections устраняет воспроизведённое на локальной SQLite устаревшее FTS state; отдельная регрессия повреждает shadow content системным sqlite3 и требует отказ. Схема/migrations не менялись.",
     "Использованы системные инструменты и существующие бесплатные зависимости. Новых пакетов, платных API/подписок/capabilities, CI artifacts/cache uploads, личных коллекций и микрофонных записей нет.",
-    "Первый PR CI run 39212924325 остановлен на package-tests Xcode 16.4/macOS-15 до merge. Выявлен недостаток диагностики runner: summary сохранялась только в игнорируемом build. Исправлено: тот же JSON whitelist также печатается в stdout CI без raw сообщений и без uploads; повтор CI необходим для установления платформенной причины."
+    "Полная проверка integrity/foreign keys и явная FTS5 integrity-check выполняются в одной writer transaction без изменения данных; v1 без FTS тоже поддерживается. Вторая CI диагностика показала syntheticCorruptFTSStillFailsFullIntegrityVerification:47:11: старый SQLite macos-15 не обнаруживал FTS corruption через PRAGMA. Reader invalidation заменён portable явной FTS-командой на writer; схема/migrations неизменны. Проверки не ослаблены.",
+    "Первый CI run 39212924325 выявил отсутствие summary в CI log; исправлено stdout того же безопасного JSON без uploads. Run 39213323497 показал portable FTS-check недостаток (см. выше), исправленный в следующем commit. Оба CI остановились до merge; результаты сохранены в build/t012-ci-failed.log и build/t012-ci-failed2.log."
   ]
 }

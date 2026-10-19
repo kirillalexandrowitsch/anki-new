@@ -18,6 +18,7 @@ import Testing
     #expect(expected == fingerprint)
     print("ANKI_FIXTURE_V1_SHA256=" + expected) // Fixed synthetic-only digest for check.py.
     try await first.database.checkIntegrity()
+    #expect(try first.fingerprint() == expected) // Verification must not change content.
     // Check again after the first verification reader has observed another commit.
     try await first.database.pool.write { try $0.execute(sql: "UPDATE notes SET updatedAt=updatedAt+1") }
     try await first.database.checkIntegrity()
@@ -27,6 +28,14 @@ import Testing
     #expect(try await reopened.metadata().createdAt.rawValue == first.seed.nowMilliseconds)
     #expect(try await reopened.pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM cards") } == 5)
     #expect(try await reopened.pool.read { try Int.fetchOne($0, sql: "SELECT count(*) FROM notes_fts WHERE notes_fts MATCH 'кофе'") } == 1)
+    // The same public verification still works before the FTS migration exists.
+    let legacyDirectory = try TestDirectory()
+    let legacy = try CollectionDatabase(url: legacyDirectory.url.appendingPathComponent("v1.sqlite"),
+        newCollection: NewCollectionMetadata(id: CollectionID(uuidString: first.seed.key(1)),
+            name: EntityName("Synthetic v1"), createdAt: EpochMilliseconds(0)), migrations: CollectionMigrations.initial)
+    defer { try? legacy.close() }
+    try await legacy.checkIntegrity()
+    #expect(try await legacy.metadata().schemaVersion == 1)
 }
 
 @Test func syntheticCorruptFTSStillFailsFullIntegrityVerification() async throws {
