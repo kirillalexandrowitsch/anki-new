@@ -139,6 +139,10 @@ Writer выполняет синхронный GRDB `write` на своём acto
 
 Ошибки портов — `CollectionRepositoryError`: notFound/alreadyExists, revisionConflict с ожидаемой и фактической revision, validation, invalidHierarchy, commandIDReused, staleContext, cancelled, unsupportedCommandResult, integrityFailure, insufficientSpace, permissionDenied и storage с техническим SQLite-кодом. DTO не содержит GRDB ошибок или пользовательских путей. Переименование коллекции меняет имя в SQLite и settingsRevision; manifest остаётся идентификационным bootstrap-документом, отображаемое актуальное имя берётся из SQLite.
 
+### Хранилище медиа T009
+
+`CollectionStore.media(generation:)` выдаёт Core-порт `MediaRepository`. Подготовка и ImageIO thumbnail выполняются на media actor; writer сериализует journal, immutable publish и короткие SQL-транзакции. Startup recovery завершается до выдачи нового контекста. Import создаёт общий asset, ссылки Note применяются только будущим явным Save. Форматы, лимиты и границы восстановления описаны в [MEDIA_STORAGE.md](MEDIA_STORAGE.md).
+
 ## Состояние UI
 
 У каждого feature — `@MainActor @Observable` модель состояния. View отображает свойства и передаёт намерения пользователя. Сетевые/дисковые операции возвращают типизированный результат; модель показывает loading, empty, content или error. Для занятия применяется отдельный автомат состояний из [REVIEW_ENGINE.md](REVIEW_ENGINE.md).

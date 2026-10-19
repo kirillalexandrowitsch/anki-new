@@ -328,12 +328,15 @@
       ],
       "verification": "Fault injection между publish и commit, повреждённое изображение и повторное добавление.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "09.4",
         "22.3"
-      ]
+      ],
+      "startedAt": "2026-10-19T03:55:04.599245+00:00",
+      "completedAt": "2026-10-19T04:02:23.307064+00:00",
+      "report": "docs/task-reports/T009.json"
     },
     {
       "id": "T010",
