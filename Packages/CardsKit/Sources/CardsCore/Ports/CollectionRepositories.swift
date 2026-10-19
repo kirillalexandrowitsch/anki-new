@@ -1,6 +1,8 @@
 import Foundation
 
 public enum RepositoryEntity: Equatable, Sendable {
+    case note(NoteID)
+    case media(MediaID)
     case deck(DeckID)
     case collection(CollectionID)
 }

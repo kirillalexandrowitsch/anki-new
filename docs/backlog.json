@@ -498,11 +498,14 @@
       ],
       "verification": "Create/edit/reopen и повторный Save после suppression; проверить ID и schedule revision.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "09.1"
-      ]
+      ],
+      "startedAt": "2026-10-19T11:46:10.476154+00:00",
+      "completedAt": "2026-10-19T11:52:16.677545+00:00",
+      "report": "docs/task-reports/T014.json"
     },
     {
       "id": "T015",

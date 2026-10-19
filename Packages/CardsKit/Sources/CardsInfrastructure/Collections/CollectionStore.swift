@@ -182,6 +182,10 @@ public actor CollectionStore: DeckWorkspaceAccess {
         SQLiteDeckRepository(writer: try writer(generation: generation))
     }
 
+    public func notes(generation: UUID) throws -> any NoteRepository {
+        SQLiteNoteRepository(writer: try writer(generation: generation), clock: clock)
+    }
+
     public func collectionInfo(generation: UUID) throws -> any CollectionInfoRepository {
         SQLiteCollectionInfoRepository(writer: try writer(generation: generation))
     }
