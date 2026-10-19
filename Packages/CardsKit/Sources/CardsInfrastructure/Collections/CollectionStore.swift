@@ -16,7 +16,7 @@ struct CollectionRegistry: Codable {
 }
 
 /// All filesystem/SQLite work runs on this actor, never on the UI actor.
-public actor CollectionStore: DeckWorkspaceAccess {
+public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
@@ -180,6 +180,11 @@ public actor CollectionStore: DeckWorkspaceAccess {
 
     public func decks(generation: UUID) throws -> any DeckRepository {
         SQLiteDeckRepository(writer: try writer(generation: generation))
+    }
+
+    public func editorWorkspace(generation: UUID) throws -> EditorWorkspace {
+        try EditorWorkspace(generation: generation, notes: notes(generation: generation),
+                            queries: queries(generation: generation))
     }
 
     public func notes(generation: UUID) throws -> any NoteRepository {

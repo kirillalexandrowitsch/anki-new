@@ -120,6 +120,97 @@ final class AppShellUITests: XCTestCase {
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
     }
 
+    @MainActor func testNoteEditorCreatePreviewValidationCloseChoicesEditAndReopen() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        func field(_ name: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(identifier: "editor.\(name)").firstMatch
+        }
+        func replace(_ name: String, _ text: String) {
+            let target = field(name)
+            XCTAssertTrue(target.waitForExistence(timeout: 5))
+            target.click()
+            target.typeKey("a", modifierFlags: .command)
+            target.typeText(text)
+        }
+        func library() {
+            XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
+            app.staticTexts["navigation.library"].click()
+            XCTAssertTrue(app.buttons["editorLauncher.create"].waitForExistence(timeout: 10))
+        }
+        func assertClosed() {
+            let absent = NSPredicate { _, _ in !field("front").exists }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: absent, object: nil)], timeout: 5), .completed)
+        }
+        // All data belongs to a fresh, disposable collection.
+        app.staticTexts["navigation.decks"].click()
+        app.buttons["decks.create"].click()
+        let deckName = app.textFields["deckEditor.name"]
+        XCTAssertTrue(deckName.waitForExistence(timeout: 5))
+        deckName.click(); deckName.typeText("Synthetic editor deck")
+        app.buttons["deckEditor.save"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Synthetic editor deck"].waitForExistence(timeout: 5))
+        library()
+        app.buttons["editorLauncher.create"].click()
+        let save = app.buttons["editor.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertFalse(save.isEnabled)
+        replace("front", "A phrase with spaces 123")
+        XCTAssertFalse(save.isEnabled)
+        replace("back", "   ")
+        XCTAssertFalse(save.isEnabled)
+        replace("back", "Synthetic translation")
+        replace("pronunciation", "/test/")
+        app.buttons["editor.addExample"].click()
+        replace("example.0.en", "Example with spaces")
+        replace("example.0.ru", "Example translation")
+        XCTAssertTrue(save.isEnabled)
+        let preview = app.descendants(matching: .any).matching(identifier: "editor.preview.front").firstMatch
+        XCTAssertTrue(preview.label.contains("A phrase with spaces 123"))
+        // Escape opens the warning; Cancel retains all typed values.
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        let warningCancel = app.buttons["editor.warning.cancel"]
+        XCTAssertTrue(warningCancel.waitForExistence(timeout: 5))
+        warningCancel.click()
+        XCTAssertEqual(field("front").value as? String, "A phrase with spaces 123")
+        // Command-W uses the same gate, and Save commits before dismissing.
+        app.typeKey("w", modifierFlags: .command)
+        let warningSave = app.buttons["editor.warning.save"]
+        XCTAssertTrue(warningSave.waitForExistence(timeout: 5))
+        warningSave.click()
+        assertClosed()
+        let edit = app.buttons["note.edit.A phrase with spaces 123"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.click()
+        XCTAssertEqual(field("back").value as? String, "Synthetic translation")
+        XCTAssertEqual(field("example.0.en").value as? String, "Example with spaces")
+        replace("back", "Discarded translation")
+        app.buttons["editor.close"].click()
+        let discard = app.buttons["editor.warning.discard"]
+        XCTAssertTrue(discard.waitForExistence(timeout: 5))
+        discard.click()
+        assertClosed()
+        edit.click()
+        XCTAssertEqual(field("back").value as? String, "Synthetic translation")
+        replace("back", "Updated translation")
+        app.typeKey("s", modifierFlags: .command)
+        assertClosed()
+        app.terminate(); app.launch()
+        library()
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        edit.click()
+        XCTAssertEqual(field("back").value as? String, "Updated translation")
+        XCTAssertEqual(field("pronunciation").value as? String, "/test/")
+        XCTAssertEqual(field("example.0.ru").value as? String, "Example translation")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        assertClosed()
+    }
+
     @MainActor func testDesignGalleryNativeControlsAndAppearances() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
