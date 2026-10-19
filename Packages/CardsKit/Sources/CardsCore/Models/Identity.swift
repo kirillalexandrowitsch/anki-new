@@ -33,6 +33,7 @@ public enum CommandIdentity: Sendable {}
 public enum SessionIdentity: Sendable {}
 public enum TagIdentity: Sendable {}
 public enum MediaIdentity: Sendable {}
+public enum SchedulerParameterSetIdentity: Sendable {}
 
 public typealias CollectionID = EntityID<CollectionIdentity>
 public typealias DeckID = EntityID<DeckIdentity>
@@ -44,6 +45,7 @@ public typealias CommandID = EntityID<CommandIdentity>
 public typealias SessionID = EntityID<SessionIdentity>
 public typealias TagID = EntityID<TagIdentity>
 public typealias MediaID = EntityID<MediaIdentity>
+public typealias SchedulerParameterSetID = EntityID<SchedulerParameterSetIdentity>
 
 public struct Revision: Hashable, Comparable, Codable, Sendable {
     public let rawValue: Int64

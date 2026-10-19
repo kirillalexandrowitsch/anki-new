@@ -605,14 +605,17 @@
       ],
       "verification": "Reference vectors для new/review/relearning, Same-day, Again и ошибочных параметров.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "06.1",
         "06.2",
         "06.3",
         "06.4"
-      ]
+      ],
+      "startedAt": "2026-10-19T20:10:48.660481+00:00",
+      "completedAt": "2026-10-19T20:16:23.423764+00:00",
+      "report": "docs/task-reports/T017.json"
     },
     {
       "id": "T018",

@@ -37,7 +37,7 @@ private struct Reference: Decodable {
     #expect(scheduler.version == .v6)
     #expect(scheduler.parameters.w.count == 21)
     #expect(scheduler.parameters.enableFuzz == false)
-    #expect(reference.cases.count == 5)
+    #expect(reference.cases.count == 9)
     for vector in reference.cases {
         let input = vector.input.card
         let now = Date(timeIntervalSince1970: vector.now)

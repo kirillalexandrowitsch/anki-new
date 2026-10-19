@@ -1,0 +1,43 @@
+{
+  "taskID": "T017",
+  "summary": "Чистый доменный Scheduler и адаптер закреплённого FSRS-6: явные Grade/phase mappings, versioned before/after snapshots и metadata с полным parameter set, now и seed. Короткие learning/relearning steps выполняет только upstream policy; таблица переходов закреплена в REVIEW_ENGINE.md. Валидация версий, finite memory/weights, времени, счётчиков и профилей; long-term maximum interval соблюдается и при насыщении. UI и SQL не задают интервалы.",
+  "criteria": [
+    {
+      "text": "Все четыре оценки на контрольных входах дают ожидаемые dueAt и memory state.",
+      "passed": true,
+      "evidence": "schedulerAdapterMatchesIndependentOracleAllGradesAndPhases: 9 независимых входов ts-fsrs 5.4.2 × Again/Hard/Good/Easy = 36 точных due/phase/step/counters и memory values с допуском 1e-7. Включены new, оба learning steps, review, relearning, overdue, same-day и UTC midnight. Дополнительный сценарий повторяет Again/Hard/Good до graduation без второго применения шагов. Custom/empty steps и cap=1 день проверены. Прежние 20 oracle outputs сохранены без изменения."
+    },
+    {
+      "text": "Повтор вычисления с теми же параметрами воспроизводим; UI не задаёт интервалы.",
+      "passed": true,
+      "evidence": "schedulerPreviewReplayConcurrencyAndVersionedRoundTrip: повторный preview/apply равен, исходный snapshot не меняется, 32 конкурентных расчёта дают тот же результат, Codable round-trip before/after/metadata сохраняет версии, UInt64.max seed, epoch и revisions. Fuzz выключен, другой seed меняет только metadata. installedPersistedFSRSProfileFeedsPureSchedulerWithoutChangingDatabase читает реальный профиль временной SQLite, вызывает Scheduler port и подтверждает неизменность SQL snapshot. Core не импортирует FSRS/GRDB/SwiftUI, Features не получает расчётных формул."
+    }
+  ],
+  "checks": [
+    {
+      "command": "node scripts/generate_fsrs_fixture.cjs > build/fsrs6-reference-expanded.json; compare old cases from origin/dev with first five expanded cases",
+      "result": "passed",
+      "details": "Generator uses existing exact ts-fsrs 5.4.2 package and verifies npm SHA-512 integrity; no install/update/payment. Metadata and first 20 outputs unchanged; expanded fixture has 9 cases/36 outputs. New values generated independently of Swift."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --filter scheduler",
+      "result": "passed",
+      "details": "build/t017-scheduler-tests.log: 6 focused tests passed. Includes all 36 oracle results, 32 concurrent previews, Codable round trip, fractional time, same-day backwards clock, >130 invalid parameter combinations, corrupt snapshots/versions/overflow, custom/empty learning steps, explicit profile switch and maximum interval normalization."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-rjyrm4nx/summary.json; build/t017-final-acceptance.log. All 125 Swift tests passed (Infrastructure 90, Core 18, Features 14, DesignSystem 3), arm64 ad-hoc app build exit 0, networkDenied=true. Includes real persisted profile to pure adapter integration with unchanged SQL snapshot. Synthetic seed12 SHA256 b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 unchanged."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T017; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T017 done only after all acceptance checks. Task graph/reports: 100 tasks, 174 design states consistent. quality passed: 26 Python tests, 2459 local links, 48/48 original PNG hashes. Whitespace check passed. Required quality/macos and each post-merge pipeline remain enforced by deliver.py."
+    }
+  ],
+  "limitations": [
+    "T017 implements calculation only; queue, transactional review log/command replay and UI rating integration belong to subsequent tasks. Preview creates no persisted review event.",
+    "Fuzz and long-term-only mode are intentionally unsupported by policy v1; seed is retained for replay. Steps are canonical ascending whole-minute strings below one day. Incompatible existing learning index is rejected when switching profiles. UTC calendar-day elapsed semantics follow pinned upstream; StudyDayKey and DST quotas remain separate.",
+    "No new dependencies, paid APIs, subscriptions, runners or CI uploads. Existing MIT pins/notices unchanged; no personal collection, secrets or recordings used. SQLite migrations and original PNGs unchanged."
+  ]
+}
