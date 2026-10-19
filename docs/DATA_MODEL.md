@@ -131,7 +131,7 @@ erDiagram
 | DeleteCards | Tombstone/suppression, batch с undoUntil, исключение из очередей и списков |
 | ApplyImport | Результат staging с UUID mapping, Notes/Cards/tags/media refs, external IDs, импортный журнал |
 
-Файлы не являются частью SQL-транзакции. Для них используется протокол staging → проверка хеша → immutable publish → SQL commit → mark completed. При сбое до commit остаются только безопасные неиспользуемые файлы; после commit ссылки ведут на уже опубликованное содержимое. Startup recovery сверяет журнал; сборщик мусора не удаляет данные из активных операций и ещё доступных undo batches.
+Файлы не являются частью SQL-транзакции. Для них используется протокол staging → проверка хеша → immutable publish → SQL commit → mark completed. При сбое до commit остаются только безопасные неиспользуемые файлы; после commit ссылки ведут на уже опубликованное содержимое. Реализация и versioned journal T009 описаны в [контракте media storage](MEDIA_STORAGE.md). Startup recovery сверяет журнал; сборщик мусора не удаляет данные из активных операций и ещё доступных undo batches.
 
 ### Идемпотентность команд T008
 
