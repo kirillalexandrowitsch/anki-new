@@ -35,9 +35,20 @@ struct EditorWindowCloseGuard: NSViewRepresentable {
             guarded = nil; previous = nil
         }
         func windowShouldClose(_ sender: NSWindow) -> Bool { requestClose(); return false }
-        override func responds(to selector: Selector!) -> Bool {
-            super.responds(to: selector) || previous?.responds(to: selector) == true
+        // Older SDKs expose NSObject forwarding as nonisolated. NSWindow queries
+        // and invokes its delegate on the AppKit main thread; assert that contract.
+        nonisolated override func responds(to selector: Selector!) -> Bool {
+            if super.responds(to: selector) { return true }
+            return MainActor.assumeIsolated { previous?.responds(to: selector) == true }
         }
-        override func forwardingTarget(for selector: Selector!) -> Any? { previous }
+        nonisolated override func forwardingTarget(for selector: Selector!) -> Any? {
+            MainActor.assumeIsolated { ForwardedDelegate(value: previous) }.value
+        }
     }
+}
+
+/// Synchronous Objective-C forwarding only, after assumeIsolated asserted the main
+/// thread. This box never leaves the callback or transfers the delegate to a task.
+private struct ForwardedDelegate: @unchecked Sendable {
+    let value: (any NSWindowDelegate)?
 }

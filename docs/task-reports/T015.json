@@ -28,6 +28,11 @@
       "command": "python3 scripts/tasks.py finish T015; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "finish после реальных критериев: T015 done; 100 задач/174 состояния, зависимости и generated docs согласованы. build/t015-quality.log: 25 Python tests passed, 2454 ссылки, 48/48 PNG hashes. quality и diff whitespace checks exit 0. Обязательные PR/post-merge checks проверяются deliver.py перед каждым продвижением."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (SDK compatibility repair); python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "После первого CI 39254074955 (Xcode16.4: compiler errors EditorWindowCloseGuard.swift:39/41) NSObject overrides явно nonisolated и синхронно проверяют MainActor.assumeIsolated; Objective-C delegate forwarding остаётся на главном потоке. Добавлен editorWindowGuardPreservesObjectiveCDelegateForwardingAndRestoresIt: реальный NSWindow сохраняет forwarding известных selector, отклоняет неизвестный и восстанавливает исходный delegate. build/checks/run-qr8ws5er/summary.json: offline package tests/app build passed, 115 tests (80 Infrastructure, 14 Features, 18 Core, 3 DesignSystem). Критерии, проверки, веточная защита и бюджет не ослаблялись. Следующий полный CI обязателен перед merge."
     }
   ],
   "limitations": [
