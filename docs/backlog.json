@@ -431,9 +431,12 @@
       ],
       "verification": "Запустить check script дважды на чистом fixture; результаты детерминированы.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
-      "stateIDs": []
+      "stateIDs": [],
+      "startedAt": "2026-10-19T06:39:41.783925+00:00",
+      "completedAt": "2026-10-19T06:56:28.610266+00:00",
+      "report": "docs/task-reports/T012.json"
     },
     {
       "id": "T013",

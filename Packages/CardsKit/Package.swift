@@ -29,14 +29,17 @@ let package = Package(
         .target(name: "CardsFeatures", dependencies: ["CardsCore", "CardsDesignSystem"],
                 resources: [.process("Resources")]),
         .testTarget(name: "CardsDesignSystemTests", dependencies: ["CardsDesignSystem"]),
-        .testTarget(name: "CardsCoreTests", dependencies: ["CardsCore"]),
+        // Test helpers are never a product or a dependency of an app/library target.
+        .target(name: "CardsTestSupport", dependencies: ["CardsCore"], path: "Tests/Support"),
+        .testTarget(name: "CardsCoreTests", dependencies: ["CardsCore", "CardsTestSupport"]),
         .testTarget(name: "CardsInfrastructureTests", dependencies: [
             "CardsInfrastructure",
+            "CardsTestSupport",
             .product(name: "GRDB", package: "GRDB.swift"),
             .product(name: "FSRS", package: "swift-fsrs"),
             .product(name: "ZIPFoundation", package: "ZIPFoundation"),
         ], resources: [.copy("Fixtures")]),
-        .testTarget(name: "CardsFeaturesTests", dependencies: ["CardsFeatures", "CardsCore"]),
+        .testTarget(name: "CardsFeaturesTests", dependencies: ["CardsFeatures", "CardsCore", "CardsTestSupport"]),
     ],
     swiftLanguageModes: [.v6]
 )

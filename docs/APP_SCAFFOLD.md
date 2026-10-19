@@ -26,3 +26,5 @@ open build/local/Build/Products/Debug/AnkiNew.app
 T004 разделяет bundle IDs: Debug — `local.anki-new.app.debug`, Release — прежний `local.anki-new.app`. Это изолирует XCUITest и sandbox Debug от одновременно запущенной Release-сборки. Оба app сохраняют ad-hoc подпись и пустой development team. Debug также содержит отдельную галерею компонентов через меню Окно; сцена не открывается/не восстанавливается автоматически и исключена из Release. Токены и API — в [дизайн-системе](DESIGN_SYSTEM.md).
 
 T007: shared scheme TestAction передаёт Debug host `-CollectionTestID` с фиксированным тестовым UUID; UI tests задают собственный UUID на каждый запуск. Debug разрешает только UUID и выводит путь из sandbox temporaryDirectory. Поэтому тесты автозапуска не открывают пользовательский registry в Application Support. Release этого режима не содержит. CollectionCoordinatorTests используют внедрённый Core port, Infrastructure tests — отдельные временные папки и процессы. Lifecycle/формат описаны в [DATA_MODEL.md](DATA_MODEL.md).
+
+T012: единая локальная проверка, synthetic seed, TestClock, fault hooks и безопасная диагностика описаны в [TESTING.md](TESTING.md).
