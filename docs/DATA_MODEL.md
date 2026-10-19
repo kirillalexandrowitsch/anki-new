@@ -104,6 +104,34 @@ erDiagram
 
 ## Содержимое Note и генерация Card
 
+### Сохранение Basic (T014)
+
+`SaveNote` принимает immutable `SaveNoteCommand`: NoteID, expectedRevision (nil только для
+создания), initialDeckID, BasicNoteContent, имена тегов и commandID. `CollectionStore.notes`
+выдаёт generation-scoped NoteRepository. UI редактора подключается в T015.
+Basic имеет постоянный NoteTypeID `00000000-0014-4000-8000-000000000001`, stableKey `basic`,
+field IDs front/back/pronunciation/examples/audio/image и template/variant ID `basic.forward`.
+Встроенная декларативная схема устанавливается при первом Save в той же транзакции;
+существующие миграции и пользовательские типы не переписываются.
+
+Контент v1 — plain text front/back/pronunciation, examples как пары en/ru и media как
+типизированные refs (mediaID/fieldID/role/orderIndex). Front/back обязательны после проверки
+trim; сам текст сохраняется без потерь. Rich text остаётся последующей задачей. Теги
+нормализуются EntityName, совпадения объединяются. Media refs обязаны ссылаться на published
+assets; audio/image должны соответствовать UTI и fieldID, slot уникален. Content и note_media
+сохраняются из одного массива. Файлы уже опубликованы MediaRepository до Save.
+
+Один writer commit проверяет revision, сохраняет Note/теги/media, обновляет FTS через triggers,
+создаёт недостающий basic.forward и fresh schedule и записывает note.saved event/command result.
+Первый schedule: fsrs/6, phase=new, память и сроки NULL, repetitions/lapses/epoch/revision=0;
+параметры берутся из ближайшего preset предка, иначе используется неизменяемый встроенный
+профиль FSRS-6 из T003. Его установка тоже атомарна; расчёт оценок реализуется в T017.
+InitialDeckID используется только при создании варианта: обычный Save не перемещает уже
+существующую Card и вообще не обновляет её schedule/revision/флаги/tombstone. Suppressed
+вариант возвращается в результате, но не активируется. Удалённые Notes не воскрешаются.
+Повтор commandID возвращает исходный результат после reopen; другой payload с тем же ID
+отклоняется. Ошибка любого этапа откатывает весь Save, включая новые теги и journal.
+
 `fieldsJSON` хранит поля по стабильным fieldID, а не русским названиям. Начальная схема: front, back, pronunciation, examples[] с парами en/ru, audio/image references. Поля и шаблоны не содержат исполняемый JavaScript. Для форматирования — AST блоков/inline marks (bold/italic/underline/lineBreak/media), сериализуемый с версией; импортированный HTML проходит конвертер или выдаёт отчёт о потерях.
 
 Примеры variantKey: `basic.forward`, `reverse.forward`, `reverse.backward`, `cloze.<stable-placeholder-id>`, `typed.forward`, позднее `audio.forward`. Встроенные типы используют тот же механизм схем, что будущий визуальный менеджер. При Save сравнить старое и новое множество вариантов: существующие сохраняют ID и расписание; новые получают fresh schedule; исчезнувшие становятся orphaned после предпросмотра последствий. Нельзя сбрасывать прогресс всех карточек при редактировании перевода.
