@@ -73,7 +73,10 @@ public struct QueueBuilder: Sendable {
             if lReady != rReady { return lReady }
             let lp = priority(lhs.item.schedule!.phase), rp = priority(rhs.item.schedule!.phase)
             if lp != rp { return lp < rp }
-            if lhs.availableAt != rhs.availableAt { return lhs.availableAt < rhs.availableAt }
+            // Burial gates eligibility; after it expires, retain the original overdue order.
+            let lDue = lhs.item.schedule!.phase == .new ? now : lhs.item.schedule!.dueAt!
+            let rDue = rhs.item.schedule!.phase == .new ? now : rhs.item.schedule!.dueAt!
+            if lDue != rDue { return lDue < rDue }
             if lhs.item.card.createdAt != rhs.item.card.createdAt { return lhs.item.card.createdAt < rhs.item.card.createdAt }
             return lhs.item.card.id.rawValue.uuidString < rhs.item.card.id.rawValue.uuidString
         }
