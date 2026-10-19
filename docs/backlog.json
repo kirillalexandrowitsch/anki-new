@@ -643,12 +643,15 @@
       ],
       "verification": "Fixtures на DST/rollover, siblings, исчерпанный лимит, повторный Again и reset той же Card.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "05.2",
         "18.2"
-      ]
+      ],
+      "startedAt": "2026-10-19T20:59:06.270555+00:00",
+      "completedAt": "2026-10-19T21:10:54.157904+00:00",
+      "report": "docs/task-reports/T018.json"
     },
     {
       "id": "T019",
