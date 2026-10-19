@@ -151,6 +151,14 @@ Today и отдельные Card/Note counts. `QueryObservation` передаё�
 SQL, FTS и GRDB остаются в Infrastructure. [Контракт запросов](QUERIES.md) описывает фильтры,
 сортировки, asOf и numbered pagination; FTS v2 поддерживается атомарными Note triggers.
 
+### Backup и restore T011
+
+`CollectionStore` предоставляет `createBackup(to:generation:)` и `restoreBackup(from:generation:)`.
+Operation lease находится вне сменяемого контейнера; snapshot и immutable media копируются
+на общем writer. Restore валидирует staged SQLite/media, инвалидирует старые repositories и
+observations и возвращает новый context. Внешний журнал разрешает незаконченный swap до чтения
+registry при startup. [Формат и гарантии](BACKUP_STORAGE.md) описывают commit/recovery и лимиты.
+
 ## Состояние UI
 
 У каждого feature — `@MainActor @Observable` модель состояния. View отображает свойства и передаёт намерения пользователя. Сетевые/дисковые операции возвращают типизированный результат; модель показывает loading, empty, content или error. Для занятия применяется отдельный автомат состояний из [REVIEW_ENGINE.md](REVIEW_ENGINE.md).
