@@ -39,7 +39,13 @@ integrityFailure без выдачи повреждённого контекст
 
 Все мутации journal/media_assets проходят один CollectionWriter; recovery при open
 выполняется до создания writer при эксклюзивном владении. Close инвалидирует media port
-перед writer/pool; старый порт не читает и не публикует в следующем generation.
+перед writer/pool; release делает явный flock LOCK_UN до close, чтобы дубликат FD
+(включая наследование между fork и exec) не продлевал lock; старый порт не читает и не публикует в следующем generation.
 Fault hooks доступны только тестам: после prepare, atomic publish, publish journal,
 SQL commit и удаления staging. Это проверяет реальные file-backed SQLite/WAL и reopen,
 включая сбой в промежутке publish → commit. Входные пути и содержимое не логируются.
+
+Регрессия lifecycle удерживает dup исходного lock descriptor через release и немедленный
+захват новым владельцем. На прежнем close-only release она детерминированно получает locked;
+с явным unlock новый владелец получает lease при живом duplicate. Семантика shared lock
+описана в [Darwin flock(2)](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/flock.2.html).

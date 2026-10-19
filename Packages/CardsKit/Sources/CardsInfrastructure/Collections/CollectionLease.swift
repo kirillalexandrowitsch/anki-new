@@ -6,9 +6,14 @@ import Foundation
 final class CollectionLease {
     private var descriptor: Int32?
 
-    init(url: URL) throws {
+    convenience init(url: URL) throws {
         let descriptor = Darwin.open(url.path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0o600)
         guard descriptor >= 0 else { throw CollectionAccessError.fileSystem(errno) }
+        try self.init(owning: descriptor)
+    }
+
+    /// Takes ownership of an already opened descriptor, including on acquisition failure.
+    init(owning descriptor: Int32) throws {
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
             let code = errno
             Darwin.close(descriptor)
@@ -23,6 +28,9 @@ final class CollectionLease {
     func release() {
         guard let descriptor else { return }
         self.descriptor = nil
+        // dup/fork share the open-file description. close alone can leave the lease
+        // held by an inherited FD until exec, even with O_CLOEXEC on our descriptor.
+        while flock(descriptor, LOCK_UN) != 0 && errno == EINTR {}
         Darwin.close(descriptor)
     }
 

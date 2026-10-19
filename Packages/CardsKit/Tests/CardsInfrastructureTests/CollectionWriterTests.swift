@@ -1,6 +1,7 @@
 import CardsCore
 @testable import CardsInfrastructure
 import Foundation
+import Darwin
 import GRDB
 import Testing
 
@@ -328,4 +329,25 @@ private func command(id: DeckID = DeckID(), revision: Revision? = nil, name: Str
     gate.signal()
     #expect(try await commit.value.revision == .initial)
     #expect(try await fixture.journalCount() == 1)
+}
+
+@Test func explicitLeaseReleaseUnlocksEvenWhenAnInheritedDescriptorRemainsOpen() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let url = root.appendingPathComponent("collection.lock")
+    let descriptor = Darwin.open(url.path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0o600)
+    #expect(descriptor >= 0)
+    let retired = try CollectionLease(owning: descriptor)
+    let inherited = Darwin.dup(descriptor) // same open-file description, as with fork before exec
+    #expect(inherited >= 0)
+    defer { Darwin.close(inherited) }
+    #expect(throws: CollectionAccessError.locked) { try CollectionLease(url: url) }
+    retired.release()
+    // The duplicate deliberately stays alive; release must explicitly unlock, not just close.
+    let current = try CollectionLease(url: url)
+    retired.release()
+    #expect(fcntl(inherited, F_GETFD) >= 0)
+    #expect(throws: CollectionAccessError.locked) { try CollectionLease(url: url) }
+    current.release()
 }
