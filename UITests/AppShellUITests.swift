@@ -1,6 +1,119 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testStudyRevealKeyboardPauseSkipAndEscapeExit() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        let start = app.buttons["study.demo"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.click()
+        let question = app.staticTexts["study.question"]
+        let answer = app.staticTexts["study.answer"]
+        let reveal = app.buttons["study.reveal"]
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        for grade in 1...4 {
+            XCTAssertFalse(app.buttons["study.grade.\(grade)"].exists)
+            app.typeKey("\(grade)", modifierFlags: [])
+        }
+        XCTAssertTrue(reveal.exists)
+        app.buttons["study.pause"].click()
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        app.buttons["study.resume"].click()
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        app.typeKey(" ", modifierFlags: [])
+        XCTAssertTrue(answer.waitForExistence(timeout: 5))
+        XCTAssertFalse(reveal.exists)
+        for grade in 1...4 { XCTAssertTrue(app.buttons["study.grade.\(grade)"].isEnabled) }
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "study.grade.")).count, 4)
+        app.buttons["study.pause"].click()
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        app.buttons["study.resume"].click()
+        XCTAssertTrue(answer.waitForExistence(timeout: 5))
+        app.buttons["study.exit"].click()
+        XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertFalse(app.buttons["study.exit.confirm"].exists)
+        XCTAssertTrue(answer.exists)
+        let first = question.value as? String
+        app.typeKey("3", modifierFlags: [])
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        XCTAssertNotEqual(question.value as? String, first)
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
+        app.buttons["study.skip"].click()
+        XCTAssertTrue(app.buttons["study.undoSkip"].waitForExistence(timeout: 5))
+        XCTAssertTrue(reveal.exists)
+        app.buttons["study.undoSkip"].click()
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        // Both the native menu and its shortcut use the confirmation gate.
+        app.menuBars.menuBarItems["Файл"].click()
+        app.menuItems["Закрыть занятие"].click()
+        XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5))
+        app.buttons["study.exit.cancel"].click()
+        app.activate()
+        app.sheets.firstMatch.typeKey("w", modifierFlags: .command)
+        XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["study.exit.cancel"].click()
+        XCTAssertTrue(reveal.exists)
+        app.buttons["study.exit"].click()
+        app.buttons["study.exit.confirm"].click()
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 5))
+        app.buttons["study.close"].click()
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testStudyButtonsCompleteAndReopenWithoutPersistingDemoProgress() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        let start = app.buttons["study.demo"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.click()
+        let reveal = app.buttons["study.reveal"]
+        for grade in [1, 2, 4] {
+            XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+            XCTAssertFalse(app.staticTexts["study.answer"].exists)
+            reveal.click()
+            XCTAssertTrue(app.staticTexts["study.answer"].waitForExistence(timeout: 5))
+            app.buttons["study.grade.\(grade)"].click()
+        }
+        let close = app.buttons["study.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 3")
+        XCTAssertFalse(app.staticTexts["study.question"].exists)
+        close.click()
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.click()
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 0")
+        XCTAssertFalse(app.staticTexts["study.answer"].exists)
+        app.buttons["study.pause"].click()
+        app.buttons["study.pausedExit"].click()
+        XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        app.buttons["study.resume"].click()
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
+        app.buttons["study.exit"].click()
+        app.buttons["study.exit.confirm"].click()
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.click()
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+    }
+
     @MainActor func testEmptyLibraryOffersCreationAndDistinctCounts() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

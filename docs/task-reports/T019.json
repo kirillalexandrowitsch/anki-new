@@ -1,0 +1,48 @@
+{
+  "taskID": "T019",
+  "summary": "Экран Study и MainActor-автомат loading/question/answer/committing/paused/completed, четыре оценки только после reveal, клавиши вне текстового ввода, pause/resume, пропуск с отменой, ошибки и подтверждение выхода. Core-порт StudySessionService сохраняет границу с будущим атомарным writer; Сегодня открывает явно обозначенное пробное занятие на трёх синтетических карточках без изменения коллекции.",
+  "criteria": [
+    {
+      "text": "Оценка недоступна до reveal и повторно во время committing.",
+      "passed": true,
+      "evidence": "studyGuardsRatingsUntilRevealAndWhileCommittingThenHidesNextAnswer + studyKeyboardSetsCommittingBeforeAnotherQueuedKey: до reveal ни кнопка/клавиша 1–4 не создаёт команду; delayed commit, повторные rate/retry/skip/exit дают ровно один вызов. UI testStudyButtonsCompleteAndReopenWithoutPersistingDemoProgress passed: скрытый ответ, явный reveal, оценки 1/2/4, каждый следующий вопрос скрыт. Keyboard UI test до отдельного сбоя ⌘W проверил отсутствие четырёх оценок до reveal и ровно четыре enabled после reveal, клавиши Space/1–4."
+    },
+    {
+      "text": "Следующий вопрос скрыт; Escape отменяет подтверждение выхода.",
+      "passed": true,
+      "evidence": "studyPauseAndEscapePreserveBothHiddenAndRevealedStates: pause хранит question/answer, Escape отменяет exit без смены состояния, confirm завершает. UI testStudyButtonsCompleteAndReopenWithoutPersistingDemoProgress passed: все следующие вопросы скрыты; после повторного запуска счётчик 0 и ответ скрыт; pause → exit → Escape → resume сохраняет скрытый вопрос. Keyboard UI test до отдельного ⌘W проверил Escape из exit на раскрытом ответе и grade 3 → следующий скрытый вопрос."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --filter study",
+      "result": "passed",
+      "details": "build/t019-study-tests.log: 11 Features tests passed, плюс studyDaysUseCollectionCalendar с 14 calendar fixtures. Проверены delayed commit/double submit, pending command identity/time/grade, failure/retry, fresh hidden next question, skip/undo, pause/exit/Escape, future queue, stale read/write и stop до queued keyboard write. Реальные NSEvent/NSWindow/NSTextView проверяют текстовый ввод, другое окно, modifiers, repeat и локализованную раскладку для close."
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts -p 'test_*.py'",
+      "result": "passed",
+      "details": "build/t019-python.log: 26 Python tests passed."
+    },
+    {
+      "command": "xcodebuild -project AnkiNew.xcodeproj -scheme AnkiNew -clonedSourcePackagesDirPath build/check-packages -derivedDataPath build/check-derived -destination 'platform=macOS,arch=arm64' -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testStudyButtonsCompleteAndReopenWithoutPersistingDemoProgress test CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "build/t019-study-buttons-ui.log: TEST SUCCEEDED, 1 UI test, 0 failures. Полное прохождение кнопками, оценки 1/2/4, завершение и reopen со скрытым ответом/нулём пробных оценок, pause/exit/Escape/resume. Отдельный полный локальный XCTest exit 65 (прежние UI tests и synthetic ⌘W) описан в limitations; keyboard test сохранён, macos-15 CI обязателен."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/t019-offline-final.log и build/checks/run-w9x_a6gs/summary.json: все 149 Swift tests passed (Core 30, Infrastructure 91, Features 25, DesignSystem 3); arm64 ad-hoc app build passed, networkDenied=true. Synthetic seed12 SHA256 b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 не изменён."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T019; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T019 done после фактической проверки критериев. build/t019-quality.log: 100 задач / 174 design states согласованы, 26 Python tests, 2467 local links, 48/48 исходных PNG hashes. Whitespace check passed. Обязательные quality/macos для каждого PR и post-merge pipeline ожидает deliver.py без bypass."
+    }
+  ],
+  "limitations": [
+    "T019 реализует экран, автомат и Core session port. Постоянный SQL snapshot/session adapter и атомарная оценка/Undo относятся к T020; playback coordinator — к T021; полные итоги/статистика — к T022. Пробное занятие запускается только явной кнопкой, помечено синтетическим, не читает и не меняет коллекцию. Не показываются выдуманные scheduler intervals или метрики обучения.",
+    "Новых зависимостей, платных API/сервисов, runners или CI uploads нет. Проверки используют синтетические временные данные. Личная коллекция, секреты, записи микрофона, SQLite schema и исходные PNG не изменены.",
+    "Локальный python3 scripts/check.py --app-tests: package tests passed (149), app-tests exit 65; build/t019-full-app-check.log и build/checks/run-b9rtrfz0/summary.json. На macOS 27 остаются сбои прежних Settings/Deck/Note/Gallery UI tests и синтетического ⌘W в новом keyboard test. В новом тесте до этого прошли hidden/revealed controls, Space/1–4, pause/resume, Escape cancellation, next hidden question, skip/undo и нативная команда меню закрытия. Этот полный локальный UI-прогон не считается успешным. Проверки сохранены; обязательный macos-15 CI должен пройти до merge."
+  ]
+}

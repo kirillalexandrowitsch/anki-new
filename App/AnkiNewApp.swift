@@ -13,6 +13,7 @@ struct AnkiNewApp: App {
             MainWindow(composition: composition)
         }
         .defaultSize(width: 1100, height: 760)
+        .commands { StudyCommands() }
 
         #if DEBUG
         Window("Дизайн-система", id: "design-system") {
