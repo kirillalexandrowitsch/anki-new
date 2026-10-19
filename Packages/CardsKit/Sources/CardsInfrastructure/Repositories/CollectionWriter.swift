@@ -74,8 +74,16 @@ public actor CollectionWriter {
             return value
         } catch {
             try requireActive()
+            if let error = error as? MediaStorageError { throw error }
             throw Self.translate(error)
         }
+    }
+
+    // Internal media pipeline owns separate short transactions around durable file publication.
+    func mediaAccess<Value: Sendable>(_ body: @Sendable (DatabasePool) throws -> Value) throws -> Value {
+        try requireActive()
+        do { return try body(database.pool) }
+        catch let error as DatabaseError { throw Self.translate(error) }
     }
 
     func close() throws {
