@@ -22,10 +22,10 @@ final class CompositionRoot {
         return DecksModel(workspace: workspace, clock: clock)
     }
 
-    func makeEditorLauncher(context: CollectionContext) async throws -> EditorLauncherModel {
+    func makeLibraryModel(context: CollectionContext) async throws -> LibraryModel {
         guard let provider = access as? any EditorWorkspaceAccess else { throw CollectionAccessError.staleContext }
         let workspace = try await provider.editorWorkspace(generation: context.generation)
-        return EditorLauncherModel(workspace: workspace, clock: clock)
+        return LibraryModel(workspace: workspace, clock: clock)
     }
 
     func makeShellModel() -> AppShellModel {

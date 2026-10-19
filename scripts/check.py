@@ -48,9 +48,9 @@ class Diagnostics:
         for line in output.splitlines():
             failure = 'error:' in line or re.search(r'\bfailed\b', line.lower()) or 'recorded an issue' in line
             if failure:
-                for name, row, column in re.findall(r'([A-Za-z_][A-Za-z_0-9]*\.(?:swift|py)):(\d+):(\d+)', line):
+                for name, row, column in re.findall(r'([A-Za-z_][A-Za-z_0-9]*\.(?:swift|py)):(\d+):(?:(\d+):)?', line):
                     if name in self.files:
-                        self.locations.add((name, int(row), int(column)))
+                        self.locations.add((name, int(row), int(column or 0)))
                 for name in re.findall(r'\b([A-Za-z_][A-Za-z_0-9]*)\(', line):
                     if name in self.tests:
                         self.failed_tests.add(name)

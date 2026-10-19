@@ -34,6 +34,17 @@ sys.exit(17)
         for private in ['Секретный', 'личный', '/Users', 'Collection.sqlite', 'abcd', 'actual']:
             self.assertNotIn(private, text)
 
+    def test_xctest_line_without_column_keeps_only_allowlisted_source_location(self):
+        diagnostics = check.Diagnostics(({'AppShellUITests.swift'}, {'testLibrary'}))
+        diagnostics.consume('/Users/private/AppShellUITests.swift:234: error: -[Tests testLibrary]: '
+                            'XCTAssertTrue failed - private collection text\n'
+                            '/Users/private/Unknown.swift:99: error: secret\n')
+        result = diagnostics.result()
+        self.assertEqual(result['locations'], [dict(file='AppShellUITests.swift', line=234, column=0)])
+        self.assertEqual(result['failedTests'], ['testLibrary'])
+        for private in ['private', '/Users', 'collection', 'Unknown', 'secret']:
+            self.assertNotIn(private, json.dumps(result))
+
     def test_timeout_preserves_failure_without_raw_output(self):
         result = check.run_stage('timeout', [sys.executable, '-c', 'import time; time.sleep(30)'], timeout=0.05)
         self.assertEqual(result['status'], 'failed')
