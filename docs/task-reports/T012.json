@@ -45,6 +45,7 @@
     "Seed — тестовые данные для storage/queries, scheduler parameter row — минимальный storage stub; для FSRS calculations остаётся независимый reference fixture T003. Полные Note/Study use cases и UI не реализуются этой задачей.",
     "Свободный текст ошибок и assertion values намеренно не сохраняются в summary; расследование начинается с phase/exit code/source location и повторения теста на fixture. Локальные build intermediates игнорируются Git и не публикуются.",
     "Полная проверка integrity и foreign keys сохранена. invalidateReadOnlyConnections устраняет воспроизведённое на локальной SQLite устаревшее FTS state; отдельная регрессия повреждает shadow content системным sqlite3 и требует отказ. Схема/migrations не менялись.",
-    "Использованы системные инструменты и существующие бесплатные зависимости. Новых пакетов, платных API/подписок/capabilities, CI artifacts/cache uploads, личных коллекций и микрофонных записей нет."
+    "Использованы системные инструменты и существующие бесплатные зависимости. Новых пакетов, платных API/подписок/capabilities, CI artifacts/cache uploads, личных коллекций и микрофонных записей нет.",
+    "Первый PR CI run 39212924325 остановлен на package-tests Xcode 16.4/macOS-15 до merge. Выявлен недостаток диагностики runner: summary сохранялась только в игнорируемом build. Исправлено: тот же JSON whitelist также печатается в stdout CI без raw сообщений и без uploads; повтор CI необходим для установления платформенной причины."
   ]
 }

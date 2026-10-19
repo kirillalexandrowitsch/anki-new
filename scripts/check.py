@@ -192,6 +192,9 @@ def main():
         summary['failure'] = 'preflight-failed-check-pinned-caches-and-run-with-resolve'
     finally:
         report.write_text(json.dumps(summary, indent=2) + '\n')
+        # CI runners are disposable and budget policy forbids artifact uploads.
+        # Print the same allowlisted summary so failed checks remain diagnosable.
+        print(json.dumps(summary, indent=2), flush=True)
         print(f'{summary["status"]}: {report.relative_to(ROOT)}', flush=True)
     return 0 if summary['status'] == 'passed' else 1
 
