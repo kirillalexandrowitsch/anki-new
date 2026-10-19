@@ -1,0 +1,35 @@
+{
+  "taskID": "T014",
+  "summary": "Реализованы Core SaveNote/NoteRepository и generation-scoped SQLite repository: встроенный Basic со стабильными IDs, versioned plain-text content с примерами, теги, published media refs, basic.forward/fresh FSRS-6 schedule, FTS и note.saved event сохраняются одним CollectionWriter commit с command replay. Редактирование сохраняет CardID, schedule и suppression/tombstone. Контракт задокументирован; миграции v1/v2 и исходные PNG не менялись. Новых зависимостей, платежей, личных данных и CI uploads нет.",
+  "criteria": [
+    {
+      "text": "Одна Note создаёт одну Basic Card с новым расписанием.",
+      "passed": true,
+      "evidence": "NoteUseCaseTests: basicNoteCreateEditReopenWithRealMediaTagsFTSAndCommandReplay создаёт Note через SaveNote, проверяет Basic NoteTypeID, variant/template basic.forward, ровно одну Card, revision=0, совпадение content/tags и реальные importFile PNG/WAV из synthetic-v1. Read-only SQL после close проверяет cards/note_tags/note_media/event rows; reopen возвращает полный snapshot, повтор старой команды возвращает исходный результат. basicFreshScheduleAndEditingPreserveEveryScheduleColumn проверяет phase=new, fsrs/6, NULL stability/difficulty/due/lastReview/learningStep, repetitions/lapses/epoch/revision=0 и сохранённые веса из проверенного T003 профиля. newBasicCardInheritsNearestDeckPresetWithoutMutatingParameters проверяет наследование preset родителя. Все 8 новых integration tests прошли в полном offline checker (summary run-zhsxd3sr)."
+    },
+    {
+      "text": "Редактирование перевода не сбрасывает прогресс и не создаёт дубликат.",
+      "passed": true,
+      "evidence": "basicFreshScheduleAndEditingPreserveEveryScheduleColumn задаёт синтетическое review schedule с памятью, сроками, счётчиками, epoch=3/revision=17, Card revision=4/suspended/burial; два Save меняют перевод, но сравнение всех schedule columns и Card DTO остаётся равным, counts Note/Card/Schedule=1/1/1. basicSaveAfterSuppressionAndReopenKeepsTombstoneAndSchedule закрывает writer, открывает БД заново и выполняет Save: прежний CardID, suppressed, tombstone, Card revision=2 и schedule revision=9 сохранены; variant не виден в library. concurrentNoteEditorsCommitOneWinnerAndReusedCommandsFail подтверждает одного победителя из 12 stale drafts, отказ при payload reuse и исходный command replay. failedBasicSaveRollsBackFieldsTagsMediaFTSEventAndJournalThenRetries проверяет rollback при SQL fault после генерации и при отсутствующем media, включая FTS/tags/journal, и retry той же команды после устранения сбоя."
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-zhsxd3sr/summary.json и build/t014-offline.log: status=passed, networkDenied=true. Package tests exit0: 78 Infrastructure (8 новых NoteUseCaseTests), 18 Core, 7 Features, 3 DesignSystem = 106 tests; arm64 app build exit0, ad-hoc CODE_SIGN_IDENTITY=-, Apple Account/provisioning не нужны. Synthetic seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 неизменен. Дополнительно sharedMediaReferencesValidateRolesSlotsAndPublishedStateAtomically проверяет общий asset двух Notes, M4A role, duplicate slots, wrong role и orphaned state; invalidBasicContentMediaAndMissingDeckDoNotWriteAnything — required fields/deck/tags и отсутствие частичных записей. Все данные временные и синтетические."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T014; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "После выполнения критериев finish отметил T014 done. tasks check: 100 задач/174 состояния, зависимости/отчёты/generated docs согласованы. build/t014-quality.log: 25 Python tests passed, 2454 локальные ссылки, 48/48 design PNG hashes; quality passed; git diff --check exit0. PR quality/macos и каждый post-merge pipeline проверяет scripts/deliver.py перед продвижением."
+    }
+  ],
+  "limitations": [
+    "T014 реализует слой Core/Infrastructure. UI редактора, preview и Save/Discard/Cancel подключаются в T015; UI приложения этой задачей не менялся и новые UI-сценарии не заявляются проверенными. Дизайн sheet-09 прочитан, исходный PNG неизменен.",
+    "Basic content v1 — plain text, examples en/ru и media refs; Note.fields представляет только скалярные front/back/pronunciation. Полный контент читает SavedBasicNote.content. Rich text и другие типы — последующие задачи.",
+    "InitialDeckID влияет только на недостающий вариант. Save существующей Card не перемещает её и не восстанавливает suppression. Удалённая Note не восстанавливается, unsupported NoteType/contentVersion отклоняется. Расчёт оценок и learning policy adapter остаются T017.",
+    "Builtin Basic и default parameter set устанавливаются лениво в транзакции Save, без новой миграции. Fresh card наследует ближайший deck preset, при его отсутствии использует сохранённый профиль T003. При несовместимой встроенной схеме или algorithmVersion команда отклоняется без перезаписи.",
+    "Локально macOS 27/Xcode 27 arm64; минимальную macOS 15 и обязательные app tests дополнительно проверяет CI доставки. Новых библиотек, платных API/подписок/runners или artifact/cache uploads нет."
+  ]
+}

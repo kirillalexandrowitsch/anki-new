@@ -1,5 +1,6 @@
 /// Domain failures carry values, never database errors or localized UI text.
 public enum ValidationError: Error, Equatable, Sendable {
+    case invalidField(String)
     case emptyName
     case duplicateName(normalized: String)
     case invalidUUID(String)
