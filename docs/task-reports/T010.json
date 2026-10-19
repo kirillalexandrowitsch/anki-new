@@ -1,0 +1,41 @@
+{
+  "taskID": "T010",
+  "summary": "Реализован Core-порт CollectionQueryService с library/deck/Today DTO, bounded pagination, whitelist filters/sorts и раздельными Card/Note counters. SQLite FTS5 front/back/examples поддерживается атомарными Note triggers в новой v2-search migration с проверенной pre-migration копией. GRDB observation выдаёт async snapshots с буфером последнего значения, явной отменой, отменой Task/освобождением consumer и инвалидированием generation при close. Core не импортирует GRDB/SwiftUI, Features не выполняет SQL. Новых зависимостей и дополнительных платежей нет; исходные PNG не менялись.",
+  "criteria": [
+    {
+      "text": "Сохранение Note обновляет список и индекс.",
+      "passed": true,
+      "evidence": "querySaveCommitUpdatesListAndFTSAndRollbackKeepsBoth сохраняет синтетическую Note через существующий CollectionWriter: два варианта одной Note получают новый front/back/revision, FTS теряет старые токены и находит новые front/back/examples; наблюдения непустого и ранее пустого результата обновляются после commit. SQL rollback с insufficientSpace оставляет прежний индекс и список. Повторное сохранение одинакового текста не дублирует токены. queryFTSTombstoneRestorePurgeAndReopen проверяет soft delete/restore/physical purge и FTS integrity-check после reopen. queryUpgradeIndexesExistingV1NotesAndPreservesVerifiedBackup проверяет backfill девяти не удалённых Notes, сохранность 11 Card и открываемую v1 backup. SaveNote/editor остаются T014/T015; тест упражняет их общий transaction boundary, не реализует преждевременно генерацию Card."
+    },
+    {
+      "text": "Закрытый экран не оставляет бесконечное наблюдение или N+1 query на строку.",
+      "passed": true,
+      "evidence": "queryExplicitCancellationTaskCancellationAndReleaseStopObservers проверяет cancel, отмену consumer Task и release: внутренний registry возвращается к нулю после фактического cancel GRDB token. queryCloseRejectsBufferedSnapshotsAndOldGenerationAfterImmediateReopen закрывает активные observations, запрещает старый buffered snapshot и старый service после reopen CollectionStore; новый generation работает. queryPagesUseConstantStatementCountsInsteadOfNPlusOne использует SQLite trace на 215 синтетических Notes: library ровно 2 SELECT/WITH и Today ровно 3 при page limit 1 и 100. Все joins/counts в SQL, в Swift возвращаются только bounded rows. queryStablePaginationAcrossEqualSortKeysAndFilteredCounts проходит все 6 сортировок по 100 строк, count/distinct Note, отсутствие дублей/пропусков, последнюю и пустую страницу; отдельный тест проверяет направление сортировки и обновление имени колоды."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit",
+      "result": "passed",
+      "details": "77 Swift Testing test functions: 55 Infrastructure (включая 10 новых query tests), 17 Core, 3 DesignSystem, 2 Features; ноль failures. build/t010-package-final.log. Проверены комбинированные deck/subtree/type/tag/phase/suspended filters, Unicode/prefix FTS, буквальный SQL/FTS ввод, пустая/пунктуационная строка, page bounds, availability на due/burial boundary, разные Card/Note counters, empty deck counts, migrations и observation lifecycle. Только временные file-backed WAL SQLite коллекции. Исторические v1 migration/rollback tests сохраняют исходные fixtures и assertions через явную v1-конфигурацию; current schema/reopen/identity/strict constraints дополнительно проверяются с v2-search."
+    },
+    {
+      "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t010-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "TEST SUCCEEDED: 4 app unit tests и 2 UI tests, ноль failures. build/t010-app.log; build/t010-app/Logs/Test/Test-AnkiNew-2026.10.19_08-23-18-+0300.xcresult. Локально macOS 27.0.1 arm64 / Xcode 27.1, ad-hoc без Apple Account. Debug CollectionTestID изолирует данные. Существующий локальный wrapper временно выбрал ABC для XCUITest и восстановил исходную Russian (noErr 0). Hosted macos-15 повторит app/package tests при доставке."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T010; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T010 done после фактических проверок обоих критериев. 100 задач/174 состояния; зависимости и отчёты согласованы. quality прошёл: 19 Python tests, generated state, 2443 локальных ссылок, хеши 48/48 исходных PNG. build/t010-quality.log. git diff --check без ошибок. Реальные PR и каждый post-merge pipeline проверяются deliver.py."
+    }
+  ],
+  "limitations": [
+    "T010 добавляет query layer; SaveNote/генерация Basic Card, editor, Library/Today UI и глобальная поисковая панель выполняются профильными T014–T016 и последующих задач. Дизайн sheet-02 и sheet-20 просмотрен, исходные PNG не изменены.",
+    "FTS индексирует plain fieldsJSON v1: front/back строки, examples массив en/ru. Rich content требует новой versioned projection. Поиск — AND из буквальных префиксов, без advanced query AST/relevance ranking. SQLite unicode61 выполняет case/diacritic folding.",
+    "Pagination — нумеруемый offset/limit до 100, ID tie-breaker. Внутри snapshot count и rows согласованы; при изменении коллекции между страницами границы могут сдвигаться. Это не замороженный snapshot для Select all/export.",
+    "Today counters отражают сырую доступность без квот и без произвольного порога изученности. asOf задаётся явно, UI должен обновлять его при активации/таймере. nameSearch ограничивает только страницу колод; общие counters относятся к CardQueryFilter.",
+    "Схема v1 неизменна; production v2-search перед upgrade создаёт проверенную SQLite-копию. Откат исходников не откатывает схему — нужна совместимая копия. Полный backup/restore относится к последующим задачам.",
+    "Нет новых библиотек, API, capabilities, платных runners, uploads artifacts/cache или личных данных. Logs/xcresult хранятся только в игнорируемой build/."
+  ]
+}

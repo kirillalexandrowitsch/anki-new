@@ -8,6 +8,7 @@ struct CollectionMigration: Sendable {
 
 enum CollectionMigrations {
     static let initial = [CollectionMigration(identifier: "v1", apply: InitialSchema.create)]
+    static let current = initial + [CollectionMigration(identifier: "v2-search", apply: SearchSchema.create)]
 
     static func readOnlyQueue(_ url: URL) throws -> DatabaseQueue {
         var configuration = Configuration()
