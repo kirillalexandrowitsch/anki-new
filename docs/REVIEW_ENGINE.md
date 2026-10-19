@@ -74,6 +74,54 @@ FSRS-адаптер отвечает за память и долгосрочны
 
 Изменение desiredRetention/весов не переписывает все старые due dates автоматически. Новые оценки используют новую parameterSet; массовое перепланирование — отдельная подтверждаемая команда с копией. Отсутствующие/NaN-значения scheduler блокируют конкретную запись с диагностикой, а не записывают повреждённый интервал.
 
+### Контракт адаптера T017
+
+`FSRS6Scheduler` реализует чистый `CardsCore.Scheduler`. Единственный владелец
+коротких шагов — `BasicSchedulerV6` закреплённой библиотеки; адаптер не добавляет
+второй learning policy поверх результата. Policy schemaVersion=1 включает
+short term=true, fuzz=false, learning=[1m,10m], relearning=[10m].
+Индекс шага нулевой. Точная таблица для начального профиля:
+
+| Вход | Again | Hard | Good | Easy |
+|---|---|---|---|---|
+| new / learning, step 0 | learning, 0, +1m | learning, 0, +6m | learning, 1, +10m | review, FSRS |
+| learning, step 1 | learning, 0, +1m | learning, 1, +6m | review, FSRS | review, FSRS |
+| review | relearning, 0, +10m; lapses+1 | review, FSRS | review, FSRS | review, FSRS |
+| relearning, step 0 | relearning, 0, +10m | relearning, 0, +15m | review, FSRS | review, FSRS |
+
+Каждая оценка обновляет memory state ровно один раз и увеличивает repetitions.
+Lapses увеличивается только при review→Again. Hard в learning всегда использует
+округлённое среднее первых двух шагов (6m), включая step 1; в одношаговом
+relearning — 1.5 первого шага (15m). Это проверенное поведение pinned версии,
+а не интервалы из PNG. Easy всегда выпускает в review. Допускаются пустые
+списки (сразу FSRS) и до 64 строго возрастающих целых минутных шагов <1 суток;
+Hard следует той же формуле библиотеки. Смена профиля с несовместимым текущим
+индексом отклоняется, а не молча пропускает шаг.
+
+Вход содержит immutable `CardScheduleSnapshot` schemaVersion=1 (CardID,
+algorithmID/version, parameterSetID, phase, память, due/lastReview, счётчики,
+шаг, epoch/revision), явные nowUTC, seed и полный выбранный parameter set.
+Выход содержит before/after и metadata schemaVersion=1 с полным parameter set,
+revision адаптера/upstream, now, seed, grade, elapsed/scheduled days. Snapshot
+полон для расчёта/будущего Undo; SQL и journal относятся к следующим задачам.
+Расчёт повышает revision на один, сохраняет CardID/epoch и фиксирует новый
+parameterSetID только в after; preview ничего не сохраняет.
+
+Fuzz выключен: seed сохраняется в metadata, но не влияет на интервалы.
+Время поступает только от вызывающего кода; скрытого Date()/Clock нет.
+FSRS elapsed days — число пересечённых UTC-полуночей pinned реализации,
+а долгий interval day = 86400 секунд. Это не StudyDayKey, квоты или DST-день.
+now до lastReview (включая откат внутри дня) запрещён; early review разрешён.
+Поддерживаемые даты — 0001…9999 UTC с проверкой результата. Новая память nil;
+у остальных фаз обязательны finite stability ≥0.001, difficulty 1…10,
+due/lastReview и согласованные счётчики/шаг. Неизвестные версии, NaN/Infinity,
+неполные snapshots, переполнение revision/counters, неверные параметры и веса,
+которые upstream стал бы молча clamp, дают типизированную ошибку до сохранения.
+Retention разрешён 0.01…0.99, maximumIntervalDays 1…36500. При насыщении
+review интервалы upstream могут раздвигаться на +1/+2 дня ради порядка оценок;
+адаптер ограничивает каждый долгий результат maximumIntervalDays (на границе
+возможны равные интервалы), сохраняя рассчитанную память. Короткие шаги не меняются.
+
 ## Сохранение, восстановление и Undo
 
 Оценка включает commandID, cardID, sessionID, expected schedule revision, event time, duration и grade. Транзакция проверяет ревизию, пишет before/after schedule, review log, продвижение очереди и processed command. Если процесс закрылся после commit, повтор команды возвращает сохранённый результат. Если commit не произошёл, карточка остаётся неоценённой.

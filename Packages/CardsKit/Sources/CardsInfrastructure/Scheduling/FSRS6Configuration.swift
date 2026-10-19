@@ -1,8 +1,16 @@
+import CardsCore
 import FSRS
 
-/// Verified initial profile. The domain Scheduler port/adapter belongs to T017.
+/// Verified initial profile shared by persistence and the domain adapter.
 /// Keep library types inside Infrastructure; never rely on FSRS's v5 defaults.
 enum FSRS6Configuration {
+    static func parameters(id: SchedulerParameterSetID) -> SchedulerParameterSet {
+        let p = makeScheduler().parameters
+        return SchedulerParameterSet(id: id, weights: p.w, desiredRetention: p.requestRetention,
+                                     maximumIntervalDays: Int(p.maximumInterval),
+                                     learningPolicy: LearningPolicy(learningSteps: p.learningSteps,
+                                                                    relearningSteps: p.relearningSteps))
+    }
     static func makeScheduler() -> FSRS {
         FSRS(parameters: FSRSParameters(
             requestRetention: 0.9,

@@ -25,6 +25,10 @@ const cases = [
   ['review', review, review.due],
   ['relearning', relearning, relearning.due],
   ['overdue', review, new Date(review.due.getTime() + 30 * 86400000)],
+  ['learning-step-zero', scheduler.next(newCard, now, Rating.Again).card, new Date(now.getTime() + 60000)],
+  ['same-day-review', review, new Date(now.getTime() + 600000)],
+  ['utc-midnight-review', review, new Date('2025-01-02T00:00:00Z')],
+  ['overdue-relearning', relearning, new Date(relearning.due.getTime() + 3 * 86400000)],
 ];
 function snapshot(card) {
   return { ...card, due: card.due.getTime()/1000,

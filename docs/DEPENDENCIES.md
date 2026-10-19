@@ -81,12 +81,18 @@ retention=0.9, maximum interval=36500 дней, fuzz=false, short term=true,
 learning=[1m,10m], relearning=[10m]. Отдельно проверяется version==v6;
 `FSRSParameters()` без весов оставлен upstream как FSRS-5 и запрещён для
 продуктового расчёта. Полный доменный адаптер, валидация входных параметров и
-политика учебного времени остаются T017; внешние типы не выходят в Core/UI.
+политика учебного времени реализованы в T017; внешние типы не выходят в Core/UI.
+`FSRS6Scheduler` реализует доменный `Scheduler`; контракт переходов, допустимые
+параметры и versioned snapshots описаны в [REVIEW_ENGINE.md](REVIEW_ENGINE.md).
 
 [Fixture](../Packages/CardsKit/Tests/CardsInfrastructureTests/Fixtures/fsrs6-reference.json)
 получена запуском **ts-fsrs 5.4.2**, независимой TypeScript-реализации,
 [source revision bb71e35](https://github.com/open-spaced-repetition/ts-fsrs/tree/bb71e35a2f5af5a5ac6cce9ef7c41ad24855721d),
 [MIT](https://github.com/open-spaced-repetition/ts-fsrs/blob/bb71e35a2f5af5a5ac6cce9ef7c41ad24855721d/LICENSE).
+T017 расширяет fixture до 9 входов / 36 результатов: добавлены learning step 0,
+same-day review, пересечение UTC-полуночи и overdue relearning. Первые 20
+результатов сохранены без изменения. Тест адаптера сверяет те же независимые
+числа после перевода доменных типов, помимо прямого smoke библиотеки.
 Это dev-only oracle: Node/npm не нужны ни приложению, ни обычному CI;
 нет транзитивных npm runtime-зависимостей. Версия, source revision и npm
 SHA-512 integrity сохранены в fixture и generator. Дата — фиксированная UTC,
