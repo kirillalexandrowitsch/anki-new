@@ -245,8 +245,10 @@ final class AppShellUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: count, object: nil)], timeout: 5), .completed)
         // Saving a different row must not move the user's existing selection.
         XCTAssertTrue(edit.exists)
-        let anotherRow = app.descendants(matching: .any).matching(identifier: "library.table").firstMatch
-            .outlineRows.firstMatch
+        // Native Table may expose the hosted action as a row label or as a Button.
+        let anotherRow = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier == %@ OR label BEGINSWITH %@",
+            "library.select.Another synthetic row", "Выбрать карточку Another synthetic row,")).firstMatch
         XCTAssertTrue(anotherRow.waitForExistence(timeout: 5))
         anotherRow.click()
         let anotherEdit = app.buttons["note.edit.Another synthetic row"]

@@ -94,8 +94,14 @@ public struct LibraryView: View {
     private var table: some View {
         Table(model.rows, selection: $model.selection) {
             TableColumn("Слово") { row in
-                Text(row.front).fontWeight(.semibold).lineLimit(2)
-                    .accessibilityIdentifier("library.row.\(row.front)")
+                Button { model.selection = row.id } label: {
+                    Text(row.front).fontWeight(.semibold).lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Выбрать карточку \(row.front), \(row.directionTitle)")
+                .accessibilityIdentifier("library.select.\(row.front)")
             }.width(min: 120, ideal: 180)
             TableColumn("Перевод") { row in Text(row.back).lineLimit(2) }.width(min: 110, ideal: 180)
             TableColumn("Колода") { row in Text(row.deckName.displayValue).lineLimit(2) }.width(min: 90, ideal: 130)
