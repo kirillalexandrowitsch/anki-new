@@ -139,6 +139,7 @@ enum BackupArchive {
                 throw CollectionBackupError.unsupportedVersion
             }
             try CollectionDatabase.checkIntegrity(db)
+            try validateSchema(db)
             let metadata = try CollectionMetadata.fetch(db)
             guard metadata.id == manifest.id else { throw CollectionBackupError.invalidArchive }
             let media = try assets(db)
@@ -150,6 +151,33 @@ enum BackupArchive {
             }
             return metadata
         }
+    }
+
+    /// Migration IDs/version and SQLite integrity do not detect a dropped application table/trigger.
+    /// Compare declared DDL with the immutable current migrations before any live data is retired.
+    private static func validateSchema(_ db: Database) throws {
+        let reference = try DatabaseQueue()
+        defer { try? reference.close() }
+        var migrator = DatabaseMigrator()
+        for migration in CollectionMigrations.current {
+            migrator.registerMigration(migration.identifier) { try migration.apply($0) }
+        }
+        try migrator.migrate(reference)
+        let expected = try reference.read { try schema($0) }
+        guard try schema(db) == expected else { throw CollectionBackupError.invalidArchive }
+    }
+
+    private static func schema(_ db: Database) throws -> [String: String] {
+        // FTS shadow tables are SQLite implementation details; the virtual table DDL is compared.
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT type, name, sql FROM sqlite_schema WHERE sql IS NOT NULL
+            AND name NOT LIKE 'sqlite_%'
+            AND NOT (type = 'table' AND name IN ('notes_fts_data', 'notes_fts_idx',
+                'notes_fts_content', 'notes_fts_docsize', 'notes_fts_config'))
+            """)
+        return Dictionary(uniqueKeysWithValues: rows.map { row in
+            ("\(row["type"] as String):\(row["name"] as String)", row["sql"] as String)
+        })
     }
 
     private static func assets(_ db: Database) throws -> [MediaAsset] {

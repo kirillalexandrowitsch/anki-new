@@ -163,6 +163,21 @@ private struct BackupFixture {
             createdAt: decoded.createdAt, files: decoded.files.map { $0.path == payload ? hash : $0 }))
         variants.append(value)
     }
+    for sql in ["DROP TABLE local_notifications", "DROP TRIGGER notes_search_update"] {
+        var value = original
+        let url = f.base.appendingPathComponent(UUID().uuidString + ".sqlite")
+        try original["collection.sqlite"]!.write(to: url)
+        let edited = try DatabaseQueue(path: url.path)
+        try await edited.write { try $0.execute(sql: sql) }
+        try edited.close()
+        value["collection.sqlite"] = try Data(contentsOf: url)
+        let entry = try BackupFiles.hash(url, path: "collection.sqlite")
+        let decoded = try JSONDecoder().decode(BackupManifest.self, from: original["manifest.json"]!)
+        value["manifest.json"] = try JSONEncoder().encode(BackupManifest(formatVersion: 1,
+            databaseVersion: decoded.databaseVersion, collectionID: decoded.collectionID,
+            createdAt: decoded.createdAt, files: decoded.files.map { $0.path == entry.path ? entry : $0 }))
+        variants.append(value)
+    }
     let expected = try f.dump(context)
     for value in variants {
         let archive = try f.zip(value)

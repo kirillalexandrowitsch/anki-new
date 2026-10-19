@@ -38,7 +38,9 @@ root коллекции. Старые копии не удаляются. Фай
 дубликаты, абсолютные/не канонические пути и посторонние entries. Ограничения v1: 100 003 entries,
 2 GiB суммарно, manifest до 32 MiB, отношение распаковки до 1000; учитываются фактические байты,
 CRC и SHA-256. Media проверяются по строкам SQLite и профилю T009; SQLite — read-only preflight,
-integrity_check, foreign_key_check, schema/identity. Принимается текущая database schema v2;
+integrity_check, foreign_key_check, schema/identity. Объявленные таблицы, индексы и триггеры
+сверяются с DDL текущих immutable migrations в отдельной in-memory reference DB; одних migration
+IDs и user_version недостаточно. Внутренние FTS shadow tables исключены из DDL-сравнения. Принимается текущая database schema v2;
 будущая совместимость со старыми версиями потребует явной политики migration в staging.
 
 После полной проверки staging содержит готовый контейнер. Закрываются media/writer/observations.

@@ -1,6 +1,6 @@
 {
   "taskID": "T011",
-  "summary": "Реализованы CollectionStore.createBackup/restoreBackup и Infrastructure/Backup: согласованный SQLite snapshot с committed WAL и standalone DELETE-journal mode, versioned ZIP manifest с SHA-256, immutable media, ограниченная потоковая валидация и staged restore. Стабильный operation lease вне контейнера и внешний rollback journal обеспечивают startup recovery и новый generation после замены. Новых зависимостей, платных API/подписок, CI uploads и личных данных нет.",
+  "summary": "Реализованы CollectionStore.createBackup/restoreBackup и Infrastructure/Backup: согласованный SQLite snapshot с committed WAL и standalone DELETE-journal mode, versioned ZIP manifest с SHA-256, immutable media, ограниченная потоковая валидация с проверкой DDL текущих migrations и staged restore. Стабильный operation lease вне контейнера и внешний rollback journal обеспечивают startup recovery и новый generation после замены. Новых зависимостей, платных API/подписок, CI uploads и личных данных нет.",
   "criteria": [
     {
       "text": "Точная копия восстанавливается в другой контейнер.",
@@ -10,7 +10,7 @@
     {
       "text": "Повреждённый архив не заменяет текущую коллекцию.",
       "passed": true,
-      "evidence": "backupCorruptArchivesNeverInvalidateOrReplaceLiveCollection проверяет неверные payload SHA, отсутствующую SQLite, посторонние entries, traversal/absolute/backslash/WAL paths, неизвестную версию, обрезанный ZIP и невалидные SQLite/container JSON даже с пересчитанным SHA manifest. После каждого отказа прежний generation/metadata/все строки остаются доступны, restore journal отсутствует. Round trip отдельно отклоняет испорченное media до замены. backupRejectsSymlinksDuplicatesAndCompressionBombs проверяет symlink, duplicate path и deflate bomb. backupDestinationCancellationAndOldGenerationAreSafe проверяет отмену до swap, запрет backup внутрь коллекции, no-clobber существующего backup и stale generation."
+      "evidence": "backupCorruptArchivesNeverInvalidateOrReplaceLiveCollection проверяет неверные payload SHA, отсутствующую SQLite, посторонние entries, traversal/absolute/backslash/WAL paths, неизвестную версию, обрезанный ZIP и невалидные SQLite/container JSON даже с пересчитанным SHA manifest. После каждого отказа прежний generation/metadata/все строки остаются доступны, restore journal отсутствует. Round trip отдельно отклоняет испорченное media до замены. backupRejectsSymlinksDuplicatesAndCompressionBombs проверяет symlink, duplicate path и deflate bomb. backupDestinationCancellationAndOldGenerationAreSafe проверяет отмену до swap, запрет backup внутрь коллекции, no-clobber существующего backup и stale generation. Дополнительно архивы с удалённой local_notifications table и notes_search_update trigger имеют правильные payload SHA, migration IDs и user_version, но отвергаются до swap по DDL-сравнению с in-memory reference, созданной текущими immutable migrations. Тест до исправления реально воспроизвёл подмену/generation change (build/t011-schema-regression-before.log), после исправления весь набор проходит."
     }
   ],
   "checks": [
@@ -22,7 +22,7 @@
     {
       "command": "xcrun swift build/t005-run-with-abc.swift test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/t011-app CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
       "result": "passed",
-      "details": "TEST SUCCEEDED: 4 app unit tests и 2 UI tests, ноль failures; build/t011-app-retry.log; build/t011-app/Logs/Test/Test-AnkiNew-2026.10.19_09-02-10-+0300.xcresult. Первый запуск завершился до UI tests по системному тайм-ауту enabling automation mode; повтор без изменения кода прошёл. macOS 27.0.1 arm64/Xcode 27.1, локальная ad-hoc подпись без Apple Account. Существующий wrapper временно выбрал ABC для XCUITest и восстановил Russian (noErr 0). Debug CollectionTestID использует изолированные данные."
+      "details": "TEST SUCCEEDED: 4 app unit tests и 2 UI tests, ноль failures; build/t011-app-final.log; build/t011-app/Logs/Test/Test-AnkiNew-2026.10.19_09-08-34-+0300.xcresult. Первый запуск завершился до UI tests по системному тайм-ауту enabling automation mode; повтор без изменения кода прошёл. macOS 27.0.1 arm64/Xcode 27.1, локальная ad-hoc подпись без Apple Account. Существующий wrapper временно выбрал ABC для XCUITest и восстановил Russian (noErr 0). Debug CollectionTestID использует изолированные данные."
     },
     {
       "command": "python3 scripts/tasks.py finish T011; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
