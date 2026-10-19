@@ -47,6 +47,31 @@ private func saveCommand(_ deck: DeckID, id: NoteID = NoteID(), revision: Revisi
             examples: [NoteExample(en: "Synthetic example", ru: "Синтетический пример")], media: media), tags: tags)
 }
 
+@Test func installedPersistedFSRSProfileFeedsPureSchedulerWithoutChangingDatabase() async throws {
+    let fixture = try NoteFixture()
+    let deck = try await fixture.deck()
+    let saved = try await fixture.notes.save(saveCommand(deck))
+    let before = try await fixture.schedule()
+    let p = try await fixture.database.pool.read { db in
+        let row = try #require(try Row.fetchOne(db, sql: "SELECT * FROM scheduler_parameters"))
+        struct Weights: Decodable { let schemaVersion: Int; let w: [Double] }
+        let weights = try JSONDecoder().decode(Weights.self, from: Data((row["weightsJSON"] as String).utf8))
+        let policy = try JSONDecoder().decode(LearningPolicy.self, from: Data((row["learningPolicyJSON"] as String).utf8))
+        return try SchedulerParameterSet(schemaVersion: weights.schemaVersion,
+            id: SchedulerParameterSetID(uuidString: row["id"]), algorithmVersion: row["algorithmVersion"],
+            weights: weights.w, desiredRetention: row["desiredRetention"], maximumIntervalDays: row["maximumIntervalDays"],
+            learningPolicy: policy)
+    }
+    #expect(p == FSRS6Scheduler.defaultParameters(id: p.id))
+    let snapshot = CardScheduleSnapshot(cardID: saved.card.id, parameterSetID: p.id)
+    let request = SchedulingInput(schedule: snapshot, nowUTC: fixture.clock.now(), parameters: p, seed: 12)
+    let scheduler: any Scheduler = FSRS6Scheduler()
+    let options = try scheduler.preview(request)
+    for grade in Grade.allCases { #expect(try scheduler.apply(request, grade: grade) == options[grade]) }
+    #expect(try await fixture.schedule() == before)
+    #expect(options[.again].after.dueAt == request.nowUTC.addingTimeInterval(60))
+}
+
 @Test func basicNoteCreateEditReopenWithRealMediaTagsFTSAndCommandReplay() async throws {
     let directory = try TestDirectory()
     let clock = TestClock()
