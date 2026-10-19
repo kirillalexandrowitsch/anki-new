@@ -19,20 +19,24 @@ public actor CollectionStore: CollectionAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
+    private let mediaFault: MediaFault?
 
     private final class OwnedCollection {
         let context: CollectionContext
         let database: CollectionDatabase
         let lease: CollectionLease
         let writer: CollectionWriter
+        let media: CollectionMediaRepository
         var closing = false
 
         init(context: CollectionContext, database: CollectionDatabase, lease: CollectionLease,
-             clock: any CardsCore.Clock) {
+             clock: any CardsCore.Clock, directory: URL, mediaFault: MediaFault?) {
             self.context = context
             self.database = database
             self.lease = lease
-            self.writer = CollectionWriter(database: database, clock: clock)
+            let writer = CollectionWriter(database: database, clock: clock)
+            self.writer = writer
+            self.media = CollectionMediaRepository(root: directory, writer: writer, fault: mediaFault)
         }
 
         deinit {
@@ -44,6 +48,13 @@ public actor CollectionStore: CollectionAccess {
     public init(root: URL, clock: any CardsCore.Clock = SystemClock()) {
         self.root = root.standardizedFileURL.resolvingSymlinksInPath()
         self.clock = clock
+        self.mediaFault = nil
+    }
+
+    init(root: URL, clock: any CardsCore.Clock = SystemClock(), mediaFault: @escaping MediaFault) {
+        self.root = root.standardizedFileURL.resolvingSymlinksInPath()
+        self.clock = clock
+        self.mediaFault = mediaFault
     }
 
     public static func applicationSupportRoot(bundleIdentifier: String) throws -> URL {
@@ -89,8 +100,15 @@ public actor CollectionStore: CollectionAccess {
             }
             guard metadata.id == manifest.id else { throw CollectionDatabaseError.collectionIdentityMismatch }
             let database = try CollectionDatabase(url: databaseURL)
+            do {
+                try MediaJournal.recover(pool: database.pool, root: directory)
+            } catch {
+                try? database.close()
+                lease.release()
+                throw error
+            }
             let context = CollectionContext(id: manifest.id, name: metadata.name)
-            active = OwnedCollection(context: context, database: database, lease: lease, clock: clock)
+            active = OwnedCollection(context: context, database: database, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault)
             return context
         }
 
@@ -113,7 +131,7 @@ public actor CollectionStore: CollectionAccess {
                       to: directory.appendingPathComponent("collection.json"))
             try write(CollectionRegistry(schemaVersion: 1, collections: [id], lastSelected: id), to: registryURL)
             let context = CollectionContext(id: id, name: name)
-            active = OwnedCollection(context: context, database: opened, lease: lease, clock: clock)
+            active = OwnedCollection(context: context, database: opened, lease: lease, clock: clock, directory: directory, mediaFault: mediaFault)
             return context
         } catch {
             try? database?.close()
@@ -142,6 +160,13 @@ public actor CollectionStore: CollectionAccess {
         SQLiteCollectionInfoRepository(writer: try writer(generation: generation))
     }
 
+    public func media(generation: UUID) throws -> any MediaRepository {
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
+            throw MediaStorageError.staleContext
+        }
+        return owned.media
+    }
+
     private func writer(generation: UUID) throws -> CollectionWriter {
         guard let owned = active, !owned.closing, owned.context.generation == generation else {
             throw CollectionRepositoryError.staleContext
@@ -152,6 +177,7 @@ public actor CollectionStore: CollectionAccess {
     public func close(generation: UUID) async throws {
         guard let owned = active, owned.context.generation == generation else { return }
         owned.closing = true
+        await owned.media.close()
         try await owned.writer.close()
         owned.lease.release() // async frame destruction need not precede the caller's next open
         if active === owned { active = nil } // release lease only after the pool has closed
