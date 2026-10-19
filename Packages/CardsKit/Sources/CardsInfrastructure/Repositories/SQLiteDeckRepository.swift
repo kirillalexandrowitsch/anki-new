@@ -51,20 +51,20 @@ struct SQLiteDeckRepository: DeckRepository {
             }
             if command.expectedRevision == nil {
                 try db.execute(sql: """
-                    INSERT INTO decks(id, parentID, name, normalizedName, description, revision)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO decks(id, parentID, name, normalizedName, description, iconKey, colorKey, revision)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, arguments: [key, parentKey, command.name.displayValue, command.name.normalizedValue,
-                                      command.description, revision.rawValue])
+                                      command.description, command.iconKey, command.colorKey, revision.rawValue])
             } else {
                 try db.execute(sql: """
-                    UPDATE decks SET parentID = ?, name = ?, normalizedName = ?, description = ?, revision = ?
+                    UPDATE decks SET parentID = ?, name = ?, normalizedName = ?, description = ?, iconKey = ?, colorKey = ?, revision = ?
                     WHERE id = ? AND revision = ? AND deletedAt IS NULL
                     """, arguments: [parentKey, command.name.displayValue, command.name.normalizedValue,
-                                      command.description, revision.rawValue, key, command.expectedRevision!.rawValue])
+                                      command.description, command.iconKey, command.colorKey, revision.rawValue, key, command.expectedRevision!.rawValue])
                 guard db.changesCount == 1 else { throw CollectionRepositoryError.integrityFailure }
             }
             return Deck(id: command.deckID, parentID: command.parentID, name: command.name,
-                        description: command.description, revision: revision)
+                        description: command.description, iconKey: command.iconKey, colorKey: command.colorKey, revision: revision)
         }
     }
 
@@ -73,7 +73,7 @@ struct SQLiteDeckRepository: DeckRepository {
                                          arguments: [id.rawValue.uuidString.lowercased()]) else { return nil }
         let parent: String? = row["parentID"]
         return try Deck(id: id, parentID: parent.map { try DeckID(uuidString: $0) },
-                        name: EntityName(row["name"]), description: row["description"],
+                        name: EntityName(row["name"]), description: row["description"], iconKey: row["iconKey"], colorKey: row["colorKey"],
                         revision: Revision(row["revision"]))
     }
 }

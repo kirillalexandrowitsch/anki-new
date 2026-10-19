@@ -1,0 +1,45 @@
+{
+  "taskID": "T013",
+  "summary": "Реализованы CreateDeck/UpdateDeck и пользовательские диалоги простой колоды: имя, описание, системная иконка и цвет. Список получает committed query snapshots; явный Save проверяет revision/дубликаты, Cancel/Escape не пишет draft и возвращает клавиатурный фокус. Иконка/цвет сохраняются в существующих столбцах SQLite без изменения миграций; сохранена совместимость старых обработанных команд. Новых зависимостей, платежей, uploads и личных данных нет.",
+  "criteria": [
+    {
+      "text": "Колода появляется в списке после commit и после перезапуска.",
+      "passed": true,
+      "evidence": "DeckUseCaseTests: создание/изменение всех четырёх полей через реальные Core use cases, совпадение query rows с committed DTO, close/reopen нового CollectionStore и проверка сохранённых данных. testDeckCreateDuplicateCancelEscapeEditAndRelaunch прошёл в build/t013-ui-native-focus.log и повторно на финальном коде в build/t013-final-app.log: новая колода видна после Save; после переименования terminate/launch с тем же новым CollectionTestID показывает Updated, описание, Книга/Фиолетовый сохранены. Все данные синтетические, временный sandbox-контейнер; личная коллекция не читается."
+    },
+    {
+      "text": "Cancel не сохраняет правки, конфликт не теряет исходное имя.",
+      "passed": true,
+      "evidence": "DeckEditorTests: Cancel новых/существующих drafts не вызывает repository; конфликт сохраняет original Deck с исходным именем и весь input, блокирует повторную перезапись. DeckUseCaseTests на file-БД: stale revision и Unicode duplicate не меняют committed winner, включая описание/иконку/цвет. UI test проверил Cancel и Escape редактирования, отсутствие несохранённых имён, возврат hasKeyboardFocus к create/edit через NSButton-адаптер после sheet, duplicate error и reopen. Дополнительно проверены empty name, safe retry с тем же commandID, новое ID команды при изменении input, double submit и отбрасывание запоздалого результата закрытой коллекции."
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-j8vpv0fv/summary.json, build/t013-offline.log: status passed, networkDenied=true; 98 package tests (18 Core, 70 Infrastructure, 7 Features, 3 DesignSystem), arm64/ad-hoc app build exit0. Test seed 12/fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 неизменен; зависимости из прежних pins/cache, новых пакетов нет. Включены новые real file-BД use case/reopen/conflict/duplicate и legacy processed-command replay tests."
+    },
+    {
+      "command": "xcrun swift build/t012-check-with-abc.swift xcodebuild -project AnkiNew.xcodeproj -scheme AnkiNew -clonedSourcePackagesDirPath build/check-packages test -destination platform=macOS,arch=arm64 -derivedDataPath build/check-derived -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -resultBundlePath build/t013-final.xcresult",
+      "result": "passed",
+      "details": "build/t013-final-app.log: TEST SUCCEEDED, 4 app unit tests и 3 UI tests, 0 failures. Новый сквозной UI test прошёл за 48.817s, полный UI suite 79.035s. Проверены empty/duplicate, все поля, Cancel/Escape, keyboard focus к create/edit, Save, terminate/relaunch с тем же synthetic CollectionTestID. Локальный временный wrapper использовал существующий ABC; исходный до тестов Russian дополнительно восстановлен TISSelectInputSource с result0 после серии диагностических прогонов. Постоянные системные настройки не изменены. xcresult только в ignored build/, CI uploads нет."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T013; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "Критерии выполнены до finish; 100 задач/174 состояния, зависимости/отчёты/generated docs согласованы. build/t013-quality.log: 25 Python tests, 2453 локальные ссылки, 48/48 PNG hashes, quality passed; git diff --check exit0. PR quality/macos и каждый post-merge push pipeline проверяет scripts/deliver.py без skipped/neutral/admin bypass."
+    },
+    {
+      "command": "xcrun swift build/t012-check-with-abc.swift xcodebuild -project AnkiNew.xcodeproj -scheme AnkiNew -clonedSourcePackagesDirPath build/check-packages test -destination platform=macOS,arch=arm64 -derivedDataPath build/check-derived -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testDeckCreateDuplicateCancelEscapeEditAndRelaunch -resultBundlePath build/t013-ui-confirmed.xcresult",
+      "result": "passed",
+      "details": "Финальный UI source без необязательных screenshot attachments: build/t013-ui-confirmed.log, TEST SUCCEEDED, 1 test/0 failures, 49.153s. Все функциональные assertions сохранены, включая hasKeyboardFocus после обоих видов отмены и reopen всех полей. Wrapper восстановил исходный Russian с result0. Неизменённые production/package sources уже прошли полный app suite и offline checker выше."
+    }
+  ],
+  "limitations": [
+    "T013 реализует простой список/диалоги. Новая колода создаётся в корне; редактирование сохраняет текущий parentID. Дерево/сетка, выбор/перемещение родителя, избранное и удаление остаются задачам M2; неработающих элементов этих функций не добавлено. Sheet-04 прочитан, PNG неизменны. Иконки/цвет выбираются нативными popup controls вместо нарисованного palette popover.",
+    "При revision conflict автоматического merge нет: исходный snapshot и draft остаются в модели/диалоге, пользователь может скопировать свой текст и заново открыть актуальную колоду. Несохранённый draft хранится в памяти диалога, не обещает восстановление после завершения процесса.",
+    "Локальная платформа macOS 27.0.1 arm64/Xcode 27.1; macOS 15 проверяет обязательный CI. Локальная подпись ad-hoc, Apple Account и provisioning не использованы. Новых библиотек, платных API/подписок/runners или CI artifact/cache uploads нет.",
+    "Первый UI прогон выявил реальную потерю клавиатурного фокуса после sheet. Варианты только с SwiftUI FocusState не устранили её; добавлен узкий native NSButton adapter с first-responder restoration после didEndSheet и однократным запросом фокуса. Проверка hasKeyboardFocus сохранена; итоговый UI тест проходит. Локальные диагностические логи/xcresult/synthetic screenshots остаются в игнорируемом build/.",
+    "Автоматический raster capture локально ограничен вторым монитором: app.screenshot() снял основной дисплей с Codex, window.screenshot() завершился Image creation failed. Диагностические attachment-блоки убраны из UI-теста; все функциональные assertions создания/редактирования/отмены/reopen/hasKeyboardFocus сохранены. Визуальное совпадение с PNG не заявляется как доказанное; layout использует native controls и исходный sheet-04. Accessibility tree отдельно подтвердил кнопку Новая колода как focused. Эти локальные снимки/xcresults не публикуются."
+  ]
+}
