@@ -8,10 +8,18 @@ import Foundation
 final class CompositionRoot {
     let clock: any CardsCore.Clock
     let collections: CollectionCoordinator
+    private let access: any CollectionAccess
 
     init(clock: any CardsCore.Clock = SystemClock(), collectionAccess: (any CollectionAccess)? = nil) {
         self.clock = clock
-        self.collections = CollectionCoordinator(access: collectionAccess ?? DefaultCollectionAccess(clock: clock))
+        self.access = collectionAccess ?? DefaultCollectionAccess(clock: clock)
+        self.collections = CollectionCoordinator(access: access)
+    }
+
+    func makeDecksModel(context: CollectionContext) async throws -> DecksModel {
+        guard let provider = access as? any DeckWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        let workspace = try await provider.deckWorkspace(generation: context.generation)
+        return DecksModel(workspace: workspace, clock: clock)
     }
 
     func makeShellModel() -> AppShellModel {
@@ -20,7 +28,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: CollectionAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -42,6 +50,11 @@ private actor DefaultCollectionAccess: CollectionAccess {
             store = CollectionStore(root: root, clock: clock)
         }
         return try await store!.open()
+    }
+
+    func deckWorkspace(generation: UUID) async throws -> DeckWorkspace {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.deckWorkspace(generation: generation)
     }
 
     func close(generation: UUID) async throws { try await store?.close(generation: generation) }

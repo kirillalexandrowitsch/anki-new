@@ -464,12 +464,15 @@
       ],
       "verification": "Проверить создание, duplicate name, Escape и reopen приложения.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "04.1",
         "04.2"
-      ]
+      ],
+      "startedAt": "2026-10-19T10:54:18.998078+00:00",
+      "completedAt": "2026-10-19T11:08:32.704491+00:00",
+      "report": "docs/task-reports/T013.json"
     },
     {
       "id": "T014",
@@ -4086,13 +4089,13 @@
       "stateID": "04.1",
       "taskID": "T013",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "04.2",
       "taskID": "T013",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "04.3",
