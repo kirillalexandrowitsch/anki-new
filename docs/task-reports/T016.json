@@ -33,6 +33,11 @@
       "command": "python3 scripts/tasks.py finish T016; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T016 done после проверки критериев. 100 задач / 174 состояния согласованы, quality exit 0: 25 Python tests, локальные ссылки и 48/48 исходных PNG hashes. whitespace check exit 0. PR и post-merge pipeline проверяет deliver.py перед продвижением."
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts -p test_check.py -v; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "CI 39282099801: 118 package tests passed, quality SUCCESS, app UI testNoteEditorCreatePreviewValidationCloseChoicesEditAndReopen failed; first log had no source location because XCTest reports file:line without column. Diagnostics now accepts this format, retains only allowlisted source/line (column 0) and test ID; a privacy regression test rejects paths, assertion values and unknown names. 7 focused Python tests and all 26 quality tests passed. Full required CI rerun remains necessary; no test or criterion removed."
     }
   ],
   "limitations": [
