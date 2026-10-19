@@ -206,8 +206,9 @@ registry при startup. [Формат и гарантии](BACKUP_STORAGE.md) �
 ### Базовый редактор T015
 
 `EditorWorkspaceAccess` выдаёт generation-scoped `NoteRepository` и `CollectionQueryService`.
-CompositionRoot создаёт отдельный `EditorLauncherModel` для каждого окна; в Библиотеке
-доступны минимальные paged entry points «Добавить карточку» / «Редактировать».
+CompositionRoot создаёт отдельный `LibraryModel` для каждого окна. Он владеет
+`EditorLauncherModel` для Add/Edit и наблюдает bounded snapshots.
+[Базовая библиотека](LIBRARY.md) описывает selection, поиск, счётчики и инспектор.
 Редактор — modal sheet: пока он открыт, навигация родительского окна недоступна.
 `EditorDraft` хранит front/back/pronunciation, все examples, tags и media refs по значению.
 Предпросмотр читает тот же draft, без SQL и автосохранения. Новая карточка выбирает колоду;

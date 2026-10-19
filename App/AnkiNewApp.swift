@@ -35,7 +35,7 @@ private struct MainWindow: View {
     private let collections: CollectionCoordinator
     private let composition: CompositionRoot
     @State private var decks: DecksModel?
-    @State private var editorLauncher: EditorLauncherModel?
+    @State private var library: LibraryModel?
     @State private var decksError = false
     @State private var decksCloseToken: UUID?
 
@@ -46,7 +46,7 @@ private struct MainWindow: View {
     }
 
     var body: some View {
-        AppShellView(model: model, decks: decks, editorLauncher: editorLauncher)
+        AppShellView(model: model, decks: decks, library: library)
             .frame(minWidth: 800, minHeight: 540)
             .task { await collections.open() }
             .task(id: collections.context) {
@@ -54,16 +54,16 @@ private struct MainWindow: View {
                 decksCloseToken = nil
                 decks?.stop()
                 decks = nil
-                editorLauncher?.stop()
-                editorLauncher = nil
+                library?.stop()
+                library = nil
                 decksError = false
                 guard let context = collections.context else { return }
                 do {
                     let loaded = try await composition.makeDecksModel(context: context)
                     guard !Task.isCancelled, collections.context == context else { loaded.stop(); return }
-                    let notes = try await composition.makeEditorLauncher(context: context)
+                    let notes = try await composition.makeLibraryModel(context: context)
                     guard !Task.isCancelled, collections.context == context else { loaded.stop(); notes.stop(); return }
-                    editorLauncher = notes
+                    library = notes
                     decks = loaded
                     decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop() }
                 } catch {
@@ -73,7 +73,7 @@ private struct MainWindow: View {
             .onDisappear {
                 if let token = decksCloseToken { collections.removeObservation(token) }
                 decks?.stop()
-                editorLauncher?.stop()
+                library?.stop()
             }
             .overlay {
                 if collections.isOpening {
