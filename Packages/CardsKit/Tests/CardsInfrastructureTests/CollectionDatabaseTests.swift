@@ -4,6 +4,13 @@ import Foundation
 import GRDB
 import Testing
 
+// Keep historical v1 migration/rollback tests on their original schema; current schema is tested below.
+private func v1Database(url: URL, newCollection: NewCollectionMetadata? = nil,
+                        migrations: [CollectionMigration] = CollectionMigrations.initial,
+                        backupDirectory: URL? = nil) throws -> CollectionDatabase {
+    try CollectionDatabase(url: url, newCollection: newCollection, migrations: migrations, backupDirectory: backupDirectory)
+}
+
 private struct DatabaseFixture {
     let directory: URL
     var url: URL { directory.appendingPathComponent("collection.sqlite") }
@@ -15,7 +22,7 @@ private struct DatabaseFixture {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
     func remove() { try? FileManager.default.removeItem(at: directory) }
-    func create() throws -> CollectionDatabase { try CollectionDatabase(url: url, newCollection: metadata) }
+    func create() throws -> CollectionDatabase { try v1Database(url: url, newCollection: metadata) }
 }
 
 private let expectedTables: Set<String> = [
@@ -28,22 +35,22 @@ private let expectedTables: Set<String> = [
 @Test func collectionSchemaCreatesReopensAndKeepsIdentity() async throws {
     let fixture = try DatabaseFixture()
     defer { fixture.remove() }
-    #expect(CollectionDatabase.schemaVersion == CollectionMigrations.initial.count)
+    #expect(CollectionDatabase.schemaVersion == CollectionMigrations.current.count)
     for attempt in 0..<3 {
         let store = try CollectionDatabase(url: fixture.url, newCollection: attempt == 0 ? fixture.metadata : nil)
         let metadata = try await store.metadata()
         #expect(metadata.id == fixture.metadata.id)
         #expect(metadata.name == fixture.metadata.name)
         #expect(metadata.createdAt == fixture.metadata.createdAt)
-        #expect(metadata.schemaVersion == 1 && metadata.containerVersion == 1)
+        #expect(metadata.schemaVersion == 2 && metadata.containerVersion == 1)
         #expect(metadata.settingsRevision == .initial)
         #expect(store.migrationBackupURL == nil)
         try await store.checkIntegrity()
         try await store.pool.read { db throws -> Void in
             let tables = try String.fetchSet(db, sql: "SELECT name FROM sqlite_schema WHERE type='table'")
-            #expect(tables == expectedTables)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations") == ["v1"])
-            #expect(try Int.fetchOne(db, sql: "PRAGMA user_version") == 1)
+            #expect(tables == expectedTables.union(["notes_fts", "notes_fts_data", "notes_fts_content", "notes_fts_idx", "notes_fts_docsize", "notes_fts_config"]))
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations") == ["v1", "v2-search"])
+            #expect(try Int.fetchOne(db, sql: "PRAGMA user_version") == 2)
             #expect(try String.fetchOne(db, sql: "PRAGMA journal_mode") == "wal")
             let strictTables = try Int.fetchOne(db, sql: "SELECT count(*) FROM pragma_table_list WHERE strict=1")
             #expect(strictTables == expectedTables.count - 1)
@@ -171,7 +178,7 @@ private func expectConstraint(_ db: Database, _ sql: String,
     }
     try await store.checkIntegrity()
     try store.close()
-    let reopened = try CollectionDatabase(url: fixture.url)
+    let reopened = try v1Database(url: fixture.url)
     defer { try? reopened.close() }
     try await reopened.pool.read { db throws -> Void in
         #expect(try Int64.fetchOne(db, sql: "SELECT createdAt FROM notes") == 1_700_000_000_123)
@@ -240,9 +247,9 @@ private let secondMigration = CollectionMigration(identifier: "v2") { db throws 
         try db.execute(sql: "INSERT INTO note_tags VALUES ('missing-note','missing-tag')")
     }
     #expect(throws: CollectionDatabaseError.integrityFailure) {
-        try CollectionDatabase(url: fixture.url, migrations: CollectionMigrations.initial + [broken])
+        try v1Database(url: fixture.url, migrations: CollectionMigrations.initial + [broken])
     }
-    let reopened = try CollectionDatabase(url: fixture.url)
+    let reopened = try v1Database(url: fixture.url)
     defer { try? reopened.close() }
     try reopened.pool.read { db throws -> Void in
         #expect(try Int.fetchOne(db, sql: "PRAGMA user_version") == 1)
@@ -265,9 +272,9 @@ private let secondMigration = CollectionMigration(identifier: "v2") { db throws 
         throw InjectedFailure.interrupted
     }
     #expect(throws: InjectedFailure.interrupted) {
-        try CollectionDatabase(url: fixture.url, migrations: CollectionMigrations.initial + [broken])
+        try v1Database(url: fixture.url, migrations: CollectionMigrations.initial + [broken])
     }
-    let reopened = try CollectionDatabase(url: fixture.url)
+    let reopened = try v1Database(url: fixture.url)
     defer { try? reopened.close() }
     try reopened.pool.read { db throws -> Void in
         #expect(try !db.tableExists("migration_probe"))
@@ -279,7 +286,7 @@ private let secondMigration = CollectionMigration(identifier: "v2") { db throws 
     let backups = try FileManager.default.contentsOfDirectory(at: fixture.directory, includingPropertiesForKeys: nil)
         .filter { $0.lastPathComponent.contains("pre-migration") && $0.pathExtension == "sqlite" }
     #expect(backups.count == 1)
-    let backup = try CollectionDatabase(url: #require(backups.first))
+    let backup = try v1Database(url: #require(backups.first))
     try backup.close()
 }
 
@@ -291,7 +298,7 @@ private let secondMigration = CollectionMigration(identifier: "v2") { db throws 
         throw InjectedFailure.interrupted
     }
     #expect(throws: InjectedFailure.interrupted) {
-        try CollectionDatabase(url: fixture.url, newCollection: fixture.metadata, migrations: [broken])
+        try v1Database(url: fixture.url, newCollection: fixture.metadata, migrations: [broken])
     }
     let reader = try CollectionMigrations.readOnlyQueue(fixture.url)
     try reader.read { db throws -> Void in
@@ -312,17 +319,17 @@ private let secondMigration = CollectionMigration(identifier: "v2") { db throws 
     try store.pool.write { try seedGraph($0) }
     defer { try? store.close() }
     #expect(throws: (any Error).self) {
-        try CollectionDatabase(url: fixture.url, migrations: CollectionMigrations.initial + [secondMigration],
+        try v1Database(url: fixture.url, migrations: CollectionMigrations.initial + [secondMigration],
                                backupDirectory: fixture.url) // file is not a destination directory
     }
     try store.pool.read { db throws -> Void in
         #expect(try Int.fetchOne(db, sql: "PRAGMA user_version") == 1)
         #expect(try !db.tableExists("migration_probe"))
     }
-    let upgraded = try CollectionDatabase(url: fixture.url, migrations: CollectionMigrations.initial + [secondMigration])
+    let upgraded = try v1Database(url: fixture.url, migrations: CollectionMigrations.initial + [secondMigration])
     defer { try? upgraded.close() }
     let backupURL = try #require(upgraded.migrationBackupURL)
-    let backup = try CollectionDatabase(url: backupURL)
+    let backup = try v1Database(url: backupURL)
     defer { try? backup.close() }
     try backup.pool.read { db throws -> Void in
         #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM notes") == 1)
@@ -358,7 +365,7 @@ func incompatibleSchemasAreRejectedWithoutChangingDatabaseContents(kind: String)
     let walBefore = (try? Data(contentsOf: wal)) ?? Data()
     let expected: CollectionDatabaseError = ["missingMigration", "mismatchedVersion"].contains(kind)
         ? .inconsistentSchema : .unsupportedSchema
-    #expect(throws: expected) { try CollectionDatabase(url: fixture.url) }
+    #expect(throws: expected) { try v1Database(url: fixture.url) }
     #expect(try Data(contentsOf: fixture.url) == bytes)
     // WAL may contain committed frames after closing a pool. OPEN_READONLY must
     // preserve those bytes too; SHM contains SQLite coordination, not collection data.
@@ -369,7 +376,7 @@ func incompatibleSchemasAreRejectedWithoutChangingDatabaseContents(kind: String)
 @Test func unrecognizedDatabaseAndMissingMetadataAreNeverAdopted() throws {
     let fixture = try DatabaseFixture()
     defer { fixture.remove() }
-    #expect(throws: CollectionDatabaseError.creationMetadataRequired) { try CollectionDatabase(url: fixture.url) }
+    #expect(throws: CollectionDatabaseError.creationMetadataRequired) { try v1Database(url: fixture.url) }
     #expect(!FileManager.default.fileExists(atPath: fixture.url.path))
     let foreign = try DatabaseQueue(path: fixture.url.path)
     try foreign.write { try $0.execute(sql: "CREATE TABLE somebody_elses_data(value TEXT)") }

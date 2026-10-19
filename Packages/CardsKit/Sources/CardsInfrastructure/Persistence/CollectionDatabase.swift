@@ -45,12 +45,12 @@ public struct CollectionMetadata: Equatable, Sendable {
 /// Owns one file-backed WAL pool. Construct off the main actor, under the collection's
 /// exclusive lifecycle lease (T007). SQL connections stay inside Infrastructure.
 public final class CollectionDatabase: Sendable {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
     let pool: DatabasePool
     public let migrationBackupURL: URL?
 
     public convenience init(url: URL, newCollection: NewCollectionMetadata? = nil) throws {
-        try self.init(url: url, newCollection: newCollection, migrations: CollectionMigrations.initial)
+        try self.init(url: url, newCollection: newCollection, migrations: CollectionMigrations.current)
     }
 
     // Migration injection is internal so tests exercise the same opening/backup/rollback path.
