@@ -363,13 +363,16 @@
       ],
       "verification": "Сверить результаты фильтра, пагинации и FTS после изменения; проверить отмену observation.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M0",
       "stateIDs": [
         "02.1",
         "02.2",
         "20.3"
-      ]
+      ],
+      "startedAt": "2026-10-19T05:16:25.965012+00:00",
+      "completedAt": "2026-10-19T05:24:43.528858+00:00",
+      "report": "docs/task-reports/T010.json"
     },
     {
       "id": "T011",
