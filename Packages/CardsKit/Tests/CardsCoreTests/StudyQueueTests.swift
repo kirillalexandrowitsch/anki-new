@@ -243,3 +243,18 @@ private actor ChangingQueueSource: StudyQueueSource {
         schedule: .init(schemaVersion: 2, cardID: item.card.id, parameterSetID: queueParameters))
     #expect(throws: StudyQueueError.invalidCard(item.card.id)) { try build([d], [badVersion]) }
 }
+
+@Test func queueExpiredBurialDoesNotReplaceDueOrderWithinAPhase() throws {
+    let d = try deck()
+    for phase in [SchedulePhase.learning, .relearning, .review] {
+        let oldest = entry(d.id, phase: phase, due: queueNow.addingTimeInterval(-300),
+                           burial: queueNow.addingTimeInterval(-10))
+        let later = entry(d.id, phase: phase, due: queueNow.addingTimeInterval(-100))
+        #expect(try build([d], [later, oldest]).ready == [oldest, later])
+        let activeBurial = entry(d.id, phase: phase, due: queueNow.addingTimeInterval(-500),
+                                burial: queueNow.addingTimeInterval(10))
+        let result = try build([d], [activeBurial, later])
+        #expect(result.ready == [later])
+        #expect(result.futureDue?.availableAt == queueNow.addingTimeInterval(10))
+    }
+}
