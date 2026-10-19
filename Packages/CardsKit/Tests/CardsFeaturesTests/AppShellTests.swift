@@ -1,23 +1,22 @@
 import CardsCore
 import CardsFeatures
+import CardsTestSupport
 import Foundation
 import Testing
 
-private struct FixedClock: CardsCore.Clock {
-    let date: Date
-    func now() -> Date { date }
-}
-
 @Test @MainActor func shellUsesInjectedDateAndKeepsWindowNavigationIndependent() {
     let date = Date(timeIntervalSince1970: 1_700_000_000)
-    let first = AppShellModel(clock: FixedClock(date: date))
-    let second = AppShellModel(clock: FixedClock(date: date))
+    let clock = TestClock(date: date)
+    let first = AppShellModel(clock: clock)
+    let second = AppShellModel(clock: clock)
     #expect(first.selection == .today)
     #expect(first.currentDate == date)
     first.selection = .library
     #expect(second.selection == .today)
+    clock.advance(by: 60)
     first.refreshDate()
-    #expect(first.currentDate == date)
+    #expect(first.currentDate == date.addingTimeInterval(60))
+    #expect(second.currentDate == date)
 }
 
 @Test func navigationAndSettingsHaveStableDistinctRoutesAndLocalizedTitles() {
