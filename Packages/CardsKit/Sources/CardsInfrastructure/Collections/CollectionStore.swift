@@ -160,6 +160,10 @@ public actor CollectionStore: CollectionAccess {
         SQLiteCollectionInfoRepository(writer: try writer(generation: generation))
     }
 
+    public func queries(generation: UUID) throws -> any CollectionQueryService {
+        SQLiteCollectionQueries(writer: try writer(generation: generation), generation: generation)
+    }
+
     public func media(generation: UUID) throws -> any MediaRepository {
         guard let owned = active, !owned.closing, owned.context.generation == generation else {
             throw MediaStorageError.staleContext

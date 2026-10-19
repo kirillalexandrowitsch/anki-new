@@ -143,6 +143,14 @@ Writer выполняет синхронный GRDB `write` на своём acto
 
 `CollectionStore.media(generation:)` выдаёт Core-порт `MediaRepository`. Подготовка и ImageIO thumbnail выполняются на media actor; writer сериализует journal, immutable publish и короткие SQL-транзакции. Startup recovery завершается до выдачи нового контекста. Import создаёт общий asset, ссылки Note применяются только будущим явным Save. Форматы, лимиты и границы восстановления описаны в [MEDIA_STORAGE.md](MEDIA_STORAGE.md).
 
+### Наблюдаемые запросы T010
+
+`CollectionStore.queries(generation:)` выдаёт `CollectionQueryService`: bounded library/deck pages,
+Today и отдельные Card/Note counts. `QueryObservation` передаёт async snapshots, закрывается
+вместе с экраном/Task/collection и проверяет generation перед выдачей буферизованного результата.
+SQL, FTS и GRDB остаются в Infrastructure. [Контракт запросов](QUERIES.md) описывает фильтры,
+сортировки, asOf и numbered pagination; FTS v2 поддерживается атомарными Note triggers.
+
 ## Состояние UI
 
 У каждого feature — `@MainActor @Observable` модель состояния. View отображает свойства и передаёт намерения пользователя. Сетевые/дисковые операции возвращают типизированный результат; модель показывает loading, empty, content или error. Для занятия применяется отдельный автомат состояний из [REVIEW_ENGINE.md](REVIEW_ENGINE.md).

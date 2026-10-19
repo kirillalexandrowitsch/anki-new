@@ -20,6 +20,8 @@ public actor CollectionWriter {
     private let database: CollectionDatabase
     private let clock: any CardsCore.Clock
     private var accepting = true
+    private var observations: [UUID: @Sendable () -> Void] = [:]
+    var observationCount: Int { observations.count }
 
     init(database: CollectionDatabase, clock: any CardsCore.Clock) {
         self.database = database
@@ -86,8 +88,37 @@ public actor CollectionWriter {
         catch let error as DatabaseError { throw Self.translate(error) }
     }
 
+    func observe<Value: Equatable & Sendable>(
+        _ fetch: @escaping @Sendable (Database) throws -> Value
+    ) throws -> QueryObservation<Value> {
+        try requireActive()
+        guard !Task.isCancelled else { throw CollectionRepositoryError.cancelled }
+        let id = UUID()
+        let pair = AsyncThrowingStream<Value, any Error>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let state = QueryObservationState<Value>(continuation: pair.continuation)
+        pair.continuation.onTermination = { [weak self, weak state] _ in
+            state?.stop(CollectionRepositoryError.cancelled)
+            Task { await self?.removeObservation(id) }
+        }
+        observations[id] = { state.stop(CollectionRepositoryError.staleContext) }
+        // Explicit source regions cover FTS shadow-table writes, empty results and both branches
+        // of optional filters. No per-row tracking or main-queue callbacks.
+        let observation = ValueObservation.tracking(
+            regions: ["notes", "cards", "decks", "card_schedules", "note_tags", "tags"].map { Table($0) },
+            fetch: fetch).removeDuplicates()
+        state.install(observation.start(in: database.pool, scheduling: .async(onQueue: .global()),
+            onError: { state.stop(Self.translate($0)) }, onChange: { state.yield($0) }))
+        return QueryObservation(stream: pair.stream,
+            cancel: { state.stop(CollectionRepositoryError.cancelled) }, validate: { try state.validate() })
+    }
+
+    private func removeObservation(_ id: UUID) { observations.removeValue(forKey: id) }
+
     func close() throws {
         accepting = false
+        let retired = observations.values
+        observations.removeAll()
+        for stop in retired { stop() }
         try database.close()
     }
 
