@@ -534,14 +534,17 @@
       ],
       "verification": "UI-сценарий создания и изменения; конфликт двух drafts и ошибка диска.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "09.1",
         "09.2",
         "18.4",
         "22.4"
-      ]
+      ],
+      "startedAt": "2026-10-19T12:25:53.402225+00:00",
+      "completedAt": "2026-10-19T12:41:02.004024+00:00",
+      "report": "docs/task-reports/T015.json"
     },
     {
       "id": "T016",
@@ -4212,13 +4215,13 @@
       "stateID": "09.1",
       "taskID": "T015",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "09.2",
       "taskID": "T015",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "09.3",

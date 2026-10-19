@@ -109,8 +109,8 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [09.1 · Создать карточку](../design-references/sheets/sheet-09.png) | [T015](tasks/T015.md) | Запланировано |
-| [09.2 · Редактировать](../design-references/sheets/sheet-09.png) | [T015](tasks/T015.md) | Запланировано |
+| [09.1 · Создать карточку](../design-references/sheets/sheet-09.png) | [T015](tasks/T015.md) | Готово |
+| [09.2 · Редактировать](../design-references/sheets/sheet-09.png) | [T015](tasks/T015.md) | Готово |
 | [09.3 · Озвучивание](../design-references/sheets/sheet-09.png) | [T036](tasks/T036.md) | Запланировано |
 | [09.4 · Изображение](../design-references/sheets/sheet-09.png) | [T036](tasks/T036.md) | Запланировано |
 

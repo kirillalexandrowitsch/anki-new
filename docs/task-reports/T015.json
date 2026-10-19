@@ -1,0 +1,43 @@
+{
+  "taskID": "T015",
+  "summary": "Реализован базовый редактор Basic: независимый EditorDraft, выбор колоды новой карточки, front/back/pronunciation и все пары examples, живой предпросмотр, явный Core SaveNote, состояния empty/valid/invalid/saving/conflict/failed. Выход защищён Save/Discard/Cancel; конфликт показывает актуальную версию и предлагает отдельную копию, ошибка диска сохраняет черновик. CompositionRoot подключает generation-scoped порты и минимальные Add/Edit entry points в Библиотеке; SQL остаётся в Infrastructure. Новых зависимостей, платежей, личных данных и CI uploads нет.",
+  "criteria": [
+    {
+      "text": "Невалидный front/back не сохраняется.",
+      "passed": true,
+      "evidence": "emptyAndWhitespaceNoteDraftsNeverWriteAndPreviewUsesValues проверяет пустые/whitespace front/back и отсутствие колоды: Save недоступен, repository не вызывается. В реальном нативном UI временной коллекции через CUA проверены пустые поля, front с пробелами/числами и whitespace-only back: Save disabled; после корректного back доступен. Предпросмотр визуально показывает тот же текст и pronunciation. UI create/edit/reopen сохранён с examples en/ru; после перезапуска Updated translation, pronunciation и оба example fields сохранены. Дополнительный автоматический XCTest UI-сценарий включён в обязательный CI; локальное ограничение ввода описано ниже."
+    },
+    {
+      "text": "Save/Discard/Cancel при закрытии имеют разные проверяемые результаты.",
+      "passed": true,
+      "evidence": "closeSaveDiscardCancelHaveDistinctResultsIncludingInvalidSave: чистый draft закрывается; Cancel оставляет тот же draft без записи; Discard закрывает без repository call; Save делает ровно один вызов и закрывает только после успеха, invalid Save не закрывает. В нативном UI выполнены все три варианта предупреждения: Cancel оставляет поля, Save создаёт одну карточку, Discard правки back не меняет исходный Synthetic translation при повторном открытии. Явный Save меняет его на Updated translation и переживает перезапуск. Escape закрывает чистый редактор; ⌘W с dirty draft открывает тот же warning. Saving блокирует повторную отправку/выход, stop отвергает поздний result. Реальный SQLITE_FULL оставляет sheet model открытым и draft неизменным."
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-mpf9jnwd/summary.json (build/t015-offline-final.log): status passed, networkDenied true; package tests exit 0: 80 Infrastructure, 13 Features, 18 Core, 3 DesignSystem = 114 tests. arm64 app build exit 0, ad-hoc подпись, без Apple Account. Synthetic seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 неизменен. twoRealEditorDraftsConflictDisplayWinnerAndExplicitlySaveSeparateCopy использует реальный CollectionStore: два drafts, один победитель, latest показан, второй не перезаписывает и создаёт отдельный Note/Card по явному действию; обе записи совпадают после reopen. realSQLiteDiskFullKeepsEditorOpenAndAtomicThenSameDraftRetries ограничивает PRAGMA max_page_count только временной БД: настоящий SQLITE_FULL, notes/cards=0, неизменный draft, retry после снятия лимита успешен и integrity passed. Features tests также проверяют tags/media/all examples, baseRevision, command replay ID и новую команду при изменении текста, stale context и delayed responses."
+    },
+    {
+      "command": "Native UI procedure via cua_repl on Debug app with disposable CollectionTestID",
+      "result": "passed",
+      "details": "Создана синтетическая колода. Проверены empty/invalid required fields, preview, front с пробелами/123, back, pronunciation и example en/ru. Cancel/Save/Discard warning дают разные результаты; edit/reopen подтверждает сохранение и отказ от правок; отдельный перезапуск подтверждает Updated translation, /test/ и examples. Escape и ⌘W проверены. Визуально проверен dark-mode sheet: прокрутка полей, preview, footer и warning; исходные PNG sheet-09/18/22 прочитаны и не менялись. Проверка использует только временную коллекцию; рабочее Release-приложение не менялось."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T015; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "finish после реальных критериев: T015 done; 100 задач/174 состояния, зависимости и generated docs согласованы. build/t015-quality.log: 25 Python tests passed, 2454 ссылки, 48/48 PNG hashes. quality и diff whitespace checks exit 0. Обязательные PR/post-merge checks проверяются deliver.py перед каждым продвижением."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (SDK compatibility repair); python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "После первого CI 39254074955 (Xcode16.4: compiler errors EditorWindowCloseGuard.swift:39/41) NSObject overrides явно nonisolated и синхронно проверяют MainActor.assumeIsolated; Objective-C delegate forwarding остаётся на главном потоке. Добавлен editorWindowGuardPreservesObjectiveCDelegateForwardingAndRestoresIt: реальный NSWindow сохраняет forwarding известных selector, отклоняет неизвестный и восстанавливает исходный delegate. build/checks/run-qr8ws5er/summary.json: offline package tests/app build passed, 115 tests (80 Infrastructure, 14 Features, 18 Core, 3 DesignSystem). Критерии, проверки, веточная защита и бюджет не ослаблялись. Следующий полный CI обязателен перед merge."
+    }
+  ],
+  "limitations": [
+    "Локальный XCTest UI на macOS 27/Xcode 27 не смог синтезировать текстовый ввод: timeout в существующем deckEditor.name до открытия T015. Повтор на основном дисплее не помог; изменение размещения тестового окна удалено. Это не записано как успешный XCTest. Нативный UI-сценарий выполнен через CUA, а новый XCTest остаётся включённым в обязательные macos проверки доставки на macos-15; merge разрешён только после их SUCCESS.",
+    "Здесь только Basic plain text и preview. UI тегов/вложений и полноценная наблюдаемая библиотека относятся к последующим задачам; существующие tags/media/examples сохраняются без потерь. Выбор колоды доступен при создании, перемещение существующей Card не входит в SaveNote.",
+    "Новые зависимости и платные API/сервисы/runners, artifact/cache uploads не добавлены. Миграции и исходные PNG не менялись; все проверки выполнялись на временных синтетических данных."
+  ]
+}

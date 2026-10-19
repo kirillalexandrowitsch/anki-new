@@ -33,7 +33,7 @@ let package = Package(
         .target(name: "CardsTestSupport", dependencies: ["CardsCore"], path: "Tests/Support"),
         .testTarget(name: "CardsCoreTests", dependencies: ["CardsCore", "CardsTestSupport"]),
         .testTarget(name: "CardsInfrastructureTests", dependencies: [
-            "CardsInfrastructure",
+            "CardsInfrastructure", "CardsFeatures",
             "CardsTestSupport",
             .product(name: "GRDB", package: "GRDB.swift"),
             .product(name: "FSRS", package: "swift-fsrs"),
