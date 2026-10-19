@@ -38,11 +38,16 @@
       "command": "python3 -m unittest discover -s scripts -p test_check.py -v; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "CI 39282099801: 118 package tests passed, quality SUCCESS, app UI testNoteEditorCreatePreviewValidationCloseChoicesEditAndReopen failed; first log had no source location because XCTest reports file:line without column. Diagnostics now accepts this format, retains only allowlisted source/line (column 0) and test ID; a privacy regression test rejects paths, assertion values and unknown names. 7 focused Python tests and all 26 quality tests passed. Full required CI rerun remains necessary; no test or criterion removed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/ci.py quality; xcodebuild test -only-testing:AnkiNewUITests/AppShellUITests/testEmptyLibraryOffersCreationAndDistinctCounts (same pinned local build settings)",
+      "result": "passed",
+      "details": "CI 39285131686 pinpointed AppShellUITests.swift:213, count text assertion. macOS AXStaticText exposes displayed text via value; exact assertions now read value, including both Card and Note counts, and the counter has explicit accessible text. New empty-library XCTest passed locally (1 test, 0 failures): real app, disposable collection, create action and exact zero counts. build/t016-empty-ui.log: TEST SUCCEEDED. Offline build/checks/run-cs3efa7v/summary.json: 118 package tests and arm64 build passed. quality: 26 Python tests, 2458 links, 48/48 PNG hashes passed. Full UI scenario and required CI remain enabled."
     }
   ],
   "limitations": [
     "Импорт, advanced filters, массовые действия и просмотр/проигрывание media относятся к последующим задачам. Пустая библиотека предлагает создание; Add без колод использует существующее объяснение редактора о необходимости создать колоду.",
-    "Локально XCTest UI targets собраны, пользовательский сценарий выполнен через CUA; полный автоматический XCTest выполняется обязательным macos CI перед каждым merge. Локальный typeText не вводит текст в данном окружении, поэтому для ручной проверки использован paste.",
+    "Локальный XCTest пустой библиотеки прошёл. Полный XCTest редактора на локальном macOS 27 остановился при typeText в deckEditor.name (AppShellUITests.swift:170, Failed to synthesize event: Timed out), до открытия библиотеки; это не успешная проверка сценария. Ручной полный сценарий выполнен CUA с paste. В CI macos-15 этот этап, редактор и reopen прошли; обнаруженная затем проверка AXStaticText label исправлена на value с сохранением точных assertions. Полный повторный CI обязателен.",
     "Новых зависимостей, оплат, API, платных runners и uploads нет. Миграции и исходные PNG не менялись; личная коллекция и секреты не использовались."
   ]
 }

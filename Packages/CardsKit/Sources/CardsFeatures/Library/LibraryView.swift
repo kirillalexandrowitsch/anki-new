@@ -71,7 +71,8 @@ public struct LibraryView: View {
                 }
             }
             HStack {
-                Text("Карточек: \(model.cardCount) · Записей: \(model.noteCount)")
+                Text(countSummary)
+                    .accessibilityLabel(countSummary)
                     .accessibilityIdentifier("library.counts")
                 Spacer()
                 if model.offset > 0 || model.hasMore {
@@ -87,6 +88,8 @@ public struct LibraryView: View {
             EditorView(model: editor) { launcher.editor = nil }
         }
     }
+
+    private var countSummary: String { "Карточек: \(model.cardCount) · Записей: \(model.noteCount)" }
 
     private var table: some View {
         Table(model.rows, selection: $model.selection) {

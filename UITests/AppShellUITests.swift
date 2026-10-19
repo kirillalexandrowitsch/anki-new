@@ -1,6 +1,21 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testEmptyLibraryOffersCreationAndDistinctCounts() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES",
+                               "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
+        app.staticTexts["navigation.library"].click()
+        XCTAssertTrue(app.buttons["library.emptyCreate"].waitForExistence(timeout: 10))
+        // macOS AXStaticText exposes its displayed text as AXValue, not AXLabel.
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 0 · Записей: 0")
+    }
+
     @MainActor func testNavigationAndNativeSettingsScene() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
@@ -210,7 +225,7 @@ final class AppShellUITests: XCTestCase {
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
         assertClosed()
         // Library snapshots, empty search, inspector and stable Card selection.
-        XCTAssertEqual(app.staticTexts["library.counts"].label, "Карточек: 1 · Записей: 1")
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 1 · Записей: 1")
         let search = app.textFields["library.search"]
         XCTAssertTrue(search.exists)
         search.click(); search.typeText("missingterm")
@@ -219,14 +234,14 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(edit.waitForExistence(timeout: 5))
         search.click(); search.typeText("Example")
         XCTAssertTrue(edit.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts["library.counts"].label, "Карточек: 1 · Записей: 1")
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 1 · Записей: 1")
         app.buttons["library.clearSearch"].click()
         app.buttons["editorLauncher.create"].click()
         replace("front", "Another synthetic row")
         replace("back", "Another answer")
         save.click()
         assertClosed()
-        let count = NSPredicate { _, _ in app.staticTexts["library.counts"].label == "Карточек: 2 · Записей: 2" }
+        let count = NSPredicate { _, _ in app.staticTexts["library.counts"].value as? String == "Карточек: 2 · Записей: 2" }
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: count, object: nil)], timeout: 5), .completed)
         // Saving a different row must not move the user's existing selection.
         XCTAssertTrue(edit.exists)
