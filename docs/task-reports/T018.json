@@ -1,0 +1,45 @@
+{
+  "taskID": "T018",
+  "summary": "Чистый QueueBuilder в CardsCore: scope с потомками, приоритет learning/relearning → review → new, исключения доступности, уникальные дневные квоты коллекции/предков, session limit и sibling burial. Отдельные ready/futureDue/empty reasons; StudyQueueService перечитывает snapshot перед каждым показом и отклоняет устаревшее поколение. Контракт и границы интеграции описаны в STUDY_QUEUE.md.",
+  "criteria": [
+    {
+      "text": "Parent scope не дублирует CardID из дочерних колод.",
+      "passed": true,
+      "evidence": "queueParentScopeDeduplicatesAndOrdersWithoutOverbookingQuotas: parent+child+grandchild в одном scope, повторные Deck/Card строки схлопываются, одинаковый результат при обратном порядке входа, 4 уникальных CardID в правильном phase/due порядке. queueAppliesEveryAncestorAndReservesSiblingDeckBudgets: лимит родителя резервируется на обе дочерние колоды; более строгий дочерний лимит, исторический путь и move не освобождают квоту."
+    },
+    {
+      "text": "Future learning не показывается раньше времени, пустота не маскирует ошибку.",
+      "passed": true,
+      "evidence": "queueFutureLearningNeverBecomesReadyEarlyAndReportsNextTime: future learning не ready за 1ms до due, становится ready ровно в due даже при нулевых квотах/session limit; futureDue и futureOnly сохранены. queueServiceRechecksFreshEligibilityAndPropagatesStorageAndGenerationErrors: свежий suspend исключает Card, storage error и stale generation пробрасываются. queueRejectsCorruptSnapshotsInsteadOfClaimingCompletion/queueHistoryValidationAndStoredDayIdentityAreExplicit: missing/mismatched/unknown-version schedule, nil/NaN due, конфликт дубликатов, повреждённая иерархия/история дают typed error, а не completed."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --filter queue",
+      "result": "passed",
+      "details": "build/t018-queue-tests.log: 11 Core tests + 1 Infrastructure integration test passed. DST fixtures New York 23/25h, точные границы rollover, siblings между scope/Undo/allow, depleted new/review и session quotas, repeated Again, reset/new epoch/move и historical paths. Настоящий FSRS выполняет Again×3 → Good×2 до review; короткие шаги не появляются раньше due и не расходуют второй unique slot."
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts -p 'test_*.py'",
+      "result": "passed",
+      "details": "build/t018-python-tests.log: 26 Python tests passed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/t018-offline-acceptance.log; build/checks/run-918ztavi/summary.json: all 137 Swift tests passed (Core 29, Infrastructure 91, Features 14, DesignSystem 3); arm64 ad-hoc app build exit 0; networkDenied=true. Synthetic seed12 SHA256 b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 unchanged."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T018; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T018 done after acceptance fixtures. 100 tasks / 174 design states consistent; quality passed with 26 Python tests, 2462 local links and 48/48 original PNG hashes. Whitespace check passed. Full quality/macos PR checks and post-merge pipelines remain mandatory in deliver.py; no bypass or weakened tests."
+    }
+  ],
+  "limitations": [
+    "T018 реализует вычисление и Core source/service ports. SQL snapshot adapter, persisted session checkpoints и атомарная запись оценок/Undo подключаются в последующих T019/T020; новая UI-функция занятия здесь не заявляется. Источник обязан отдавать согласованный snapshot с полной иерархией и эффективной историей, включая event-time deck path/day/timezone/burial boundary.",
+    "FutureDue — ближайшее известное время при текущих ограничениях. Для quota-blocked new/review не выдумывается срок; на границе учебного дня/после изменения данных очередь пересчитывается. Scheduler memory/weights проверяет Scheduler, QueueBuilder проверяет необходимые ему identity/schema/due fields.",
+    "Нет новых зависимостей, платных API, подписок, runners или uploads; использованы существующие Swift/Foundation и закреплённый бесплатный FSRS. Проверки только на синтетических данных; личная коллекция, секреты и записи микрофона не использованы. SQLite schema и исходные PNG не менялись.",
+    "Дополнительный локальный --deny-network --app-tests остановлен SIGTERM до начала XCTest (build/checks/run-y2ybp9hf/summary.json, app-tests exit -15): test host не подключился. Этот запуск не считается успешным. Offline package/build проверены отдельно; обычный XCTest и обязательный macos CI не отключены.",
+    "Обычный локальный python3 scripts/check.py --app-tests: package tests passed, app-tests exit 65 (build/checks/run-fqua13oe/summary.json). Существующие UI tests: Settings AppShellUITests.swift:47, Deck editor :85, Note editor :170, Gallery :284. Это не успешный полный UI-прогон. T018 не меняет UI/эти tests; обязательный полный macos-15 CI должен пройти до merge. Локальная ОС macOS 27 уже имела ограничения XCTest ввода, описанные в отчёте T016; точная причина этого запуска из безопасного summary не установлена."
+  ]
+}
