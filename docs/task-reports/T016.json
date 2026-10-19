@@ -1,0 +1,58 @@
+{
+  "taskID": "T016",
+  "summary": "Базовая библиотека реальных Card: native Table, наблюдаемые bounded snapshots, стабильный выбор по CardID, поиск front/back/examples, пагинация, отдельные Card/Note counts, статус и направление варианта. Add/Edit используют защищённый редактор; инспектор показывает сохранённый текст, pronunciation, examples, tags и число вложений, в компактном окне открывается кнопкой. SQL остаётся в Infrastructure; новые зависимости, платежи и CI uploads не добавлены.",
+  "criteria": [
+    {
+      "text": "Новые и изменённые записи появляются без ручной перезагрузки.",
+      "passed": true,
+      "evidence": "libraryObservesCreateOtherWindowEditSelectionSearchInspectorAndReopen: реальный CollectionStore, создание через EditorLauncher/EditorModel из пустого состояния и Save другого окна обновляют LibraryModel без load/reload. CardID selection сохраняется после добавления/изменения; инспектор получает новую revision. Поиск по examples, пустой поиск и ограничение 512 символов проверены. После close/reopen сохранены обе записи и Updated answer. В нативном UI временной коллекции создание и изменение автоматически меняют таблицу и счётчики; повторный запуск подтверждает сохранение."
+    },
+    {
+      "text": "Пустая библиотека предлагает создание или импорт.",
+      "passed": true,
+      "evidence": "Нативный UI пустой временной коллекции показывает «У вас пока нет карточек» и «Добавить первую карточку». Из этого действия открыт прежний редактор, заполнены Synthetic café / First answer / pronunciation и сохранена первая запись. Поиск missingterm даёт отдельное «Ничего не найдено» с очисткой поиска; очистка возвращает карточку. Интеграционный тест подтверждает начальные rows=[], Card/Note counts=0."
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-1_1petd3/summary.json (build/t016-acceptance.log): package-tests и app-build exit 0, networkDenied true; 118 Swift tests: Infrastructure 83, Features 14, Core 18, DesignSystem 3. arm64 ad-hoc app build успешен. Fixture seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86 неизменен. Новые integration tests: live create/edit/search/reopen; 101 Cards одного Note с вариантами, paging и удалением последней страницы; delayed inspector read не заменяет другую выбранную карточку."
+    },
+    {
+      "command": "xcodebuild -project AnkiNew.xcodeproj -scheme AnkiNew -clonedSourcePackagesDirPath build/check-packages build-for-testing -destination platform=macOS,arch=arm64 -derivedDataPath build/check-derived -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "build/t016-build-tests-final.log: TEST BUILD SUCCEEDED. Все app/unit/UI test targets компилируются. Расширенный XCTest UI-сценарий проверяет counts, search/reset, создание второй строки, сохранение selection и выбор строки с инспектором; выполнение полного XCTest suite обязательно в CI macos-15."
+    },
+    {
+      "command": "Native UI via cua_repl, Debug app with disposable CollectionTestID",
+      "result": "passed",
+      "details": "Проверены empty creation, Save, выбранная строка → Edit → Updated answer, live table update, search no-results/reset и reopen с тем же Updated answer. В тёмной теме визуально проверены компактная таблица с горизонтальной прокруткой и popover инспектора, а также широкое окно с боковым инспектором. Итоговое accessibility описание library.inspector.content содержит direction/front/back/deck/status/pronunciation. Использованы только синтетические данные; тестовый экземпляр закрыт."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T016; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T016 done после проверки критериев. 100 задач / 174 состояния согласованы, quality exit 0: 25 Python tests, локальные ссылки и 48/48 исходных PNG hashes. whitespace check exit 0. PR и post-merge pipeline проверяет deliver.py перед продвижением."
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts -p test_check.py -v; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "CI 39282099801: 118 package tests passed, quality SUCCESS, app UI testNoteEditorCreatePreviewValidationCloseChoicesEditAndReopen failed; first log had no source location because XCTest reports file:line without column. Diagnostics now accepts this format, retains only allowlisted source/line (column 0) and test ID; a privacy regression test rejects paths, assertion values and unknown names. 7 focused Python tests and all 26 quality tests passed. Full required CI rerun remains necessary; no test or criterion removed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/ci.py quality; xcodebuild test -only-testing:AnkiNewUITests/AppShellUITests/testEmptyLibraryOffersCreationAndDistinctCounts (same pinned local build settings)",
+      "result": "passed",
+      "details": "CI 39285131686 pinpointed AppShellUITests.swift:213, count text assertion. macOS AXStaticText exposes displayed text via value; exact assertions now read value, including both Card and Note counts, and the counter has explicit accessible text. New empty-library XCTest passed locally (1 test, 0 failures): real app, disposable collection, create action and exact zero counts. build/t016-empty-ui.log: TEST SUCCEEDED. Offline build/checks/run-cs3efa7v/summary.json: 118 package tests and arm64 build passed. quality: 26 Python tests, 2458 links, 48/48 PNG hashes passed. Full UI scenario and required CI remain enabled."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/ci.py quality; xcodebuild build-for-testing (same pinned local build settings); Native UI selection procedure via cua_repl",
+      "result": "passed",
+      "details": "build/checks/run-wq8z8b91/summary.json: 118 Swift tests and arm64 app build passed. quality 26 Python tests passed. CI 39286708135 passed exact native counter values, search/reset, second create and stable previous selection, then identified index-based AX row selection at AppShellUITests.swift:253. Word cell now has an explicit select action and accessible Card/direction label; test addresses that specific action/row rather than an AX index and still requires the corresponding Edit and inspector contents. In native disposable UI: new second Card leaves original selected, selecting the named row changes Edit identity to Another synthetic row and inspector to Another answer. build/t016-selection-test-build.log: TEST BUILD SUCCEEDED."
+    }
+  ],
+  "limitations": [
+    "Импорт, advanced filters, массовые действия и просмотр/проигрывание media относятся к последующим задачам. Пустая библиотека предлагает создание; Add без колод использует существующее объяснение редактора о необходимости создать колоду.",
+    "Локальный XCTest пустой библиотеки прошёл. Полный XCTest редактора на локальном macOS 27 остановился при typeText в deckEditor.name (AppShellUITests.swift:170, Failed to synthesize event: Timed out), до открытия библиотеки; это не успешная проверка сценария. Ручной полный сценарий выполнен CUA с paste. В CI macos-15 этот этап, редактор и reopen прошли; обнаруженная затем проверка AXStaticText label исправлена на value с сохранением точных assertions. Полный повторный CI обязателен.",
+    "Новых зависимостей, оплат, API, платных runners и uploads нет. Миграции и исходные PNG не менялись; личная коллекция и секреты не использовались."
+  ]
+}

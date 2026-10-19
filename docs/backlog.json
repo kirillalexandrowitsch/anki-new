@@ -571,12 +571,15 @@
       ],
       "verification": "Создать запись из пустого состояния, выбрать строку и изменить её; проверить reopen.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-04",
         "18.1"
-      ]
+      ],
+      "startedAt": "2026-10-19T15:51:49.521365+00:00",
+      "completedAt": "2026-10-19T15:59:42.973147+00:00",
+      "report": "docs/task-reports/T016.json"
     },
     {
       "id": "T017",
@@ -4005,7 +4008,7 @@
       "stateID": "base-04",
       "taskID": "T016",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "base-05",
@@ -4431,7 +4434,7 @@
       "stateID": "18.1",
       "taskID": "T016",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "18.2",
