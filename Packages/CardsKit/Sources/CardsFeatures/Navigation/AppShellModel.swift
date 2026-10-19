@@ -13,6 +13,8 @@ public final class AppShellModel {
         self.currentDate = clock.now()
     }
 
+    var studyClock: any CardsCore.Clock { clock }
+
     public func refreshDate() {
         currentDate = clock.now()
     }
