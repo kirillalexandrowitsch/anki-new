@@ -143,6 +143,15 @@ Writer выполняет синхронный GRDB `write` на своём acto
 
 `CollectionStore.media(generation:)` выдаёт Core-порт `MediaRepository`. Подготовка и ImageIO thumbnail выполняются на media actor; writer сериализует journal, immutable publish и короткие SQL-транзакции. Startup recovery завершается до выдачи нового контекста. Import создаёт общий asset, ссылки Note применяются только будущим явным Save. Форматы, лимиты и границы восстановления описаны в [MEDIA_STORAGE.md](MEDIA_STORAGE.md).
 
+### SaveNote T014
+
+`CollectionStore.notes(generation:)` выдаёт `NoteRepository`; Core `SaveNote` принимает
+immutable команду и возвращает `SavedBasicNote` с Note, полным BasicNoteContent, тегами
+и связанной Card. `Note.fields` остаётся проекцией скалярных текстовых полей для совместимости
+с T005; examples/media берутся из content. SQL и генерация Basic выполняются через тот же
+CollectionWriter, включая command journal и event. [Контракт сохранения](DATA_MODEL.md)
+фиксирует stable IDs, fresh schedule, idempotency и сохранение suppressed variants.
+
 ### Наблюдаемые запросы T010
 
 `CollectionStore.queries(generation:)` выдаёт `CollectionQueryService`: bounded library/deck pages,
