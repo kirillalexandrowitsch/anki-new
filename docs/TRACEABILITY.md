@@ -87,10 +87,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [07.1 · Пауза](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Запланировано |
-| [07.2 · Завершить раньше?](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Запланировано |
-| [07.3 · Пропустить](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Запланировано |
-| [07.4 · Занятие завершено](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Запланировано |
+| [07.1 · Пауза](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Готово |
+| [07.2 · Завершить раньше?](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Готово |
+| [07.3 · Пропустить](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Готово |
+| [07.4 · Занятие завершено](../design-references/sheets/sheet-07.png) | [T022](tasks/T022.md) | Готово |
 
 ## 08 · Виды учебных карточек
 

@@ -64,8 +64,8 @@ struct SQLiteReviewRepository: ReviewRepository {
                     ReviewSQL.json(before), ReviewSQL.json(after), ReviewSQL.key(after.parameterSetID), after.scheduleEpoch])
             try db.execute(sql: "UPDATE session_items SET stage='rated', eligibleAt=? WHERE id=?",
                 arguments: [ReviewSQL.ms(after.dueAt), receipt.itemID])
-            try db.execute(sql: "UPDATE study_sessions SET revision=?, lastActivityAt=?, activeDurationMs=activeDurationMs+? WHERE id=?",
-                arguments: [revision.rawValue, ReviewSQL.ms(eventNow), c.durationMs, ReviewSQL.key(command.sessionID)])
+            try db.execute(sql: "UPDATE study_sessions SET revision=?, lastActivityAt=? WHERE id=?",
+                arguments: [revision.rawValue, ReviewSQL.ms(eventNow), ReviewSQL.key(command.sessionID)])
             try ReviewSQL.event(db, command: c.id, type: "review.rated", object: ReviewSQL.key(c.cardID), at: eventNow, payload: receipt)
             try fault?(.beforeCommit)
             return receipt
@@ -109,9 +109,8 @@ struct SQLiteReviewRepository: ReviewRepository {
                 arguments: [ReviewSQL.ms(restored.dueAt), receipt.itemID])
             guard db.changesCount == 1 else { throw CollectionRepositoryError.undoConflict }
             let sessionRevision = try receipt.sessionRevision.advanced()
-            try db.execute(sql: "UPDATE study_sessions SET revision=?, lastActivityAt=?, activeDurationMs=activeDurationMs-? WHERE id=?",
-                arguments: [sessionRevision.rawValue, ReviewSQL.ms(command.occurredAt), receipt.command.rating.durationMs,
-                    ReviewSQL.key(command.sessionID)])
+            try db.execute(sql: "UPDATE study_sessions SET revision=?, lastActivityAt=? WHERE id=?",
+                arguments: [sessionRevision.rawValue, ReviewSQL.ms(command.occurredAt), ReviewSQL.key(command.sessionID)])
             let result = try ReviewUndoResult(command: command, restored: restored, presentation: ReviewSQL.presentation(db, cardID: cardID))
             try ReviewSQL.event(db, command: command.id, type: "review.undone", object: ReviewSQL.key(cardID), at: command.occurredAt, payload: result)
             try fault?(.beforeCommit)
