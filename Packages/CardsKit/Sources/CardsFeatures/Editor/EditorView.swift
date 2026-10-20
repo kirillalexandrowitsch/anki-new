@@ -37,6 +37,25 @@ struct EditorView: View {
                         field("Обратная сторона (обязательно)", text: $model.draft.back, id: "back")
                         if let error = model.draft.backError { validation(error, id: "back") }
                         field("Произношение (необязательно)", text: $model.draft.pronunciation, id: "pronunciation")
+                        if let audio = model.audio {
+                            HStack {
+                                Button("Произнести слово", systemImage: "speaker.wave.2.fill") {
+                                    Task { await audio.preview(text: model.draft.front) }
+                                }.accessibilityIdentifier("editor.audio.speech")
+                                if let media = model.draft.media.filter({ $0.role == .audio }).sorted(by: { $0.orderIndex < $1.orderIndex }).first {
+                                    Button("Воспроизвести вложение") {
+                                        Task { await audio.preview(text: model.draft.front, mediaID: media.mediaID) }
+                                    }.accessibilityIdentifier("editor.audio.file")
+                                }
+                                if audio.isPlaying {
+                                    Button("Стоп") { audio.stop() }.accessibilityIdentifier("editor.audio.stop")
+                                }
+                            }
+                            if let message = audio.message {
+                                Text(message).foregroundStyle(audio.hasError ? Color.red : Color.secondary)
+                                    .accessibilityIdentifier("editor.audio.message")
+                            }
+                        }
                         ForEach(model.draft.examples.indices, id: \.self) { index in
                             VStack(alignment: .leading, spacing: 6) {
                                 field("Пример", text: exampleBinding(index, english: true), id: "example.\(index).en")
@@ -98,6 +117,8 @@ struct EditorView: View {
                 .keyboardShortcut("w", modifiers: .command).hidden().accessibilityHidden(true)
         }
         .onAppear { frontFocused = true }
+        .onDisappear { model.audio?.stop() }
+        .onChange(of: model.draft.front) { _, _ in model.audio?.stop() }
         .onChange(of: model.isClosed) { _, value in if value { close() } }
         .onExitCommand { model.requestClose() }
         .alert("Несохранённые изменения", isPresented: $model.showsUnsavedWarning) {

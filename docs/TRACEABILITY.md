@@ -210,7 +210,7 @@
 |---|---|---|
 | [18.1 · Пустая библиотека](../design-references/sheets/sheet-18.png) | [T016](tasks/T016.md) | Готово |
 | [18.2 · Всё повторено](../design-references/sheets/sheet-18.png) | [T023](tasks/T023.md) | Запланировано |
-| [18.3 · Не удалось воспроизвести](../design-references/sheets/sheet-18.png) | [T021](tasks/T021.md) | Запланировано |
+| [18.3 · Не удалось воспроизвести](../design-references/sheets/sheet-18.png) | [T021](tasks/T021.md) | Готово |
 | [18.4 · Несохранённые изменения](../design-references/sheets/sheet-18.png) | [T048](tasks/T048.md) | Запланировано |
 
 ## 19 · Кнопки и поля

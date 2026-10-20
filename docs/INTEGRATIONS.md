@@ -75,3 +75,24 @@ rollback journal и startup recovery. Формат, ограничения и AP
 UserNotifications хранит локальное календарное расписание напоминаний по разрешению; при отказе настройки времени сохраняются и показывается ссылка на системные настройки. Система может отложить/подавить баннер из-за Focus и пользовательских настроек; факт планирования не выдаётся за факт доставки. Внутренний центр сообщений отдельно хранит результаты собственных операций. [Документация локальных уведомлений](https://developer.apple.com/documentation/usernotifications/scheduling-a-notification-locally-from-your-app).
 
 Sandbox entitlements первоначально: user-selected read/write и bookmarks там, где нужен длительный доступ. Microphone добавляется в расширении; сетевой доступ не нужен для главной функциональности. Конкретные entitlement keys сверяются с выбранным SDK. Системные Open/Save-панели, bookmarks и разрешения тестируются в sandboxed Release-сборке, а не только в Debug. [Доступ к файлам macOS](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox).
+
+### Playback T021
+
+Один app-scoped `AudioPlaybackCoordinator` сериализует Study, Editor и проверку голоса
+в Settings. Запрос содержит owner, generation, текст английской стороны и необязательный
+MediaID; путь выдаёт только generation-scoped MediaRepository. Прикреплённый файл имеет
+приоритет. Missing/corrupt файл показывает ошибку и повтор; системное произношение можно
+запустить явно отдельно. Ошибку файла не маскируем успешным TTS.
+
+Replay сначала останавливает предыдущий источник. Stop, смена Card, пауза, закрытие
+редактора/занятия и коллекции отменяют pending lookup и playback; поздние callbacks
+не меняют новый запрос. Старый owner не может остановить новый источник другого окна.
+Список голосов берётся из AVSpeechSynthesisVoice.speechVoices(), фильтруется по en-GB/en-US;
+нет голоса выбранного locale/identifier — явная ошибка без подстановки default voice.
+Успех означает didFinish, ошибки декодирования/запуска и отмена передаются отдельно.
+
+Autoplay (по умолчанию выключен), UK/US и выбранный установленный voice сохраняются
+сразу в локальных UserDefaults. Autoplay запускается один раз при показе нового вопроса,
+не при reveal/resume. Editor произносит текущий draft.front, а не IPA/перевод; прослушивание
+не сохраняет draft. UI прикрепления новых файлов остаётся T036, playback уже поддерживает
+существующие audio references. Ни сети, загрузки голосов, ни новых зависимостей/платежей нет.

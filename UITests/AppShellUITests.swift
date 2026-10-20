@@ -5,7 +5,9 @@ final class AppShellUITests: XCTestCase {
         let app = XCUIApplication()
         continueAfterFailure = false
         app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
-                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString,
+                               "-audio.autoplay", "YES", "-audio.locale", "en-GB",
+                               "-audio.voice.en-GB", "SyntheticMissingVoice"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.staticTexts["navigation.decks"].waitForExistence(timeout: 10))
@@ -24,6 +26,10 @@ final class AppShellUITests: XCTestCase {
         front.click(); front.typeText("Synthetic review question")
         let back = app.descendants(matching: .any).matching(identifier: "editor.back").firstMatch
         back.click(); back.typeText("Synthetic review answer")
+        app.buttons["editor.audio.speech"].click()
+        let editorAudioError = app.staticTexts["editor.audio.message"]
+        XCTAssertTrue(editorAudioError.waitForExistence(timeout: 5))
+        XCTAssertTrue((editorAudioError.value as? String)?.contains("Голос") == true)
         app.buttons["editor.save"].click()
         XCTAssertTrue(app.buttons["note.edit.Synthetic review question"].waitForExistence(timeout: 5))
         app.staticTexts["navigation.today"].click()
@@ -31,6 +37,11 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 5)); start.click()
         let reveal = app.buttons["study.reveal"], answer = app.staticTexts["study.answer"]
         XCTAssertTrue(reveal.waitForExistence(timeout: 5)); XCTAssertFalse(answer.exists)
+        let studyAudioError = app.staticTexts["study.audioError"]
+        XCTAssertTrue(studyAudioError.waitForExistence(timeout: 5)) // autoplay uses the selected voice
+        XCTAssertTrue((studyAudioError.value as? String)?.contains("Голос") == true)
+        app.buttons["study.audio"].click()
+        XCTAssertTrue(reveal.isEnabled) // retrying audio must not block reveal or rating
         reveal.click(); XCTAssertTrue(answer.waitForExistence(timeout: 5))
         app.buttons["study.grade.4"].click()
         let undo = app.buttons["study.undoRating"]
@@ -201,11 +212,15 @@ final class AppShellUITests: XCTestCase {
         for (route, tab) in [("general", "Основные"), ("review", "Повторение"),
                              ("cards", "Карточки"), ("data", "Данные")] {
             settings.toolbars.buttons[tab].click()
-            XCTAssertTrue(settings.staticTexts["settings.\(route)"].exists)
+            if route == "general" {
+                XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.audio.autoplay").firstMatch.exists, settings.debugDescription)
+                XCTAssertTrue(settings.buttons["settings.audio.preview"].exists)
+            } else { XCTAssertTrue(settings.staticTexts["settings.\(route)"].exists) }
         }
         // Verify the app menu's native Command-comma entry also opens Settings.
         settings.typeKey("w", modifierFlags: .command)
-        XCTAssertFalse(settings.exists)
+        let closed = NSPredicate { _, _ in !settings.exists }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: closed, object: nil)], timeout: 5), .completed)
         app.typeKey(",", modifierFlags: .command)
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
     }
