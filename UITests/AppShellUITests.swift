@@ -87,7 +87,9 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
         XCTAssertTrue(app.staticTexts["study.completed"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
-        XCTAssertTrue(app.otherElements["study.summary"].exists || app.staticTexts["study.summary"].exists)
+        let summary = app.descendants(matching: .any).matching(identifier: "study.summary").firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(summary.descendants(matching: .staticText).count, 0)
         XCTAssertFalse(reveal.exists); XCTAssertFalse(answer.exists)
         XCTAssertTrue(app.buttons["study.checkQueue"].exists) // persisted learning due is still in the future
     }

@@ -53,6 +53,11 @@
       "command": "python3 scripts/check.py --deny-network (named summary accessibility group); native CUA synthetic demo pause",
       "result": "passed",
       "details": "build/checks/run-qpvag7wg/summary.json: все package tests и arm64 build passed, networkDenied=true. Native AX после реального перезапуска сборки: container study.summary содержит счётчики/время/Skip; study.paused — отдельный text, study.resume и study.pausedExit — отдельные buttons. До исправления summary/заголовок объединялись в один text. Только demo, без записи в личную коллекцию."
+    },
+    {
+      "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T022-ui-query-build.log: TEST BUILD SUCCEEDED с точным study.summary identifier query и дополнительной проверкой текстовых descendants. App source не менялся после run-qpvag7wg."
     }
   ],
   "limitations": [
@@ -70,6 +75,11 @@
       "command": "gh run view 39483127697 --log-failed",
       "result": "failed",
       "details": "PR #77 initial macos CI: Xcode 16.4, package tests 177 passed, app-tests exit 65. Единственная source location AppShellUITests.swift:63 в testPersistentRatingUndoAndReratingSurviveRelaunch (ответ после Undo). Merge не выполнен. Undo вынесен из растущего ScrollView итогов; UI assertions сохранены/усилены isHittable и отдельной диагностикой checkpoint/error/pause/закрытия."
+    },
+    {
+      "command": "gh run view 39485949544 --log-failed",
+      "result": "failed",
+      "details": "macos Xcode 16.4: все 178 package tests прошли. UI дошёл до AppShellUITests.swift:90: pause/relaunch, Undo с ответом, rerate и force-terminate с сохранённым count=1 прошли; единственное падение — role-limited query study.summary. Native AX подтверждает именованный container. Query теперь ищет тот же точный identifier через descendants(.any), ждёт существования и дополнительно требует staticText descendants; assertions сохранены."
     }
   ]
 }
