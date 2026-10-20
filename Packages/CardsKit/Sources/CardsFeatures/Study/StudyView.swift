@@ -1,5 +1,7 @@
+import AppKit
 import CardsCore
 import CardsDesignSystem
+import CoreGraphics
 import SwiftUI
 
 public struct StudyView: View {
@@ -31,6 +33,11 @@ public struct StudyView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     content
+                    if let message = model.checkpointError {
+                        Text(message).foregroundStyle(.red).accessibilityIdentifier("study.checkpoint.error")
+                        Button("Повторить сохранение прогресса") { Task { await model.retryCheckpoint() } }
+                            .accessibilityIdentifier("study.checkpoint.retry")
+                    }
                     if let message = model.errorMessage {
                         Text(message).foregroundStyle(.red).accessibilityIdentifier("study.error")
                         if model.pendingCommand != nil {
@@ -71,9 +78,18 @@ public struct StudyView: View {
         .onExitCommand { model.escape() }
         .focusedSceneValue(\.studyCloseAction, StudyCloseAction(
             isEnabled: model.phase != .committing, perform: requestClose))
-        .task { await model.load() }
+        .task {
+            await model.load()
+            while !Task.isCancelled && !model.isStopped {
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                await model.heartbeat(systemIdleSeconds: CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null))
+            }
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)) { _ in model.setForeground(false) }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in model.setForeground(false) }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.setForeground(true) }
         .onDisappear { model.stop() }
-        .onChange(of: scenePhase) { _, value in if value != .active { model.pause() } }
+        .onChange(of: scenePhase) { _, value in model.setForeground(value == .active) }
     }
 
     @ViewBuilder private var content: some View {
@@ -128,6 +144,7 @@ public struct StudyView: View {
             CardsPanel {
                 VStack(spacing: 24) {
                     Image(systemName: "pause.circle.fill").font(.system(size: 50)).foregroundStyle(.tint)
+                    summary
                     Text("Занятие на паузе").font(.title2.bold()).accessibilityIdentifier("study.paused")
                     Button("Продолжить") { model.resume() }.buttonStyle(CardsButtonStyle(.primary))
                         .accessibilityIdentifier("study.resume")
@@ -143,8 +160,14 @@ public struct StudyView: View {
                         Text("Ближайшая карточка: \(date.formatted(date: .abbreviated, time: .shortened))")
                         Button("Проверить очередь") { Task { await model.checkQueue() } }.accessibilityIdentifier("study.checkQueue")
                     }
-                    Text("Пропущено в этом занятии: \(model.skipped.count)").foregroundStyle(.secondary)
-                    Button("Закрыть") { close() }.buttonStyle(CardsButtonStyle(.primary)).accessibilityIdentifier("study.close")
+                    summary
+                    HStack {
+                        Text("Снова: \(model.grades[0])")
+                        Text("Трудно: \(model.grades[1])")
+                        Text("Хорошо: \(model.grades[2])")
+                        Text("Легко: \(model.grades[3])")
+                    }.accessibilityIdentifier("study.summary.grades")
+                    Button("Закрыть") { requestClose() }.disabled(model.isFinishing).buttonStyle(CardsButtonStyle(.primary)).accessibilityIdentifier("study.close")
                 }.padding(40).frame(maxWidth: .infinity)
             }
         }
@@ -185,7 +208,17 @@ public struct StudyView: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var summary: some View {
+        VStack(spacing: 8) {
+            Text("Оценок: \(model.confirmedRatings) · Карточек: \(model.uniqueCards)")
+            Text("Активное время: \(model.activeDurationMs / 60_000) мин \((model.activeDurationMs / 1000) % 60) с")
+            Text("Пропущено в этом занятии: \(model.skipped.count)")
+        }.foregroundStyle(.secondary).accessibilityElement(children: .combine).accessibilityIdentifier("study.summary")
+    }
+
     private func requestClose() {
-        if model.phase == .completed { close() } else { model.requestExit() }
+        if model.phase == .completed {
+            Task { if await model.finishSession() { close() } }
+        } else { model.requestExit() }
     }
 }

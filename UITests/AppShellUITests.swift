@@ -43,6 +43,20 @@ final class AppShellUITests: XCTestCase {
         app.buttons["study.audio"].click()
         XCTAssertTrue(reveal.isEnabled) // retrying audio must not block reveal or rating
         reveal.click(); XCTAssertTrue(answer.waitForExistence(timeout: 5))
+        // Pause keeps a revealed answer in this process; restart conservatively hides it.
+        app.buttons["study.pause"].click()
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        app.buttons["study.resume"].click()
+        XCTAssertTrue(answer.waitForExistence(timeout: 5))
+        app.buttons["study.pause"].click()
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
+        XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
+        XCTAssertFalse(answer.exists)
+        app.buttons["study.resume"].click()
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5)); XCTAssertFalse(answer.exists)
+        reveal.click(); XCTAssertTrue(answer.waitForExistence(timeout: 5))
         app.buttons["study.grade.4"].click()
         let undo = app.buttons["study.undoRating"]
         XCTAssertTrue(undo.waitForExistence(timeout: 5)); undo.click()
@@ -52,10 +66,12 @@ final class AppShellUITests: XCTestCase {
         app.buttons["study.grade.1"].click()
         XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
-        app.buttons["study.close"].click()
+        // Abrupt termination after the rating must retain the same session's effective count.
         app.terminate(); app.launch()
         XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
         XCTAssertTrue(app.staticTexts["study.completed"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
+        XCTAssertTrue(app.otherElements["study.summary"].exists || app.staticTexts["study.summary"].exists)
         XCTAssertFalse(reveal.exists); XCTAssertFalse(answer.exists)
         XCTAssertTrue(app.buttons["study.checkQueue"].exists) // persisted learning due is still in the future
     }

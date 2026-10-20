@@ -1,0 +1,45 @@
+{
+  "taskID": "T022",
+  "summary": "Сохранение checkpoint реальной study-сессии после действий и heartbeat: prior-to-pause, текущая Card и Skip. Восстановление скрывает ответ и читает effective ReviewLog без повторной оценки. Добавлены активное время без pause/sleep/idle, досрочное завершение, durable completed/abandoned и итоги с grade distribution; ошибки записи требуют повторного сохранения.",
+  "criteria": [
+    {
+      "text": "Пауза возвращает тот же текущий вопрос/ответ до перезапуска.",
+      "passed": true,
+      "evidence": "studyPauseAndEscapePreserveBothHiddenAndRevealedStates проверяет question/answer и Escape. progressPauseRestoresExactAnswerInProcessAndHiddenQuestionAfterReopen использует реальную SQLite: pause сохраняет answer/prior-to-pause, resume возвращает ту же presentation, после закрытия writer и открытия базы сохраняются Card, pause и duration, но resume показывает скрытый question. progressActiveTimeExcludesPauseSleepIdleExitConfirmationAndCapsResponse проверяет монотонное время, паузу, длинный heartbeat gap (сон), idle >=60, confirmation, скачок wall time и cap response 60000 ms. progressBackgroundDuringCommitPausesTheNextQuestion проверяет фон во время commit."
+    },
+    {
+      "text": "Перезапуск не создаёт повторных log и не теряет подтверждённые оценки.",
+      "passed": true,
+      "evidence": "reviewProcessDeathRecoversAtomicCommitAndCommandReplay запускает дочерний xctest и _exit(86) до/после commit: после открытия WAL модель получает 0/1 подтверждённых оценок; replay команды даёт ровно один effective ReviewLog и одну revision. progressSkipAllSurvivesRestartWithoutLogsAndUndoSkipRestoresHiddenQuestion проверяет Skip всех Card, неизменность schedule/нулевые logs, восстановление exclusions, Undo skip, cancel/confirm early exit, abandoned и новый sessionID. progressSummaryCountsEffectiveGradesUniqueCardsAndPersistsCompletion проверяет Undo/rerate, 2 effective ratings/2 unique Cards, [0,0,1,1], идемпотентный finish и completed/endedAt. progressCheckpointFailureBlocksRatingAndCloseUntilRetry инъецирует SQLite write failures и проверяет сохранение/завершение только после успешного повтора."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter 'progress|review|study'",
+      "result": "passed",
+      "details": "/tmp/anki-T022-progress-final.log: Infrastructure 16 tests (включая 2 crash cases), Features 14, Core study day tests passed; проверены реальные SQLite checkpoint/reopen/skip/finish/failure, process death и монотонное active time."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "Финальный build/checks/run-jvat7f8i/summary.json: networkDenied=true; package tests passed (Core 30, Infrastructure 116, Features 27, DesignSystem 3, XCTest worker 1), arm64 app-build passed. Synthetic fixture seed12 fingerprint сохранён. Предыдущий полный прогон run-qafg1rjg также passed."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T022; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T022 done после фактических критериев; tasks check passed. /tmp/anki-T022-quality.log: 26 Python tests passed, 100 задач/174 состояния согласованы, 2474 local links, 48/48 PNG hashes; git diff --check passed."
+    }
+  ],
+  "limitations": [
+    "Нет новых зависимостей, платных API, подписок, голосовых загрузок, CI runners/uploads. Только временные синтетические коллекции; личные данные и исходные PNG не менялись.",
+    "Физический сон ноутбука не инициировался: исключение сна проверено детерминированным монотонным heartbeat gap и уходом в фон во время commit; приложение подписано на системный willSleep и activity notifications. После аварийного завершения возможно потерять только незавершённый интервал времени до следующего heartbeat; подтверждённые оценки атомарны.",
+    "Локальный UI-сценарий не подтверждён из-за timeout синтеза ввода XCTest до study. Предварительный unsigned запуск прерван до сценария; повтор в /tmp с ad-hoc подписью завершился linker Open errno=1. Подписанный запуск в workspace дошёл до UI и дал явный timeout TypeText. Эти прогоны не заявляются успешными; CI не ослаблялся."
+  ],
+  "failedChecks": [
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testPersistentRatingUndoAndReratingSurviveRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "failed",
+      "details": "/tmp/anki-T022-ui-workspace.log: приложение реально запустилось, test остановился на строке 18 (TypeText имени синтетической колоды): Timed out while synthesizing event. До новых pause/relaunch assertions не дошёл. XCTest requirement/assertions сохранены; полный suite обязателен на macos-15 CI до merge."
+    }
+  ]
+}

@@ -53,3 +53,44 @@ public protocol StudySessionService: Sendable {
     /// Check generation/revision and return only after durable, idempotent commit.
     func rate(_ command: StudyRatingCommand) async throws
 }
+
+public enum StudyCheckpointPhase: String, Codable, Sendable { case question, answer, paused, summary }
+
+/// Contains identities and UI progress only; render content is always read afresh.
+public struct StudyCheckpoint: Codable, Equatable, Sendable {
+    public var schemaVersion = 1
+    public var cardID: CardID?
+    public var phase: StudyCheckpointPhase
+    public var priorToPause: StudyCheckpointPhase
+    public var skipped: Set<CardID>
+    public var lastSkipped: CardID?
+    public var activeDurationMs: Int64
+    public var endedEarly: Bool
+    public init(cardID: CardID?, phase: StudyCheckpointPhase, priorToPause: StudyCheckpointPhase = .question,
+                skipped: Set<CardID> = [], lastSkipped: CardID? = nil, activeDurationMs: Int64 = 0, endedEarly: Bool = false) {
+        self.cardID = cardID; self.phase = phase; self.priorToPause = priorToPause
+        self.skipped = skipped; self.lastSkipped = lastSkipped; self.activeDurationMs = activeDurationMs; self.endedEarly = endedEarly
+    }
+}
+
+public struct StudyProgress: Equatable, Sendable {
+    public let checkpoint: StudyCheckpoint?
+    public let ratings: Int
+    public let uniqueCards: Int
+    /// Counts in Grade.rawValue order (Again, Hard, Good, Easy).
+    public let grades: [Int]
+    public let lastRatingID: CommandID?
+    public let activeDurationMs: Int64
+    public init(checkpoint: StudyCheckpoint?, ratings: Int, uniqueCards: Int, grades: [Int],
+                lastRatingID: CommandID?, activeDurationMs: Int64) {
+        self.checkpoint = checkpoint; self.ratings = ratings; self.uniqueCards = uniqueCards
+        self.grades = grades; self.lastRatingID = lastRatingID; self.activeDurationMs = activeDurationMs
+    }
+}
+
+public protocol StudyProgressService: StudySessionService {
+    func progress() async throws -> StudyProgress
+    func checkpoint(_ value: StudyCheckpoint) async throws
+    /// early=true ends the session as abandoned while retaining all committed reviews.
+    func finish(early: Bool) async throws
+}

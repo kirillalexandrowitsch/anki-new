@@ -25,7 +25,7 @@ private struct StoredStudyPolicy: Codable, Sendable {
 }
 
 /// The collection writer serializes every decision with rating/undo. No cached success or queue.
-struct SQLiteStudySession: StudyReviewSessionService {
+struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
     let sessionID: SessionID
     let reviews: SQLiteReviewRepository
 
@@ -36,7 +36,6 @@ struct SQLiteStudySession: StudyReviewSessionService {
                 if let r = try Row.fetchOne(db, sql: "SELECT * FROM study_sessions WHERE mode='scheduled' AND status IN ('active','paused')") {
                     let policy = try ReviewSQL.decode(StoredStudyPolicy.self, r["studyPolicyJSON"])
                     let id = try SessionID(uuidString: r["id"])
-                    try db.execute(sql: "UPDATE study_sessions SET status='active' WHERE id=?", arguments: [ReviewSQL.key(id)])
                     return try (id, policy.configuration(generation: configuration.generation))
                 }
                 let id = SessionID(), now = try ReviewSQL.ms(clock.now())
@@ -55,15 +54,23 @@ struct SQLiteStudySession: StudyReviewSessionService {
         let sessionID = sessionID, configuration = reviews.configuration, now = reviews.clock.now()
         return try await reviews.writer.mediaAccess { pool in
             try pool.write { db in
-                _ = try SQLiteReviewRepository.session(db, id: sessionID)
-                let snapshot = try ReviewSQL.snapshot(db, generation: configuration.generation, sessionID: sessionID, skipping: skipping)
+                let session = try Self.resumableSession(db, id: sessionID)
+                let saved = try Self.savedCheckpoint(session)
+                // The checkpoint is authoritative after a crash; a rated item can never be selected
+                // merely because an old checkpoint still mentions it.
+                let exclusions = saved?.skipped ?? skipping
+                let currentCard = try String.fetchOne(db, sql: "SELECT cardID FROM session_items WHERE sessionID=? AND stage IN ('question','answer') ORDER BY queueOrdinal DESC LIMIT 1",
+                    arguments: [ReviewSQL.key(sessionID)])
+                let currentID = try currentCard.map { try CardID(uuidString: $0) }
+                let preferred = preferred ?? currentID
+                let snapshot = try ReviewSQL.snapshot(db, generation: configuration.generation, sessionID: sessionID, skipping: exclusions)
                 let queue = try QueueBuilder().build(snapshot, configuration: configuration, now: now)
                 guard let chosen = queue.ready.first(where: { $0.card.id == preferred }) ?? queue.ready.first else {
                     if let future = queue.futureDue { return .completed(.future(future.availableAt)) }
                     return .completed(queue.emptyReasons.contains(.skipped) ? .availableViewed : .noCards)
                 }
                 let value = try ReviewSQL.presentation(db, cardID: chosen.card.id)
-                try db.execute(sql: "UPDATE session_items SET stage='skipped' WHERE sessionID=? AND stage IN ('question','answer') AND cardID!=?",
+                try db.execute(sql: "UPDATE session_items SET stage='queued' WHERE sessionID=? AND stage IN ('question','answer') AND cardID!=?",
                     arguments: [ReviewSQL.key(sessionID), ReviewSQL.key(chosen.card.id)])
                 let current = try Row.fetchOne(db, sql: """
                     SELECT id FROM session_items WHERE sessionID=? AND cardID=? AND stage IN ('question','answer')
@@ -82,6 +89,74 @@ struct SQLiteStudySession: StudyReviewSessionService {
                             ordinal, ReviewSQL.ms(chosen.schedule?.dueAt), ReviewSQL.ms(now)])
                 }
                 return .question(value)
+            }
+        }
+    }
+
+    private static func resumableSession(_ db: Database, id: SessionID) throws -> Row {
+        guard let row = try Row.fetchOne(db, sql: "SELECT * FROM study_sessions WHERE id=? AND status IN ('active','paused')",
+            arguments: [ReviewSQL.key(id)]) else { throw CollectionRepositoryError.reviewUnavailable }
+        return row
+    }
+
+    private static func savedCheckpoint(_ row: Row) throws -> StudyCheckpoint? {
+        // v1 scopeJSON before T022 contained only schemaVersion.
+        struct Envelope: Decodable { let checkpoint: StudyCheckpoint? }
+        let value = try ReviewSQL.decode(Envelope.self, row["scopeJSON"]).checkpoint
+        if let value, value.schemaVersion != 1 { throw CollectionRepositoryError.unsupportedCommandResult }
+        return value
+    }
+
+    func progress() async throws -> StudyProgress {
+        try await reviews.writer.read { db in
+            guard let row = try Row.fetchOne(db, sql: "SELECT * FROM study_sessions WHERE id=?",
+                arguments: [ReviewSQL.key(sessionID)]) else { throw CollectionRepositoryError.reviewUnavailable }
+            let stats = try Row.fetchOne(db, sql: "SELECT count(*) AS ratings, count(DISTINCT cardIdentitySnapshot) AS cards FROM review_logs WHERE sessionID=? AND voidedBy IS NULL",
+                arguments: [ReviewSQL.key(sessionID)])!
+            let grades = try (1...4).map { grade in
+                try Int.fetchOne(db, sql: "SELECT count(*) FROM review_logs WHERE sessionID=? AND voidedBy IS NULL AND grade=?",
+                    arguments: [ReviewSQL.key(sessionID), grade])!
+            }
+            let last = try String.fetchOne(db, sql: "SELECT commandID FROM review_logs WHERE sessionID=? AND voidedBy IS NULL ORDER BY rowid DESC LIMIT 1",
+                arguments: [ReviewSQL.key(sessionID)])
+            return try StudyProgress(checkpoint: Self.savedCheckpoint(row), ratings: stats["ratings"], uniqueCards: stats["cards"],
+                grades: grades, lastRatingID: last.map { try CommandID(uuidString: $0) }, activeDurationMs: row["activeDurationMs"])
+        }
+    }
+
+    func checkpoint(_ value: StudyCheckpoint) async throws {
+        guard value.schemaVersion == 1, value.activeDurationMs >= 0 else { throw CollectionRepositoryError.integrityFailure }
+        struct Envelope: Encodable { let schemaVersion = 1; let checkpoint: StudyCheckpoint }
+        let now = reviews.clock.now()
+        try await reviews.writer.mediaAccess { pool in
+            try pool.write { db in
+                _ = try Self.resumableSession(db, id: sessionID)
+                // Skip is persisted without any ReviewLog or schedule mutation.
+                try db.execute(sql: "UPDATE session_items SET stage='queued' WHERE sessionID=? AND stage='skipped'",
+                    arguments: [ReviewSQL.key(sessionID)])
+                for id in value.skipped {
+                    try db.execute(sql: "UPDATE session_items SET stage='skipped' WHERE sessionID=? AND cardID=? AND stage!='rated'",
+                        arguments: [ReviewSQL.key(sessionID), ReviewSQL.key(id)])
+                }
+                if let id = value.cardID, value.phase != .summary {
+                    let stage = value.phase == .answer || (value.phase == .paused && value.priorToPause == .answer) ? "answer" : "question"
+                    try db.execute(sql: "UPDATE session_items SET stage=? WHERE sessionID=? AND cardID=? AND stage IN ('question','answer')",
+                        arguments: [stage, ReviewSQL.key(sessionID), ReviewSQL.key(id)])
+                }
+                try db.execute(sql: "UPDATE study_sessions SET scopeJSON=?, status=?, activeDurationMs=max(activeDurationMs,?), lastActivityAt=? WHERE id=?",
+                    arguments: [ReviewSQL.json(Envelope(checkpoint: value)), value.phase == .paused ? "paused" : "active",
+                        value.activeDurationMs, ReviewSQL.ms(now), ReviewSQL.key(sessionID)])
+            }
+        }
+    }
+
+    func finish(early: Bool) async throws {
+        let now = reviews.clock.now()
+        try await reviews.writer.mediaAccess { pool in
+            try pool.write { db in
+                // Idempotent after a lost acknowledgement; never reopens an ended session.
+                try db.execute(sql: "UPDATE study_sessions SET status=?, endedAt=?, lastActivityAt=? WHERE id=? AND status IN ('active','paused')",
+                    arguments: [early ? "abandoned" : "completed", ReviewSQL.ms(now), ReviewSQL.ms(now), ReviewSQL.key(sessionID)])
             }
         }
     }
