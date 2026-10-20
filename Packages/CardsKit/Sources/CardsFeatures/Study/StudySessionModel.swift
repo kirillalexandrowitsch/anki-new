@@ -153,7 +153,11 @@ extension StudyAudioPlayer {
         guard !isStopped, let command = pendingCommand else { return }
         saveCheckpoint()
         phase = .committing; lastTick = nil; errorMessage = nil; lastSkipped = nil; stopAudio()
-        guard await flushCheckpoint(), !isStopped else { phase = .answer; return }
+        guard await flushCheckpoint(), !isStopped else {
+            phase = .answer
+            errorMessage = "Не удалось подготовить оценку. Сохраните прогресс и повторите ту же оценку."
+            return
+        }
         let token = UUID(); operation = token
         do {
             try await service.rate(command)
@@ -344,8 +348,11 @@ extension StudyAudioPlayer {
     public func retryCheckpoint() async {
         guard let value = checkpointValue, let progressService = service as? any StudyProgressService else { return }
         await checkpointTask?.value
-        do { try await progressService.checkpoint(value); checkpointError = nil }
-        catch { checkpointError = "Не удалось сохранить прогресс. Повторите сохранение перед продолжением." }
+        do {
+            try await progressService.checkpoint(value)
+            checkpointError = nil
+            if phase == .loading, !isStopped { await readNext(preferred: retryPreferred) }
+        } catch { checkpointError = "Не удалось сохранить прогресс. Повторите сохранение перед продолжением." }
     }
 
     /// Summary is reviewable before closing; never dismiss on a storage error.
