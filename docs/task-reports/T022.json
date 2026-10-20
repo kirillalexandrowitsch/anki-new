@@ -38,6 +38,16 @@
       "command": "python3 scripts/check.py --deny-network (final Undo/Skip regression)",
       "result": "passed",
       "details": "build/checks/run-a4q_327g/summary.json: networkDenied=true, все package tests (Core 30, Infrastructure 117, Features 27, DesignSystem 3, XCTest worker 1) и arm64 app-build passed; seed12 fingerprint совпадает."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter progressReopened",
+      "result": "passed",
+      "details": "/tmp/anki-T022-reopen-undo.log: реальная база закрывается и открывается после revealed pause, затем resume скрытого вопроса, новая оценка easy и Undo из summary успешно возвращают answer с нулём effective ratings; текущее wall time и ненулевая duration."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (UI accessibility and persistent Undo control)",
+      "result": "passed",
+      "details": "build/checks/run-ns0gm5k6/summary.json: Core 30, Infrastructure 118, Features 27, DesignSystem 3, worker 1 и arm64 app-build passed, networkDenied=true, seed12 fingerprint unchanged. Native CUA осмотрел только синтетическое demo: question/reveal/Skip всех и summary с нулём оценок; личная коллекция не редактировалась."
     }
   ],
   "limitations": [
@@ -50,6 +60,11 @@
       "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testPersistentRatingUndoAndReratingSurviveRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
       "result": "failed",
       "details": "/tmp/anki-T022-ui-workspace.log: приложение реально запустилось, test остановился на строке 18 (TypeText имени синтетической колоды): Timed out while synthesizing event. До новых pause/relaunch assertions не дошёл. XCTest requirement/assertions сохранены; полный suite обязателен на macos-15 CI до merge."
+    },
+    {
+      "command": "gh run view 39483127697 --log-failed",
+      "result": "failed",
+      "details": "PR #77 initial macos CI: Xcode 16.4, package tests 177 passed, app-tests exit 65. Единственная source location AppShellUITests.swift:63 в testPersistentRatingUndoAndReratingSurviveRelaunch (ответ после Undo). Merge не выполнен. Undo вынесен из растущего ScrollView итогов; UI assertions сохранены/усилены isHittable и отдельной диагностикой checkpoint/error/pause/закрытия."
     }
   ]
 }

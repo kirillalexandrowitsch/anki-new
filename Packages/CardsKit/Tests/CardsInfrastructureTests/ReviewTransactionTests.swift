@@ -490,3 +490,30 @@ private actor LostUndoService: StudyReviewSessionService {
     #expect(model.confirmedRatings == 1 && model.pendingCommand == nil)
     #expect(try await session.reviews.effectiveStatistics().ratings == 1)
 }
+
+@Test @MainActor func progressReopenedPausedSessionCanRateAndUndoFromSummaryWithRealTime() async throws {
+    let f = try ReviewFixture()
+    f.clock.set(Date())
+    _ = try await f.card()
+    let session = try await f.session()
+    var elapsed: TimeInterval = 0
+    let first = StudySessionModel(service: session, clock: f.clock, elapsed: { elapsed })
+    await first.load(); first.reveal()
+    elapsed = 2.575; first.pause()
+    #expect(await first.flushCheckpoint())
+    first.stop()
+    try await f.writer.close()
+    let database = try CollectionDatabase(url: f.directory.url.appendingPathComponent("reviews.sqlite"))
+    let writer = CollectionWriter(database: database, clock: f.clock)
+    let resumed = try await SQLiteStudySession.open(writer: writer, configuration: session.reviews.configuration, clock: f.clock)
+    let model = StudySessionModel(service: resumed, clock: f.clock, elapsed: { elapsed })
+    await model.load(); model.resume(); model.reveal()
+    elapsed += 1.325; f.clock.set(Date())
+    await model.rate(.easy)
+    #expect(model.phase == .completed && model.confirmedRatings == 1 && model.canUndoRating)
+    await model.undoRating()
+    #expect(model.phase == .answer && model.errorMessage == nil && model.checkpointError == nil)
+    #expect(model.confirmedRatings == 0 && model.canRate)
+    model.stop(); #expect(await model.flushCheckpoint())
+    try await writer.close()
+}

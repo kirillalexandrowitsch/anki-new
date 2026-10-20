@@ -59,8 +59,24 @@ final class AppShellUITests: XCTestCase {
         reveal.click(); XCTAssertTrue(answer.waitForExistence(timeout: 5))
         app.buttons["study.grade.4"].click()
         let undo = app.buttons["study.undoRating"]
-        XCTAssertTrue(undo.waitForExistence(timeout: 5)); undo.click()
-        XCTAssertTrue(answer.waitForExistence(timeout: 5)); XCTAssertFalse(reveal.exists)
+        XCTAssertTrue(undo.waitForExistence(timeout: 5))
+        XCTAssertTrue(undo.isHittable)
+        undo.click()
+        let restoredAnswer = answer.waitForExistence(timeout: 5)
+        if !restoredAnswer {
+            // Separate source locations survive the privacy-preserving CI diagnostics.
+            XCTAssertFalse(app.staticTexts["study.checkpoint.error"].exists)
+            let error = app.staticTexts["study.error"]
+            if error.exists {
+                let text = (error.value as? String) ?? error.label
+                if text.contains("данные уже изменились") { XCTFail("Undo revision conflict") }
+                else { XCTFail("Undo persistence failure") }
+            }
+            XCTAssertFalse(app.staticTexts["study.paused"].exists)
+            XCTAssertFalse(start.exists)
+        }
+        XCTAssertTrue(restoredAnswer)
+        XCTAssertFalse(reveal.exists)
         XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 0")
         XCTAssertTrue(app.buttons["study.grade.1"].isEnabled)
         app.buttons["study.grade.1"].click()
