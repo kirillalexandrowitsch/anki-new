@@ -719,7 +719,7 @@
       ],
       "verification": "Падение до/после commit, replay commandID, конфликт revision и Undo после следующего изменения.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "06.1",
@@ -727,7 +727,10 @@
         "06.3",
         "06.4",
         "28.1"
-      ]
+      ],
+      "startedAt": "2026-10-20T10:10:07.110478+00:00",
+      "completedAt": "2026-10-20T10:21:35.544199+00:00",
+      "report": "docs/task-reports/T020.json"
     },
     {
       "id": "T021",
@@ -4161,19 +4164,19 @@
       "stateID": "06.2",
       "taskID": "T020",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "06.3",
       "taskID": "T020",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "06.4",
       "taskID": "T020",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "07.1",

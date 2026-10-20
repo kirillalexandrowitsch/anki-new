@@ -23,6 +23,9 @@ public enum StudyPhase: Equatable, Sendable {
     public private(set) var lastSkipped: CardID?
     public private(set) var isStopped = false
     public private(set) var pendingCommand: StudyRatingCommand?
+    public private(set) var lastRatingID: CommandID?
+    public private(set) var pendingUndo: UndoRatingCommand?
+    public private(set) var reviewMessage: String?
     private let service: any StudySessionService
     private let clock: any CardsCore.Clock
     private let audio: (any StudyAudioPlayer)?
@@ -35,7 +38,11 @@ public enum StudyPhase: Equatable, Sendable {
         self.service = service; self.clock = clock; self.audio = audio
     }
 
-    public var canRate: Bool { phase == .answer && pendingCommand == nil && acceptsInput }
+    public var canRate: Bool { phase == .answer && pendingCommand == nil && pendingUndo == nil && acceptsInput }
+    public var canUndoRating: Bool {
+        service is any StudyReviewSessionService && lastRatingID != nil && pendingCommand == nil &&
+        [.question, .answer, .completed].contains(phase) && acceptsInput
+    }
     public var canPause: Bool { [.question, .answer].contains(phase) && acceptsInput }
     public var canExit: Bool { phase != .committing && phase != .completed && acceptsInput }
     private var acceptsInput: Bool { !isStopped && !showsExitConfirmation }
@@ -73,7 +80,7 @@ public enum StudyPhase: Equatable, Sendable {
     public func rate(_ grade: Grade) async {
         guard canRate, let presentation else { return }
         pendingCommand = StudyRatingCommand(cardID: presentation.cardID, expectedRevision: presentation.revision,
-                                            grade: grade, occurredAt: clock.now())
+                                            grade: grade, occurredAt: clock.now(), scheduleEpoch: presentation.scheduleEpoch)
         await commitPending()
     }
 
@@ -89,7 +96,7 @@ public enum StudyPhase: Equatable, Sendable {
         do {
             try await service.rate(command)
             guard !isStopped, operation == token else { return }
-            confirmedRatings += 1; pendingCommand = nil
+            confirmedRatings += 1; lastRatingID = command.id; pendingCommand = nil; reviewMessage = nil
             await readNext()
         } catch {
             guard !isStopped, operation == token else { return }
@@ -98,15 +105,41 @@ public enum StudyPhase: Equatable, Sendable {
         }
     }
 
+    public func undoRating() async {
+        guard canUndoRating, let service = service as? any StudyReviewSessionService, let ratingID = lastRatingID else { return }
+        if pendingUndo == nil {
+            pendingUndo = UndoRatingCommand(ratingID: ratingID, sessionID: service.sessionID, occurredAt: clock.now())
+        }
+        guard let command = pendingUndo else { return }
+        let previousPhase = phase
+        phase = .committing; errorMessage = nil; stopAudio()
+        let token = UUID(); operation = token
+        do {
+            let result = try await service.undoRating(command)
+            guard !isStopped, operation == token else { return }
+            pendingUndo = nil; lastRatingID = nil; lastSkipped = nil
+            confirmedRatings = max(0, confirmedRatings - 1)
+            presentation = result.presentation; completion = nil; phase = .answer
+            reviewMessage = "Оценка отменена. Карточка и расписание восстановлены."
+        } catch {
+            guard !isStopped, operation == token else { return }
+            phase = previousPhase
+            if error as? CollectionRepositoryError == .undoConflict {
+                pendingUndo = nil; lastRatingID = nil
+                errorMessage = "Не удалось отменить оценку: данные уже изменились."
+            } else { errorMessage = "Не удалось отменить оценку. Повторите ту же команду отмены." }
+        }
+    }
+
     public func skip() async {
-        guard phase == .question, acceptsInput, let presentation else { return }
+        guard phase == .question, acceptsInput, pendingUndo == nil, let presentation else { return }
         lastSkipped = presentation.cardID; skipped.insert(presentation.cardID)
         await readNext()
     }
 
     public func undoSkip() async {
         guard [.question, .answer, .completed].contains(phase), acceptsInput,
-              pendingCommand == nil, let id = lastSkipped else { return }
+              pendingCommand == nil, pendingUndo == nil, let id = lastSkipped else { return }
         skipped.remove(id); lastSkipped = nil
         await readNext(preferred: id)
     }
@@ -153,7 +186,7 @@ public enum StudyPhase: Equatable, Sendable {
             // Enter committing synchronously before scheduling work: queued key events cannot submit twice.
             guard let presentation else { return false }
             pendingCommand = StudyRatingCommand(cardID: presentation.cardID, expectedRevision: presentation.revision,
-                                                grade: grade, occurredAt: clock.now())
+                                                grade: grade, occurredAt: clock.now(), scheduleEpoch: presentation.scheduleEpoch)
             phase = .committing
             Task { await commitPending() }
             return true

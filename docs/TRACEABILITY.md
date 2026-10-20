@@ -77,9 +77,9 @@
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
 | [06.1 · Ответ открыт](../design-references/sheets/sheet-06.png) | [T019](tasks/T019.md) | Готово |
-| [06.2 · Снова](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Запланировано |
-| [06.3 · Трудно / Хорошо](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Запланировано |
-| [06.4 · Легко](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Запланировано |
+| [06.2 · Снова](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Готово |
+| [06.3 · Трудно / Хорошо](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Готово |
+| [06.4 · Легко](../design-references/sheets/sheet-06.png) | [T020](tasks/T020.md) | Готово |
 
 ## 07 · Управление занятием
 
