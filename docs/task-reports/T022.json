@@ -48,6 +48,11 @@
       "command": "python3 scripts/check.py --deny-network (UI accessibility and persistent Undo control)",
       "result": "passed",
       "details": "build/checks/run-ns0gm5k6/summary.json: Core 30, Infrastructure 118, Features 27, DesignSystem 3, worker 1 и arm64 app-build passed, networkDenied=true, seed12 fingerprint unchanged. Native CUA осмотрел только синтетическое demo: question/reveal/Skip всех и summary с нулём оценок; личная коллекция не редактировалась."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (named summary accessibility group); native CUA synthetic demo pause",
+      "result": "passed",
+      "details": "build/checks/run-qpvag7wg/summary.json: все package tests и arm64 build passed, networkDenied=true. Native AX после реального перезапуска сборки: container study.summary содержит счётчики/время/Skip; study.paused — отдельный text, study.resume и study.pausedExit — отдельные buttons. До исправления summary/заголовок объединялись в один text. Только demo, без записи в личную коллекцию."
     }
   ],
   "limitations": [

@@ -215,7 +215,7 @@ public struct StudyView: View {
             Text("Оценок: \(model.confirmedRatings) · Карточек: \(model.uniqueCards)")
             Text("Активное время: \(model.activeDurationMs / 60_000) мин \((model.activeDurationMs / 1000) % 60) с")
             Text("Пропущено в этом занятии: \(model.skipped.count)")
-        }.foregroundStyle(.secondary).accessibilityElement(children: .combine).accessibilityIdentifier("study.summary")
+        }.foregroundStyle(.secondary).accessibilityElement(children: .contain).accessibilityIdentifier("study.summary")
     }
 
     private func requestClose() {
