@@ -8,11 +8,16 @@ public final class EditorLauncherModel {
     public private(set) var errorMessage: String?
     public private(set) var isLoading = false
     public var editor: EditorModel?
+    private let audioService: (any AudioPlayback)?
+    private let preferences: AudioPreferences?
     private let workspace: EditorWorkspace
     private let clock: any CardsCore.Clock
     private var active = true
 
-    public init(workspace: EditorWorkspace, clock: any CardsCore.Clock) { self.workspace = workspace; self.clock = clock }
+    public init(workspace: EditorWorkspace, clock: any CardsCore.Clock,
+                audio: (any AudioPlayback)? = nil, preferences: AudioPreferences? = nil) {
+        self.workspace = workspace; self.clock = clock; self.audioService = audio; self.preferences = preferences
+    }
     public func open(noteID: NoteID? = nil) async {
         guard active, editor == nil, !isLoading else { return }
         isLoading = true; errorMessage = nil
@@ -36,7 +41,11 @@ public final class EditorLauncherModel {
                 original = saved
             } else { original = nil }
             guard active, !Task.isCancelled else { return }
-            editor = EditorModel(repository: workspace.notes, decks: decks, original: original)
+            let audio: AudioPreviewModel?
+            if let audioService, let preferences {
+                audio = AudioPreviewModel(service: audioService, preferences: preferences, generation: workspace.generation)
+            } else { audio = nil }
+            editor = EditorModel(repository: workspace.notes, decks: decks, original: original, audio: audio)
         } catch { if active { errorMessage = "Не удалось открыть редактор. Повторите попытку." } }
     }
     public func stop() { active = false; editor?.stop(); editor = nil }

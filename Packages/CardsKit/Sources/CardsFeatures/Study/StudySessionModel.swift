@@ -9,6 +9,11 @@ public enum StudyPhase: Equatable, Sendable {
 @MainActor public protocol StudyAudioPlayer: AnyObject {
     func play(_ presentation: StudyPresentation) async throws
     func stop()
+    var automaticallyPlays: Bool { get }
+}
+
+extension StudyAudioPlayer {
+    public var automaticallyPlays: Bool { false }
 }
 
 @MainActor @Observable public final class StudySessionModel {
@@ -38,6 +43,8 @@ public enum StudyPhase: Equatable, Sendable {
         self.service = service; self.clock = clock; self.audio = audio
     }
 
+    public var playback: AudioPreviewModel? { audio as? AudioPreviewModel }
+
     public var canRate: Bool { phase == .answer && pendingCommand == nil && pendingUndo == nil && acceptsInput }
     public var canUndoRating: Bool {
         service is any StudyReviewSessionService && lastRatingID != nil && pendingCommand == nil &&
@@ -62,7 +69,9 @@ public enum StudyPhase: Equatable, Sendable {
             guard !isStopped, operation == token else { return }
             isReading = false
             switch next {
-            case .question(let value): presentation = value; phase = .question
+            case .question(let value):
+                presentation = value; phase = .question
+                if audio?.automaticallyPlays == true { await playAudio() }
             case .completed(let reason): completion = reason; phase = .completed
             }
         } catch {
@@ -201,14 +210,15 @@ public enum StudyPhase: Equatable, Sendable {
         do { try await audio.play(presentation) }
         catch {
             guard !isStopped, audioOperation == token else { return }
-            audioMessage = "Не удалось воспроизвести звук. Можно продолжить занятие."
+            if error is CancellationError || error as? AudioPlaybackError == .cancelled { return }
+            audioMessage = ((error as? AudioPlaybackError)?.errorDescription ?? "Не удалось воспроизвести звук.") + " Можно продолжить занятие."
         }
     }
 
-    private func stopAudio() { audioOperation = UUID(); audio?.stop(); audioMessage = nil }
+    public func stopAudio() { audioOperation = UUID(); audio?.stop(); audioMessage = nil }
 
     public func stop() {
-        isStopped = true; operation = UUID(); stopAudio()
+        isStopped = true; operation = UUID(); stopAudio(); playback?.close()
         presentation = nil; showsExitConfirmation = false
     }
 }

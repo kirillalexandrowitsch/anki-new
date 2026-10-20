@@ -28,15 +28,22 @@ public enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
 public struct SettingsView: View {
     @State private var selection: SettingsTab = .general
 
-    public init() {}
+    private let audio: AudioPreviewModel?
+    public init(audio: AudioPreviewModel? = nil) { self.audio = audio }
 
     public var body: some View {
         TabView(selection: $selection) {
             ForEach(SettingsTab.allCases) { tab in
-                SectionPlaceholder(
-                    title: tab.title, symbol: tab.symbol,
-                    message: String(localized: "Параметры этого раздела появятся в следующих версиях.", bundle: .module)
-                )
+                Group {
+                    if tab == .general, let audio {
+                        PronunciationSettingsView(audio: audio, preferences: audio.preferences)
+                    } else {
+                        SectionPlaceholder(
+                            title: tab.title, symbol: tab.symbol,
+                            message: String(localized: "Параметры этого раздела появятся в следующих версиях.", bundle: .module)
+                        )
+                    }
+                }
                 .accessibilityIdentifier("settings.\(tab.rawValue)")
                 .tabItem { Label(tab.title, systemImage: tab.symbol) }
                 .tag(tab)

@@ -25,7 +25,7 @@ struct AnkiNewApp: App {
         #endif
 
         Settings {
-            SettingsView()
+            SettingsView(audio: composition.audioPreview)
         }
     }
 }
