@@ -63,27 +63,12 @@ enum ReviewSQL {
             try Deck(id: DeckID(uuidString: r["id"]), parentID: (r["parentID"] as String?).map { try DeckID(uuidString: $0) },
                 name: EntityName(r["name"]), revision: Revision(r["revision"]), deletedAt: date(r["deletedAt"]))
         }
-        let cards = try Row.fetchAll(db, sql: """
+        let cardRows: [Row] = try Row.fetchAll(db, sql: """
             SELECT c.*, n.deletedAt AS noteDeleted, n.noteTypeID, n.contentVersion, n.fieldsJSON,
                 t.deletedAt AS typeDeleted, t.templatesJSON
             FROM cards c JOIN notes n ON n.id=c.noteID JOIN note_types t ON t.id=n.noteTypeID
-            """).map { r -> StudyQueueCard in
-                guard let state = CardGenerationState(rawValue: r["generationState"]) else {
-                    throw CollectionRepositoryError.integrityFailure
-                }
-                let card = try Card(id: CardID(uuidString: r["id"]), noteID: NoteID(uuidString: r["noteID"]),
-                    deckID: DeckID(uuidString: r["deckID"]), variantKey: r["variantKey"], templateID: r["templateID"],
-                    generationState: state, suspended: r["suspended"], buriedUntil: date(r["buriedUntil"]),
-                    createdAt: EpochMilliseconds(r["createdAt"]).date, revision: Revision(r["revision"]), deletedAt: date(r["deletedAt"]))
-                // Only the delivered Basic renderer is supported; never present an unrenderable template.
-                let basic = r["noteTypeID"] as String == key(BasicNoteType.id) && r["typeDeleted"] == nil &&
-                    r["templatesJSON"] as String == BasicNoteDefaults.templates && r["contentVersion"] as Int == 1 &&
-                    card.templateID == BasicNoteType.templateID && card.variantKey == BasicNoteType.variantKey
-                let content = try? decode(BasicNoteContent.self, r["fieldsJSON"])
-                let validContent = content.map { (try? $0.validate()) != nil } ?? false
-                return StudyQueueCard(card: card, schedule: try schedule(db, cardID: card.id),
-                    noteIsDeleted: r["noteDeleted"] != nil, templateIsValid: basic && validContent)
-            }
+            """)
+        let cards: [StudyQueueCard] = try cardRows.map { try queueCard($0, db: db) }
         let rows = try Row.fetchAll(db, sql: """
             SELECT e.payloadJSON, l.voidedBy FROM domain_events e JOIN review_logs l ON l.commandID=e.commandID
             WHERE e.type='review.rated'
@@ -104,6 +89,34 @@ enum ReviewSQL {
         return try StudyQueueSnapshot(generation: generation, decks: decks, cards: cards, events: events,
             session: StudyQueueSession(selectedCardIDs: Set(selected), skippedCardIDs: skipping,
                 lastPresentedNoteID: lastNote.map { try NoteID(uuidString: $0) }))
+    }
+
+    private static func queueCard(_ row: Row, db: Database) throws -> StudyQueueCard {
+        let rawState: String = row["generationState"]
+        guard let state = CardGenerationState(rawValue: rawState) else {
+            throw CollectionRepositoryError.integrityFailure
+        }
+        let cardID = try CardID(uuidString: row["id"])
+        let noteID = try NoteID(uuidString: row["noteID"])
+        let deckID = try DeckID(uuidString: row["deckID"])
+        let createdAt = EpochMilliseconds(row["createdAt"]).date
+        let revision = try Revision(row["revision"])
+        let card = Card(id: cardID, noteID: noteID, deckID: deckID,
+            variantKey: row["variantKey"], templateID: row["templateID"], generationState: state,
+            suspended: row["suspended"], buriedUntil: date(row["buriedUntil"]),
+            createdAt: createdAt, revision: revision, deletedAt: date(row["deletedAt"]))
+        let noteTypeID: String = row["noteTypeID"]
+        let typeDeleted: Int64? = row["typeDeleted"]
+        let templates: String = row["templatesJSON"]
+        let contentVersion: Int = row["contentVersion"]
+        let validType = noteTypeID == key(BasicNoteType.id) && typeDeleted == nil
+        let validTemplate = templates == BasicNoteDefaults.templates && contentVersion == 1
+        let validVariant = card.templateID == BasicNoteType.templateID && card.variantKey == BasicNoteType.variantKey
+        let content: BasicNoteContent? = try? decode(BasicNoteContent.self, row["fieldsJSON"])
+        let validContent = content.map { (try? $0.validate()) != nil } ?? false
+        return StudyQueueCard(card: card, schedule: try schedule(db, cardID: cardID),
+            noteIsDeleted: (row["noteDeleted"] as Int64?) != nil,
+            templateIsValid: validType && validTemplate && validVariant && validContent)
     }
 
     static func event<T: Encodable>(_ db: Database, command: CommandID, type: String,
