@@ -1,6 +1,6 @@
 {
   "taskID": "T022",
-  "summary": "Сохранение checkpoint реальной study-сессии после действий и heartbeat: prior-to-pause, текущая Card и Skip. Восстановление скрывает ответ и читает effective ReviewLog без повторной оценки. Добавлены активное время без pause/sleep/idle, досрочное завершение, durable completed/abandoned и итоги с grade distribution; ошибки записи требуют повторного сохранения.",
+  "summary": "Сохранение checkpoint реальной study-сессии после действий и heartbeat: prior-to-pause, текущая Card и Skip. Восстановление скрывает ответ и читает effective ReviewLog без повторной оценки. Добавлены активное время без pause/sleep/idle, досрочное завершение, durable completed/abandoned и итоги с grade distribution; ошибки записи требуют повторного сохранения. Повтор checkpoint продолжает прерванный Skip/чтение очереди и сохраняет явный retry подготовленной оценки.",
   "criteria": [
     {
       "text": "Пауза возвращает тот же текущий вопрос/ответ до перезапуска.",
@@ -10,7 +10,7 @@
     {
       "text": "Перезапуск не создаёт повторных log и не теряет подтверждённые оценки.",
       "passed": true,
-      "evidence": "reviewProcessDeathRecoversAtomicCommitAndCommandReplay запускает дочерний xctest и _exit(86) до/после commit: после открытия WAL модель получает 0/1 подтверждённых оценок; replay команды даёт ровно один effective ReviewLog и одну revision. progressSkipAllSurvivesRestartWithoutLogsAndUndoSkipRestoresHiddenQuestion проверяет Skip всех Card, неизменность schedule/нулевые logs, восстановление exclusions, Undo skip, cancel/confirm early exit, abandoned и новый sessionID. progressSummaryCountsEffectiveGradesUniqueCardsAndPersistsCompletion проверяет Undo/rerate, 2 effective ratings/2 unique Cards, [0,0,1,1], идемпотентный finish и completed/endedAt. progressCheckpointFailureBlocksRatingAndCloseUntilRetry инъецирует SQLite write failures и проверяет сохранение/завершение только после успешного повтора. progressUndoRatingAfterSkippingItsDueLearningCardReleasesSkipExclusion проверяет наступление learning due, Skip той же Card, Undo оценки с удалением Skip-exclusion и успешную новую оценку."
+      "evidence": "reviewProcessDeathRecoversAtomicCommitAndCommandReplay запускает дочерний xctest и _exit(86) до/после commit: после открытия WAL модель получает 0/1 подтверждённых оценок; replay команды даёт ровно один effective ReviewLog и одну revision. progressSkipAllSurvivesRestartWithoutLogsAndUndoSkipRestoresHiddenQuestion проверяет Skip всех Card, неизменность schedule/нулевые logs, восстановление exclusions, Undo skip, cancel/confirm early exit, abandoned и новый sessionID. progressSummaryCountsEffectiveGradesUniqueCardsAndPersistsCompletion проверяет Undo/rerate, 2 effective ratings/2 unique Cards, [0,0,1,1], идемпотентный finish и completed/endedAt. progressCheckpointFailureBlocksRatingAndCloseUntilRetry инъецирует SQLite write failures и проверяет сохранение/завершение только после успешного повтора. progressUndoRatingAfterSkippingItsDueLearningCardReleasesSkipExclusion проверяет наступление learning due, Skip той же Card, Undo оценки с удалением Skip-exclusion и успешную новую оценку. progressSkipCheckpointRetryResumesTheInterruptedQueueRead и progressPreRatingCheckpointFailurePreservesAnExplicitRatingRetry проверяют реальный отказ SQLite до Skip/оценки и последующий полный переход без дублирования ReviewLog."
     }
   ],
   "checks": [
@@ -58,6 +58,16 @@
       "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
       "result": "passed",
       "details": "/tmp/anki-T022-ui-query-build.log: TEST BUILD SUCCEEDED с точным study.summary identifier query и дополнительной проверкой текстовых descendants. App source не менялся после run-qpvag7wg."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter 'progressSkipCheckpointRetry|progressPreRatingCheckpointFailure'",
+      "result": "passed",
+      "details": "/tmp/anki-T022-checkpoint-retry.log: 2 regression tests passed. Ошибки реального SQLite trigger до первого/последнего Skip восстанавливаются в hidden question/availableViewed без ReviewLog. Ошибка checkpoint перед rating сохраняет pending command и errorMessage для отдельной кнопки retry; после сохранения прогресса до явного retry нет оценки, затем одна effective оценка."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final checkpoint recovery repair)",
+      "result": "passed",
+      "details": "build/checks/run-h2v19_4w/summary.json: networkDenied=true, Core 30 / Infrastructure 120 / Features 27 / DesignSystem 3 / XCTest worker 1 и arm64 app-build passed. Golden synthetic seed12 fingerprint unchanged."
     }
   ],
   "limitations": [
@@ -80,6 +90,11 @@
       "command": "gh run view 39485949544 --log-failed",
       "result": "failed",
       "details": "macos Xcode 16.4: все 178 package tests прошли. UI дошёл до AppShellUITests.swift:90: pause/relaunch, Undo с ответом, rerate и force-terminate с сохранённым count=1 прошли; единственное падение — role-limited query study.summary. Native AX подтверждает именованный container. Query теперь ищет тот же точный identifier через descendants(.any), ждёт существования и дополнительно требует staticText descendants; assertions сохранены."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter progressSkipCheckpointRetry (before recovery fix)",
+      "result": "failed",
+      "details": "/tmp/anki-T022-skip-retry-before.log: SQLite trigger вызвал ошибку checkpoint при Skip; после успешного retry модель ошибочно оставалась loading. Падение ReviewTransactionTests.swift:534 воспроизвело проблему до исправления; доставка остановлена перед main."
     }
   ]
 }

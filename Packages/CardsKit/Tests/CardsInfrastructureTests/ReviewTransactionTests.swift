@@ -517,3 +517,48 @@ private actor LostUndoService: StudyReviewSessionService {
     model.stop(); #expect(await model.flushCheckpoint())
     try await writer.close()
 }
+
+@Test @MainActor func progressSkipCheckpointRetryResumesTheInterruptedQueueRead() async throws {
+    let f = try ReviewFixture()
+    defer { try? f.database.close() }
+    _ = try await f.card(); _ = try await f.card()
+    let session = try await f.session()
+    let model = StudySessionModel(service: session, clock: f.clock)
+    await model.load()
+    let skipped = try #require(model.presentation?.cardID)
+    try await f.database.pool.write { try $0.execute(sql: "CREATE TRIGGER fail_skip_checkpoint BEFORE UPDATE OF scopeJSON ON study_sessions BEGIN SELECT RAISE(ABORT,'synthetic full disk'); END") }
+    await model.skip()
+    #expect(model.phase == .loading && model.checkpointError != nil)
+    try await f.database.pool.write { try $0.execute(sql: "DROP TRIGGER fail_skip_checkpoint") }
+    await model.retryCheckpoint()
+    #expect(model.phase == .question && model.presentation?.cardID != skipped && !model.canRate)
+    #expect(model.skipped == [skipped] && model.checkpointError == nil)
+    try await f.database.pool.write { try $0.execute(sql: "CREATE TRIGGER fail_skip_checkpoint BEFORE UPDATE OF scopeJSON ON study_sessions BEGIN SELECT RAISE(ABORT,'synthetic full disk'); END") }
+    await model.skip()
+    #expect(model.phase == .loading && model.checkpointError != nil)
+    try await f.database.pool.write { try $0.execute(sql: "DROP TRIGGER fail_skip_checkpoint") }
+    await model.retryCheckpoint()
+    #expect(model.phase == .completed && model.completion == .availableViewed && model.skipped.count == 2)
+    #expect(try await session.reviews.effectiveStatistics().ratings == 0)
+}
+
+@Test @MainActor func progressPreRatingCheckpointFailurePreservesAnExplicitRatingRetry() async throws {
+    let f = try ReviewFixture()
+    defer { try? f.database.close() }
+    _ = try await f.card(); _ = try await f.card()
+    let session = try await f.session()
+    let model = StudySessionModel(service: session, clock: f.clock)
+    await model.load(); model.reveal(); #expect(await model.flushCheckpoint())
+    try await f.database.pool.write { try $0.execute(sql: "CREATE TRIGGER fail_rating_checkpoint BEFORE UPDATE OF scopeJSON ON study_sessions BEGIN SELECT RAISE(ABORT,'synthetic full disk'); END") }
+    await model.rate(.easy)
+    let pending = try #require(model.pendingCommand)
+    #expect(model.phase == .answer && model.checkpointError != nil && model.errorMessage != nil)
+    #expect(try await session.reviews.effectiveStatistics().ratings == 0)
+    try await f.database.pool.write { try $0.execute(sql: "DROP TRIGGER fail_rating_checkpoint") }
+    await model.retryCheckpoint()
+    #expect(model.pendingCommand == pending && model.errorMessage != nil && !model.canRate)
+    #expect(try await session.reviews.effectiveStatistics().ratings == 0)
+    await model.retryRating()
+    #expect(model.pendingCommand == nil && model.phase == .question && model.confirmedRatings == 1)
+    #expect(try await session.reviews.effectiveStatistics().ratings == 1)
+}
