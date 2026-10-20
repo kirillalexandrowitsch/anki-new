@@ -7,13 +7,20 @@ public struct AppShellView: View {
 
     @State private var showsStudyDemo = false
 
+    @State private var study: StudySessionModel?
+    @State private var showsStudy = false
+    @State private var studyError = false
+    @State private var studyLoading = false
+    private let makeStudy: (@MainActor () async throws -> StudySessionModel)?
     private let decks: DecksModel?
 
     private let library: LibraryModel?
 
-    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil) {
+    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil,
+                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil) {
         self.model = model
         self.decks = decks
+        self.makeStudy = makeStudy
         self.library = library
     }
 
@@ -64,6 +71,19 @@ public struct AppShellView: View {
                 } else if model.selection == .today {
                     CardsPanel("Занятие") {
                         VStack(alignment: .leading, spacing: 16) {
+                            if let makeStudy {
+                                Button("Начать занятие") {
+                                    studyLoading = true; studyError = false
+                                    Task {
+                                        defer { studyLoading = false }
+                                        do { study = try await makeStudy(); showsStudy = true }
+                                        catch { studyError = true }
+                                    }
+                                }.buttonStyle(CardsButtonStyle(.primary)).disabled(studyLoading)
+                                    .accessibilityIdentifier("study.start")
+                                if studyLoading { ProgressView("Открытие занятия…") }
+                                if studyError { Text("Не удалось открыть занятие. Повторите попытку.").foregroundStyle(.red) }
+                            }
                             Text("Пробное занятие на трёх примерах. Данные вашей коллекции не меняются.")
                                 .foregroundStyle(.secondary)
                             Button("Пробное занятие") { showsStudyDemo = true }
@@ -84,6 +104,9 @@ public struct AppShellView: View {
             .background(CardsColor.window.color)
         }
         .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock) }
+        .sheet(isPresented: $showsStudy) {
+            if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
+        }
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refreshDate() }

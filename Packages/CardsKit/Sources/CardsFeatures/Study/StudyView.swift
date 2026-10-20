@@ -31,7 +31,7 @@ public struct StudyView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     content
-                    if let message = model.errorMessage, [.loading, .answer].contains(model.phase) {
+                    if let message = model.errorMessage {
                         Text(message).foregroundStyle(.red).accessibilityIdentifier("study.error")
                         if model.pendingCommand != nil {
                             Button("Повторить сохранение") { Task { await model.retryRating() } }
@@ -40,6 +40,13 @@ public struct StudyView: View {
                             Button("Повторить") { Task { await model.load() } }
                                 .accessibilityIdentifier("study.retryLoad")
                         }
+                    }
+                    if let message = model.reviewMessage {
+                        Label(message, systemImage: "arrow.uturn.backward").accessibilityIdentifier("study.undoNotice")
+                    }
+                    if model.canUndoRating {
+                        Button(model.pendingUndo == nil ? "Отменить оценку" : "Повторить отмену") { Task { await model.undoRating() } }
+                            .accessibilityIdentifier("study.undoRating")
                     }
                     if let message = model.audioMessage {
                         Text(message).foregroundStyle(.secondary).accessibilityIdentifier("study.audioError")

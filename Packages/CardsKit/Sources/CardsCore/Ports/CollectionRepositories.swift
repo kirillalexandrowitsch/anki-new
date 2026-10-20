@@ -1,6 +1,8 @@
 import Foundation
 
 public enum RepositoryEntity: Equatable, Sendable {
+    case card(CardID)
+    case session(SessionID)
     case note(NoteID)
     case media(MediaID)
     case deck(DeckID)
@@ -13,6 +15,8 @@ public enum CollectionRepositoryError: Error, Equatable, Sendable {
     case alreadyExists(RepositoryEntity)
     case revisionConflict(entity: RepositoryEntity, expected: Revision, actual: Revision)
     case validation(ValidationError)
+    case reviewUnavailable
+    case undoConflict
     case invalidHierarchy
     case commandIDReused
     case unsupportedCommandResult

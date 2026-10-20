@@ -9,7 +9,7 @@ public enum StudyQueueError: Error, Equatable, Sendable {
     case staleGeneration
 }
 
-public struct StudyQueueLimits: Equatable, Sendable {
+public struct StudyQueueLimits: Equatable, Codable, Sendable {
     public let new: Int
     public let review: Int
     public init(new: Int = 20, review: Int = 200) throws {
@@ -19,12 +19,12 @@ public struct StudyQueueLimits: Equatable, Sendable {
     public static let standard = try! Self()
 }
 
-public enum StudyQueueScope: Equatable, Sendable {
+public enum StudyQueueScope: Equatable, Codable, Sendable {
     case collection
     case decks(Set<DeckID>)
 }
 
-public enum StudySiblingPolicy: Sendable { case buryUntilNextStudyDay, allow }
+public enum StudySiblingPolicy: Codable, Sendable { case buryUntilNextStudyDay, allow }
 
 public struct StudyQueueConfiguration: Sendable {
     public let generation: UUID
@@ -56,7 +56,7 @@ public struct StudyQueueCard: Equatable, Sendable {
 }
 
 /// Effective historical identity survives reset, move and deletion. Paths are event-time snapshots.
-public struct StudyQueueEvent: Equatable, Sendable {
+public struct StudyQueueEvent: Equatable, Codable, Sendable {
     public let commandID: CommandID
     public let cardID: CardID
     public let noteID: NoteID

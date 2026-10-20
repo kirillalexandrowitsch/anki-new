@@ -28,13 +28,18 @@ final class CompositionRoot {
         return LibraryModel(workspace: workspace, clock: clock)
     }
 
+    func makeStudyModel(context: CollectionContext) async throws -> StudySessionModel {
+        guard let provider = access as? any StudyWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        return try await StudySessionModel(service: provider.studySession(generation: context.generation), clock: clock)
+    }
+
     func makeShellModel() -> AppShellModel {
         AppShellModel(clock: clock)
     }
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -66,6 +71,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func editorWorkspace(generation: UUID) async throws -> EditorWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.editorWorkspace(generation: generation)
+    }
+
+    func studySession(generation: UUID) async throws -> any StudyReviewSessionService {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.studySession(generation: generation)
     }
 
     func close(generation: UUID) async throws { try await store?.close(generation: generation) }

@@ -39,6 +39,7 @@ private struct MainWindow: View {
     @State private var library: LibraryModel?
     @State private var decksError = false
     @State private var decksCloseToken: UUID?
+    @State private var studyCloseToken: UUID?
 
     init(composition: CompositionRoot) {
         _model = State(initialValue: composition.makeShellModel())
@@ -47,7 +48,14 @@ private struct MainWindow: View {
     }
 
     var body: some View {
-        AppShellView(model: model, decks: decks, library: library)
+        AppShellView(model: model, decks: decks, library: library, makeStudy: {
+            guard let context = collections.context else { throw CollectionAccessError.staleContext }
+            let study = try await composition.makeStudyModel(context: context)
+            guard collections.context == context else { study.stop(); throw CollectionAccessError.staleContext }
+            if let token = studyCloseToken { collections.removeObservation(token) }
+            studyCloseToken = collections.onClose(context) { study.stop() }
+            return study
+        })
             .frame(minWidth: 800, minHeight: 540)
             .task { await collections.open() }
             .task(id: collections.context) {
@@ -72,6 +80,7 @@ private struct MainWindow: View {
                 }
             }
             .onDisappear {
+                if let token = studyCloseToken { collections.removeObservation(token) }
                 if let token = decksCloseToken { collections.removeObservation(token) }
                 decks?.stop()
                 library?.stop()
