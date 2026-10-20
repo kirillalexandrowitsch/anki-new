@@ -269,3 +269,47 @@ private let studyClock = TestClock(date: Date(timeIntervalSince1970: 1_700_000_0
     #expect(await service.submitted().isEmpty)
     #expect(model.confirmedRatings == 0 && model.isStopped)
 }
+
+@Test @MainActor func progressActiveTimeExcludesPauseSleepIdleExitConfirmationAndCapsResponse() async throws {
+    var elapsed: TimeInterval = 0
+    let service = SessionService()
+    let clock = TestClock()
+    let model = StudySessionModel(service: service, clock: clock, elapsed: { elapsed })
+    await model.load()
+    elapsed = 2; model.tick()
+    #expect(model.activeDurationMs == 2000)
+    clock.advance(by: 86_400) // a wall-clock jump has no effect
+    elapsed = 3; model.pause()
+    elapsed = 300; model.tick(); model.resume()
+    elapsed = 301; model.tick()
+    #expect(model.activeDurationMs == 4000)
+    elapsed = 900; model.tick() // suspended heartbeat / sleep
+    #expect(model.activeDurationMs == 4000)
+    elapsed = 901; model.tick(systemIdleSeconds: 90)
+    #expect(model.activeDurationMs == 4000)
+    elapsed = 902; model.requestExit()
+    let before = model.activeDurationMs
+    elapsed = 1000; model.tick(); model.cancelExit()
+    #expect(model.activeDurationMs == before)
+    for _ in 0..<70 { elapsed += 1; model.tick() }
+    model.reveal(); await model.rate(.good)
+    let command = try #require(await service.submitted().first)
+    #expect(command.durationMs == 60_000)
+}
+
+@Test @MainActor func progressBackgroundDuringCommitPausesTheNextQuestion() async {
+    let service = SessionService()
+    await service.configure(delayedRate: true)
+    var elapsed: TimeInterval = 0
+    let model = StudySessionModel(service: service, clock: studyClock, elapsed: { elapsed })
+    await model.load(); model.reveal()
+    let commit = Task { await model.rate(.easy) }
+    while !(await service.waitingRate()) { await Task.yield() }
+    model.setForeground(false)
+    await service.configure(); await service.completeRate(); await commit.value
+    #expect(model.phase == .paused && model.confirmedRatings == 1)
+    elapsed = 1000; model.tick()
+    #expect(model.activeDurationMs == 0)
+    model.setForeground(true); model.resume()
+    #expect(model.phase == .question && !model.canRate)
+}

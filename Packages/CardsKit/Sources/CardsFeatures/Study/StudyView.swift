@@ -1,5 +1,7 @@
+import AppKit
 import CardsCore
 import CardsDesignSystem
+import CoreGraphics
 import SwiftUI
 
 public struct StudyView: View {
@@ -28,9 +30,20 @@ public struct StudyView: View {
             if let notice { Text(notice).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             Text("Подтверждённых оценок: \(model.confirmedRatings)")
                 .foregroundStyle(.secondary).accessibilityIdentifier("study.count")
+            // Keep Undo outside the changing card/summary scroll content. It must stay
+            // reachable when the summary grows or the window is at its minimum height.
+            if model.canUndoRating {
+                Button(model.pendingUndo == nil ? "Отменить оценку" : "Повторить отмену") { Task { await model.undoRating() } }
+                    .accessibilityIdentifier("study.undoRating")
+            }
             ScrollView {
                 VStack(spacing: 20) {
                     content
+                    if let message = model.checkpointError {
+                        Text(message).foregroundStyle(.red).accessibilityIdentifier("study.checkpoint.error")
+                        Button("Повторить сохранение прогресса") { Task { await model.retryCheckpoint() } }
+                            .accessibilityIdentifier("study.checkpoint.retry")
+                    }
                     if let message = model.errorMessage {
                         Text(message).foregroundStyle(.red).accessibilityIdentifier("study.error")
                         if model.pendingCommand != nil {
@@ -44,10 +57,6 @@ public struct StudyView: View {
                     if let message = model.reviewMessage {
                         Label(message, systemImage: "arrow.uturn.backward").accessibilityIdentifier("study.undoNotice")
                     }
-                    if model.canUndoRating {
-                        Button(model.pendingUndo == nil ? "Отменить оценку" : "Повторить отмену") { Task { await model.undoRating() } }
-                            .accessibilityIdentifier("study.undoRating")
-                    }
                     if let message = model.playback?.message ?? model.audioMessage {
                         Text(message).foregroundStyle(.secondary).accessibilityIdentifier("study.audioError")
                     }
@@ -59,7 +68,7 @@ public struct StudyView: View {
                                 .accessibilityIdentifier("study.undoSkip")
                         }.font(.callout).padding().background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
                     }
-                }.frame(maxWidth: .infinity)
+                }.frame(maxWidth: .infinity).accessibilityElement(children: .contain)
             }
         }
         .padding(28).frame(minWidth: 680, idealWidth: 850, minHeight: 530, idealHeight: 680)
@@ -71,9 +80,18 @@ public struct StudyView: View {
         .onExitCommand { model.escape() }
         .focusedSceneValue(\.studyCloseAction, StudyCloseAction(
             isEnabled: model.phase != .committing, perform: requestClose))
-        .task { await model.load() }
+        .task {
+            await model.load()
+            while !Task.isCancelled && !model.isStopped {
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                await model.heartbeat(systemIdleSeconds: CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null))
+            }
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.willSleepNotification)) { _ in model.setForeground(false) }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in model.setForeground(false) }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.setForeground(true) }
         .onDisappear { model.stop() }
-        .onChange(of: scenePhase) { _, value in if value != .active { model.pause() } }
+        .onChange(of: scenePhase) { _, value in model.setForeground(value == .active) }
     }
 
     @ViewBuilder private var content: some View {
@@ -108,7 +126,7 @@ public struct StudyView: View {
                         } else {
                             Text("Попробуйте вспомнить значение, прежде чем открыть ответ.").foregroundStyle(.secondary)
                         }
-                    }.padding(24).frame(maxWidth: .infinity)
+                    }.padding(24).frame(maxWidth: .infinity).accessibilityElement(children: .contain)
                 }
                 if model.phase == .question {
                     Button("Показать ответ · Пробел") { model.reveal() }
@@ -128,11 +146,12 @@ public struct StudyView: View {
             CardsPanel {
                 VStack(spacing: 24) {
                     Image(systemName: "pause.circle.fill").font(.system(size: 50)).foregroundStyle(.tint)
+                    summary
                     Text("Занятие на паузе").font(.title2.bold()).accessibilityIdentifier("study.paused")
                     Button("Продолжить") { model.resume() }.buttonStyle(CardsButtonStyle(.primary))
                         .accessibilityIdentifier("study.resume")
                     Button("Завершить занятие") { model.requestExit() }.accessibilityIdentifier("study.pausedExit")
-                }.padding(40).frame(maxWidth: .infinity)
+                }.padding(40).frame(maxWidth: .infinity).accessibilityElement(children: .contain)
             }
         case .completed:
             CardsPanel {
@@ -143,9 +162,15 @@ public struct StudyView: View {
                         Text("Ближайшая карточка: \(date.formatted(date: .abbreviated, time: .shortened))")
                         Button("Проверить очередь") { Task { await model.checkQueue() } }.accessibilityIdentifier("study.checkQueue")
                     }
-                    Text("Пропущено в этом занятии: \(model.skipped.count)").foregroundStyle(.secondary)
-                    Button("Закрыть") { close() }.buttonStyle(CardsButtonStyle(.primary)).accessibilityIdentifier("study.close")
-                }.padding(40).frame(maxWidth: .infinity)
+                    summary
+                    HStack {
+                        Text("Снова: \(model.grades[0])")
+                        Text("Трудно: \(model.grades[1])")
+                        Text("Хорошо: \(model.grades[2])")
+                        Text("Легко: \(model.grades[3])")
+                    }.accessibilityIdentifier("study.summary.grades")
+                    Button("Закрыть") { requestClose() }.disabled(model.isFinishing).buttonStyle(CardsButtonStyle(.primary)).accessibilityIdentifier("study.close")
+                }.padding(40).frame(maxWidth: .infinity).accessibilityElement(children: .contain)
             }
         }
     }
@@ -185,7 +210,17 @@ public struct StudyView: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var summary: some View {
+        VStack(spacing: 8) {
+            Text("Оценок: \(model.confirmedRatings) · Карточек: \(model.uniqueCards)")
+            Text("Активное время: \(model.activeDurationMs / 60_000) мин \((model.activeDurationMs / 1000) % 60) с")
+            Text("Пропущено в этом занятии: \(model.skipped.count)")
+        }.foregroundStyle(.secondary).accessibilityElement(children: .contain).accessibilityIdentifier("study.summary")
+    }
+
     private func requestClose() {
-        if model.phase == .completed { close() } else { model.requestExit() }
+        if model.phase == .completed {
+            Task { if await model.finishSession() { close() } }
+        } else { model.requestExit() }
     }
 }

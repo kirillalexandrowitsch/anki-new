@@ -792,7 +792,7 @@
       ],
       "verification": "Пауза, сон, force quit после оценки, Skip всех доступных Card и досрочный выход.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "07.1",
@@ -800,7 +800,10 @@
         "07.3",
         "07.4",
         "18.2"
-      ]
+      ],
+      "startedAt": "2026-10-20T19:12:21.078141+00:00",
+      "completedAt": "2026-10-20T19:19:44.126182+00:00",
+      "report": "docs/task-reports/T022.json"
     },
     {
       "id": "T023",
@@ -4185,25 +4188,25 @@
       "stateID": "07.1",
       "taskID": "T022",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "07.2",
       "taskID": "T022",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "07.3",
       "taskID": "T022",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "07.4",
       "taskID": "T022",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "08.1",
