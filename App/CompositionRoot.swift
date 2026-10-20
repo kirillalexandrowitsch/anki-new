@@ -8,6 +8,10 @@ import Foundation
 final class CompositionRoot {
     let clock: any CardsCore.Clock
     let collections: CollectionCoordinator
+    let audio = AudioPlaybackCoordinator()
+    let audioPreferences = AudioPreferences()
+    lazy var audioPreview = AudioPreviewModel(service: audio, preferences: audioPreferences)
+    private var audioGenerations: Set<UUID> = []
     private let access: any CollectionAccess
 
     init(clock: any CardsCore.Clock = SystemClock(), collectionAccess: (any CollectionAccess)? = nil) {
@@ -25,21 +29,37 @@ final class CompositionRoot {
     func makeLibraryModel(context: CollectionContext) async throws -> LibraryModel {
         guard let provider = access as? any EditorWorkspaceAccess else { throw CollectionAccessError.staleContext }
         let workspace = try await provider.editorWorkspace(generation: context.generation)
-        return LibraryModel(workspace: workspace, clock: clock)
+        try await prepareAudio(context: context)
+        return LibraryModel(workspace: workspace, clock: clock, audio: audio, preferences: audioPreferences)
     }
 
     func makeStudyModel(context: CollectionContext) async throws -> StudySessionModel {
         guard let provider = access as? any StudyWorkspaceAccess else { throw CollectionAccessError.staleContext }
-        return try await StudySessionModel(service: provider.studySession(generation: context.generation), clock: clock)
+        try await prepareAudio(context: context)
+        return try await StudySessionModel(service: provider.studySession(generation: context.generation), clock: clock,
+            audio: AudioPreviewModel(service: audio, preferences: audioPreferences, generation: context.generation))
+    }
+
+    private func prepareAudio(context: CollectionContext) async throws {
+        if audioGenerations.contains(context.generation) { return }
+        guard let provider = access as? any AudioMediaAccess else { throw CollectionAccessError.staleContext }
+        let media = try await provider.media(generation: context.generation)
+        guard collections.context == context else { throw CollectionAccessError.staleContext }
+        audio.register(generation: context.generation, media: media)
+        audioGenerations.insert(context.generation)
+        collections.onClose(context) { [weak self] in
+            self?.audio.retire(generation: context.generation)
+            self?.audioGenerations.remove(context.generation)
+        }
     }
 
     func makeShellModel() -> AppShellModel {
-        AppShellModel(clock: clock)
+        AppShellModel(clock: clock, audio: audio, preferences: audioPreferences)
     }
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -76,6 +96,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func studySession(generation: UUID) async throws -> any StudyReviewSessionService {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.studySession(generation: generation)
+    }
+
+    func media(generation: UUID) async throws -> any MediaRepository {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.media(generation: generation)
     }
 
     func close(generation: UUID) async throws { try await store?.close(generation: generation) }

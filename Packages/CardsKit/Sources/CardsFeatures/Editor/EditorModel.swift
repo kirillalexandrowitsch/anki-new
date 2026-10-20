@@ -10,19 +10,21 @@ public final class EditorModel: Identifiable {
     public let id = UUID()
     public var draft: EditorDraft
     public let decks: [Deck]
+    public let audio: AudioPreviewModel?
     public private(set) var original: SavedBasicNote?
     public private(set) var latest: SavedBasicNote?
     public private(set) var errorMessage: String?
     public private(set) var isSaving = false
     public private(set) var hasConflict = false
-    public private(set) var isClosed = false
+    public private(set) var isClosed = false { didSet { if isClosed { audio?.close() } } }
     public var showsUnsavedWarning = false
     private let repository: any NoteRepository
     private var noteID: NoteID
     private var baseline: EditorDraft
     private var attempt: (draft: EditorDraft, commandID: CommandID)?
 
-    public init(repository: any NoteRepository, decks: [Deck], original: SavedBasicNote? = nil) {
+    public init(repository: any NoteRepository, decks: [Deck], original: SavedBasicNote? = nil, audio: AudioPreviewModel? = nil) {
+        self.audio = audio
         self.repository = repository; self.decks = decks; self.original = original
         noteID = original?.note.id ?? NoteID()
         let initial = original.map(EditorDraft.init) ?? EditorDraft(deckID: decks.first?.id)
@@ -42,6 +44,7 @@ public final class EditorModel: Identifiable {
     /// All exit paths (button, Escape, Command-W, window close) use this gate.
     public func requestClose() {
         guard !isSaving, !isClosed else { return }
+        audio?.stop()
         if isDirty { showsUnsavedWarning = true }
         else { isClosed = true }
     }
@@ -62,6 +65,7 @@ public final class EditorModel: Identifiable {
         let command = SaveNoteCommand(commandID: attempt!.commandID, noteID: noteID,
             expectedRevision: original?.note.revision, initialDeckID: deckID,
             content: captured.content, tags: captured.tags)
+        audio?.stop()
         isSaving = true; errorMessage = nil
         defer { isSaving = false }
         do {
@@ -96,5 +100,5 @@ public final class EditorModel: Identifiable {
         baseline = EditorDraft(deckID: draft.deckID)
         hasConflict = false; latest = nil; errorMessage = nil
     }
-    public func stop() { isClosed = true; showsUnsavedWarning = false }
+    public func stop() { audio?.stop(); isClosed = true; showsUnsavedWarning = false }
 }

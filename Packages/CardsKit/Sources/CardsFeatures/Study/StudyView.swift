@@ -48,7 +48,7 @@ public struct StudyView: View {
                         Button(model.pendingUndo == nil ? "Отменить оценку" : "Повторить отмену") { Task { await model.undoRating() } }
                             .accessibilityIdentifier("study.undoRating")
                     }
-                    if let message = model.audioMessage {
+                    if let message = model.playback?.message ?? model.audioMessage {
                         Text(message).foregroundStyle(.secondary).accessibilityIdentifier("study.audioError")
                     }
                     if model.lastSkipped != nil, model.phase != .committing {
@@ -89,8 +89,16 @@ public struct StudyView: View {
                             .accessibilityIdentifier("study.question")
                         HStack {
                             if !card.pronunciation.isEmpty { Text(card.pronunciation).foregroundStyle(.secondary) }
-                            Button("Звук", systemImage: "speaker.wave.2.fill") { Task { await model.playAudio() } }
+                            Button("Воспроизвести снова", systemImage: "speaker.wave.2.fill") { Task { await model.playAudio() } }
                                 .disabled(model.phase == .committing).accessibilityIdentifier("study.audio")
+                            if model.playback?.isPlaying == true {
+                                Button("Стоп", systemImage: "stop.fill") { model.stopAudio() }
+                                    .accessibilityIdentifier("study.audio.stop")
+                            }
+                            if card.audioMediaID != nil, let audio = model.playback {
+                                Button("Системное произношение") { Task { await audio.preview(text: card.question) } }
+                                    .disabled(model.phase == .committing).accessibilityIdentifier("study.audio.speech")
+                            }
                         }
                         if !card.example.isEmpty { Text(card.example).textSelection(.enabled) }
                         if model.phase != .question {

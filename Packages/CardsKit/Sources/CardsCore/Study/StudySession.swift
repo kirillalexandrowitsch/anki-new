@@ -10,11 +10,12 @@ public struct StudyPresentation: Equatable, Codable, Sendable {
     public let answer: String
     public let pronunciation: String
     public let example: String
+    public let audioMediaID: MediaID?
     public init(cardID: CardID, revision: Revision = .initial, question: String, answer: String, scheduleEpoch: Int64 = 0,
-                pronunciation: String = "", example: String = "") {
+                pronunciation: String = "", example: String = "", audioMediaID: MediaID? = nil) {
         self.scheduleEpoch = scheduleEpoch
         self.cardID = cardID; self.revision = revision; self.question = question; self.answer = answer
-        self.pronunciation = pronunciation; self.example = example
+        self.pronunciation = pronunciation; self.example = example; self.audioMediaID = audioMediaID
     }
 }
 
