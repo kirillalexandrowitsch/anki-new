@@ -1,0 +1,43 @@
+{
+  "taskID": "T021",
+  "summary": "Один app-scoped AudioPlaybackCoordinator для локальных вложений и установленных en-GB/en-US голосов: stop/replay, owner/generation guards, отмена pending media lookup и stale callbacks. Study и Editor подключены к общему сервису; inline ошибки не мешают reveal/rating/Save. Settings сохраняют autoplay, UK/US и voice identifier сразу в UserDefaults; успех только после didFinish.",
+  "criteria": [
+    {
+      "text": "Один источник звучит в каждый момент; ошибка не блокирует reveal/rating.",
+      "passed": true,
+      "evidence": "audioCoordinatorSerializesOwnersReplayAndIgnoresOldCompletion подтверждает maximumActive=1, replay и защиту нового owner от старого stop/callback. audioCoordinatorCollectionChangeCancelsLookupAndCannotInterruptNewCollection и audioCoordinatorTaskCancellationStopsCurrentOutput проверяют retire generation, поздний lookup, отмену Task. audioStudyAutoplayStopsOnCardChangePauseAndEditorPreemptionAndErrorsAllowRating проверяет autoplay off/on, переход к следующей Card, pause/resume, editor preemption и две эффективные оценки после ошибки. audioPersistedNoteAttachmentFlowsThroughStudyAndEditorWithoutMutatingDraft использует реальную SQLite-коллекцию/MediaRepository/StudySession и EditorModel: audio reference доходит до playback, Cancel не сохраняет draft и закрытый editor не запускает поздний звук."
+    },
+    {
+      "text": "Отсутствующий голос не выдаётся за успешно воспроизведённый.",
+      "passed": true,
+      "evidence": "audioCoordinatorMissingVoiceNeverStartsOrClaimsSuccess: пустой список, неизвестный identifier и неподдерживаемый locale возвращают unavailableVoice без старта output. AudioPreviewModel показывает LocalizedError, success только после завершения service.play. audioSystemInstalledVoiceActuallyFinishesOfflineOrReportsUnavailable в локальном OS sandbox deny network действительно завершил установленный голос (ANKI_AUDIO_INSTALLED_VOICE_COMPLETED=1), отсутствующий голос проверен отдельно. Никакой загрузки/default voice fallback."
+    }
+  ],
+  "checks": [
+    {
+      "command": "sandbox-exec -p '(version 1)(allow default)(deny network*)' swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --disable-sandbox -Xswiftc -disable-sandbox --filter audio",
+      "result": "passed",
+      "details": "/tmp/anki-T021-audio-offline.log: все 10 audio tests passed. Реальный AVAudioPlayer проиграл синтетический WAV и отклонил missing/corrupt; реальный установленный AVSpeech voice завершил Hello без сети. Проверены shared ownership, replay, async cancellation, отсутствие голоса, настройки, реальная SQLite/медиа/редактор интеграция."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-6lzpbctl/summary.json: package tests (Core 30, Infrastructure 112, Features 25, DesignSystem 3, XCTest worker 1) и arm64 app-build passed, networkDenied=true; synthetic seed12 fingerprint совпал."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final implementation)",
+      "result": "passed",
+      "details": "build/checks/run-pp2aaimm/summary.json: все package tests (Core 30, Infrastructure 112, Features 25, DesignSystem 3, XCTest worker 1) и arm64 app-build прошли после подключения demo к общему coordinator и защиты AVFoundation callbacks уникальным token. networkDenied=true; synthetic seed12 fingerprint сохранён."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T021; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T021 переведена из in_progress в done после критериев; итоговый tasks check прошёл. /tmp/anki-T021-quality-final.log: 26 Python tests passed, 100 задач / 174 design states согласованы, 2473 local links и 48/48 неизменённых PNG hashes. git diff --check passed."
+    }
+  ],
+  "limitations": [
+    "UI выбора/изменения новых вложений остаётся T036; playback поддерживает существующие Note audio references. Произносится английский draft.front/question, IPA и перевод не отправляются в TTS.",
+    "Нет новых библиотек, платных API/сервисов, загрузки голосов, новых runners или CI uploads. Только синтетические временные данные; личные данные и исходные PNG не изменялись.",
+    "Локальные xcodebuild test UI-прогоны /tmp/anki-T021-ui.log и /tmp/anki-T021-settings-ui.log завершились exit 65. Первый selector Toggle исправлен; повтор Settings реально нашёл autoplay/preview и прошёл все вкладки, но локальная Command-W синтезация не закрыла окно. Добавлено ожидание фактического закрытия до 5 секунд, без удаления assertion. Persistent rating test остановился до новых аудио-проверок при TypeText имени колоды: Timed out while synthesizing event. Успех этих UI-прогонов не заявляется; полный UI-suite обязателен в macos-15 CI до merge."
+  ]
+}

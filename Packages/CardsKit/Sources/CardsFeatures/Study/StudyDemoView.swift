@@ -2,12 +2,12 @@ import CardsCore
 import Foundation
 import SwiftUI
 
-/// Explicit opt-in, disposable UI demonstration until the persistent adapter in T020.
+/// Explicit opt-in demonstration; its ratings never mutate the collection.
 public struct StudyDemoView: View {
     @State private var model: StudySessionModel
     @Environment(\.dismiss) private var dismiss
-    public init(clock: any CardsCore.Clock) {
-        _model = State(initialValue: StudySessionModel(service: DemoStudySession(), clock: clock))
+    public init(clock: any CardsCore.Clock, audio: AudioPreviewModel? = nil) {
+        _model = State(initialValue: StudySessionModel(service: DemoStudySession(), clock: clock, audio: audio))
     }
     public var body: some View {
         StudyView(model: model, title: "Пробное занятие",

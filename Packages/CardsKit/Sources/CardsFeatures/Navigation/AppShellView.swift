@@ -103,7 +103,7 @@ public struct AppShellView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(CardsColor.window.color)
         }
-        .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock) }
+        .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock, audio: model.makeDemoAudio()) }
         .sheet(isPresented: $showsStudy) {
             if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
         }

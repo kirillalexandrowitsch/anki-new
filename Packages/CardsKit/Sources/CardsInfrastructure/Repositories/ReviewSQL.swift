@@ -54,7 +54,8 @@ enum ReviewSQL {
         let s = try schedule(db, cardID: cardID)
         return StudyPresentation(cardID: cardID, revision: s.revision, question: content.front, answer: content.back,
             scheduleEpoch: s.scheduleEpoch, pronunciation: content.pronunciation,
-            example: content.examples.map { $0.en }.joined(separator: "\n"))
+            example: content.examples.map { $0.en }.joined(separator: "\n"),
+            audioMediaID: content.media.filter { $0.role == .audio }.sorted { $0.orderIndex < $1.orderIndex }.first?.mediaID)
     }
 
     static func snapshot(_ db: Database, generation: UUID, sessionID: SessionID,

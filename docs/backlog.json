@@ -757,13 +757,16 @@
       ],
       "verification": "Файлы good/missing/corrupt, смена Card во время playback и offline с установленным голосом.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "09.3",
         "18.3",
         "23.2"
-      ]
+      ],
+      "startedAt": "2026-10-20T11:32:36.332799+00:00",
+      "completedAt": "2026-10-20T11:40:16.822916+00:00",
+      "report": "docs/task-reports/T021.json"
     },
     {
       "id": "T022",
@@ -4458,7 +4461,7 @@
       "stateID": "18.3",
       "taskID": "T021",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "18.4",

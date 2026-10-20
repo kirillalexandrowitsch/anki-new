@@ -23,9 +23,10 @@ public final class LibraryModel {
     private var active = true
     private var inspectionID = UUID()
 
-    public init(workspace: EditorWorkspace, clock: any CardsCore.Clock) {
+    public init(workspace: EditorWorkspace, clock: any CardsCore.Clock,
+                audio: (any AudioPlayback)? = nil, preferences: AudioPreferences? = nil) {
         self.workspace = workspace
-        launcher = EditorLauncherModel(workspace: workspace, clock: clock)
+        launcher = EditorLauncherModel(workspace: workspace, clock: clock, audio: audio, preferences: preferences)
     }
     public var selectedRow: LibraryRow? { rows.first { $0.id == selection } }
     public var hasMore: Bool { offset + rows.count < cardCount }
