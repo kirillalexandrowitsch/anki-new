@@ -1,0 +1,49 @@
+{
+  "taskID": "T020",
+  "summary": "Атомарные RateCard/UndoRating через CollectionWriter: проверка commandID и revision/epoch, сохранённый receipt для replay, schedule/log/session item/metadata/processed command в одной транзакции. Guarded Undo создаёт компенсацию с новой revision, voided log и пересчётом эффективных квот/статистики. Реальная коллекция подключена к Study; отмена возвращает раскрытую карточку.",
+  "criteria": [
+    {
+      "text": "Двойное нажатие даёт одну эффективную оценку.",
+      "passed": true,
+      "evidence": "reviewConcurrentDoubleSubmissionReplaysOneDurableReceipt: 16 конкурентных повторов одной команды возвращают один receipt, одна эффективная оценка и revision=1. reviewDistinctCommandsRaceAndStaleRevisionCannotWrite: из 12 разных команд для одного snapshot проходит ровно одна. reviewProcessDeathRecoversAtomicCommitAndCommandReplay: настоящий _exit(86) дочернего процесса до/после commit; reopen восстанавливает согласованные schedule/log/queue/journal и replay не дублирует оценку. reviewFailureBeforeCommitRollsBackEveryTableAndRetrySucceeds проверяет rollback всех шести таблиц, включая отказ последней записи processed_commands."
+    },
+    {
+      "text": "Undo не перезаписывает последующую несовместимую revision и исключает отменённое из статистики.",
+      "passed": true,
+      "evidence": "reviewUndoRejectsLaterScheduleMutationAndLaterRating: последующая оценка или изменение revision/epoch блокируют Undo, все таблицы неизменны. reviewUndoRestoresScheduleWithFreshRevisionVoidsHistoryAndReleasesQuota: восстановлены before-поля с revision=2, voided log сохраняется, effectiveStatistics=0, другая новая Card проходит освобождённую дневную квоту. reviewUndoFailureIsAtomicAndLostAcknowledgementReplaysCompensation: rollback и повтор компенсации без двойного Undo. reviewRealServiceScreenUndoReturnsRevealedCardAndCanRateAgain и reviewScreenRetriesSameUndoIdentityAfterLostAcknowledgement проверяют MainActor UI model с реальным SQL service: раскрытый ответ, повторная оценка с новой revision, стабильный commandID отмены после потери ответа."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --filter 'review'",
+      "result": "passed",
+      "details": "/tmp/anki-T020-review.log: 12 Infrastructure Swift tests passed (11 новых review tests плюс schedulerPreview), 1 существующий Features test passed. Параметризованный crash test реально запускает xctest-подпроцессы и _exit до/после commit. Проверены конкурентные команды, revision/epoch/availability/duration, stale writer, rollback всех таблиц, replay, квоты, effective statistics, Undo conflict и повтор потерянного ответа."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-vwktow47/summary.json: package-tests passed (Core 30, Infrastructure 100, Features 25, DesignSystem 3, XCTest worker 1), arm64 app-build passed, networkDenied=true; выполнено до добавления двух дополнительных review tests и финальной правки UI selector. Дополнительные tests проверены отдельной командой выше. Synthetic seed12 fingerprint сохранён."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T020; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "Критерии подтверждены, T020 done; 100 задач / 174 design states согласованы, 26 Python tests passed, 2473 local links, 48/48 неизменённых PNG hashes; whitespace check passed. Лог /tmp/anki-T020-quality.log. Полный обязательный quality/macos CI и post-merge pipelines проверяет deliver.py без bypass."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --filter 'review' (после исправления Swift mapping)",
+      "result": "passed",
+      "details": "/tmp/anki-T020-review-repair.log: 12 Infrastructure + 1 Features tests passed, включая обе точки реального process death. ReviewSQL mapping разделён на типизированные чтения Row и отдельную queueCard function для совместимости с компилятором Xcode 16.4; поведение транзакций не менялось."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/ci.py quality; git diff --check (repair)",
+      "result": "passed",
+      "details": "build/checks/run-si86w2x9/summary.json: все 160 Swift tests (Core 30, Infrastructure 102, Features 25, DesignSystem 3) и 1 XCTest worker passed; app-build passed, networkDenied=true. /tmp/anki-T020-quality-repair.log: 26 Python tests, 2473 links, 48/48 PNG hashes; whitespace passed."
+    }
+  ],
+  "limitations": [
+    "Локальный xcodebuild test -only-testing:AnkiNewUITests/AppShellUITests/testPersistentRatingUndoAndReratingSurviveRelaunch завершился exit 65: XCTest runner не инициализировал UI automation, Timed out while enabling automation mode. Сценарий UI не начался; успех UI не заявляется. Полный тест сохранён и должен пройти в обязательном macos-15 CI до merge. Локальный лог /tmp/anki-T020-ui.log, xcresult build/check-derived/Logs/Test/Test-AnkiNew-2026.10.20_13-19-30-+0300.xcresult. Повторный запуск по просьбе владельца прошёл инициализацию automation и клики, но на вводе имени тестовой колоды завершил действие ошибкой Timed out while synthesizing event (t=41.51s); новый системный запрос не показан. Лог /tmp/anki-T020-ui-retry.log. Runner самостоятельно завершился exit 65: 1 test, 1 failure, 64.332s; попытка SIGINT после его завершения не выполнилась. Успешным прогоном это не считается.",
+    "Минимальная scheduled session/queue и неизменяемая policy сохраняются для атомарной оценки. Полные checkpoint/Skip/pause/active duration/итоги и Today-метрики остаются T022/T023. UI пока передаёт durationMs=0; Core-команда и статистика поддерживают проверенный диапазон 0…60000. Renderer ограничен доставленным Basic template.",
+    "Новых зависимостей, платных API/сервисов, runners или CI uploads нет. Только синтетические временные данные; личная коллекция, секреты, микрофонные записи, исходные PNG и доставленные SQLite migrations не изменены.",
+    "Первый CI run 39407667188: quality SUCCESS, macos FAILURE на package-tests compile, location ReviewSQL.swift:66:13 в Xcode 16.4. gh run view --log-failed прочитан; mapping упрощён и типы заданы явно. Проверки не изменялись; новая версия должна пройти весь обязательный CI до merge."
+  ]
+}

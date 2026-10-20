@@ -1,6 +1,54 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testPersistentRatingUndoAndReratingSurviveRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.staticTexts["navigation.decks"].waitForExistence(timeout: 10))
+        app.staticTexts["navigation.decks"].click()
+        app.buttons["decks.create"].click()
+        let name = app.textFields["deckEditor.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.click(); name.typeText("Synthetic review deck")
+        app.buttons["deckEditor.save"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Synthetic review deck"].waitForExistence(timeout: 5))
+        app.staticTexts["navigation.library"].click()
+        XCTAssertTrue(app.buttons["editorLauncher.create"].waitForExistence(timeout: 5))
+        app.buttons["editorLauncher.create"].click()
+        let front = app.descendants(matching: .any).matching(identifier: "editor.front").firstMatch
+        XCTAssertTrue(front.waitForExistence(timeout: 5))
+        front.click(); front.typeText("Synthetic review question")
+        let back = app.descendants(matching: .any).matching(identifier: "editor.back").firstMatch
+        back.click(); back.typeText("Synthetic review answer")
+        app.buttons["editor.save"].click()
+        XCTAssertTrue(app.buttons["note.edit.Synthetic review question"].waitForExistence(timeout: 5))
+        app.staticTexts["navigation.today"].click()
+        let start = app.buttons["study.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5)); start.click()
+        let reveal = app.buttons["study.reveal"], answer = app.staticTexts["study.answer"]
+        XCTAssertTrue(reveal.waitForExistence(timeout: 5)); XCTAssertFalse(answer.exists)
+        reveal.click(); XCTAssertTrue(answer.waitForExistence(timeout: 5))
+        app.buttons["study.grade.4"].click()
+        let undo = app.buttons["study.undoRating"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 5)); undo.click()
+        XCTAssertTrue(answer.waitForExistence(timeout: 5)); XCTAssertFalse(reveal.exists)
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 0")
+        XCTAssertTrue(app.buttons["study.grade.1"].isEnabled)
+        app.buttons["study.grade.1"].click()
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
+        app.buttons["study.close"].click()
+        app.terminate(); app.launch()
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
+        XCTAssertTrue(app.staticTexts["study.completed"].waitForExistence(timeout: 5))
+        XCTAssertFalse(reveal.exists); XCTAssertFalse(answer.exists)
+        XCTAssertTrue(app.buttons["study.checkQueue"].exists) // persisted learning due is still in the future
+    }
+
     @MainActor func testStudyRevealKeyboardPauseSkipAndEscapeExit() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
