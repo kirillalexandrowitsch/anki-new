@@ -472,3 +472,21 @@ private actor LostUndoService: StudyReviewSessionService {
     try await f.database.pool.write { try $0.execute(sql: "DROP TRIGGER fail_finish") }
     #expect(await model.finishSession())
 }
+
+@Test @MainActor func progressUndoRatingAfterSkippingItsDueLearningCardReleasesSkipExclusion() async throws {
+    let f = try ReviewFixture()
+    defer { try? f.database.close() }
+    _ = try await f.card()
+    let session = try await f.session()
+    let model = StudySessionModel(service: session, clock: f.clock)
+    await model.load(); model.reveal(); await model.rate(.again)
+    guard case .future(let due) = model.completion else { Issue.record("Learning must wait for its due time"); return }
+    f.clock.set(due.addingTimeInterval(1))
+    await model.checkQueue(); await model.skip()
+    #expect(model.skipped.count == 1 && model.canUndoRating)
+    await model.undoRating()
+    #expect(model.phase == .answer && model.skipped.isEmpty && model.confirmedRatings == 0)
+    await model.rate(.good)
+    #expect(model.confirmedRatings == 1 && model.pendingCommand == nil)
+    #expect(try await session.reviews.effectiveStatistics().ratings == 1)
+}

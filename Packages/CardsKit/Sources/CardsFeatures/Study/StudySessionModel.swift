@@ -188,6 +188,7 @@ extension StudyAudioPlayer {
             pendingUndo = nil; lastRatingID = nil; lastSkipped = nil
             confirmedRatings = max(0, confirmedRatings - 1)
             presentation = result.presentation; completion = nil; phase = .answer
+            skipped.remove(result.presentation.cardID)
             cardStartedMs = activeDurationMs; lastTick = elapsed()
             saveCheckpoint(); _ = await flushCheckpoint()
             if let progressService = self.service as? any StudyProgressService { apply(try await progressService.progress()) }

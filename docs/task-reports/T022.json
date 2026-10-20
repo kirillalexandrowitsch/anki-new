@@ -10,7 +10,7 @@
     {
       "text": "Перезапуск не создаёт повторных log и не теряет подтверждённые оценки.",
       "passed": true,
-      "evidence": "reviewProcessDeathRecoversAtomicCommitAndCommandReplay запускает дочерний xctest и _exit(86) до/после commit: после открытия WAL модель получает 0/1 подтверждённых оценок; replay команды даёт ровно один effective ReviewLog и одну revision. progressSkipAllSurvivesRestartWithoutLogsAndUndoSkipRestoresHiddenQuestion проверяет Skip всех Card, неизменность schedule/нулевые logs, восстановление exclusions, Undo skip, cancel/confirm early exit, abandoned и новый sessionID. progressSummaryCountsEffectiveGradesUniqueCardsAndPersistsCompletion проверяет Undo/rerate, 2 effective ratings/2 unique Cards, [0,0,1,1], идемпотентный finish и completed/endedAt. progressCheckpointFailureBlocksRatingAndCloseUntilRetry инъецирует SQLite write failures и проверяет сохранение/завершение только после успешного повтора."
+      "evidence": "reviewProcessDeathRecoversAtomicCommitAndCommandReplay запускает дочерний xctest и _exit(86) до/после commit: после открытия WAL модель получает 0/1 подтверждённых оценок; replay команды даёт ровно один effective ReviewLog и одну revision. progressSkipAllSurvivesRestartWithoutLogsAndUndoSkipRestoresHiddenQuestion проверяет Skip всех Card, неизменность schedule/нулевые logs, восстановление exclusions, Undo skip, cancel/confirm early exit, abandoned и новый sessionID. progressSummaryCountsEffectiveGradesUniqueCardsAndPersistsCompletion проверяет Undo/rerate, 2 effective ratings/2 unique Cards, [0,0,1,1], идемпотентный finish и completed/endedAt. progressCheckpointFailureBlocksRatingAndCloseUntilRetry инъецирует SQLite write failures и проверяет сохранение/завершение только после успешного повтора. progressUndoRatingAfterSkippingItsDueLearningCardReleasesSkipExclusion проверяет наступление learning due, Skip той же Card, Undo оценки с удалением Skip-exclusion и успешную новую оценку."
     }
   ],
   "checks": [
@@ -28,6 +28,16 @@
       "command": "python3 scripts/tasks.py finish T022; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T022 done после фактических критериев; tasks check passed. /tmp/anki-T022-quality.log: 26 Python tests passed, 100 задач/174 состояния согласованы, 2474 local links, 48/48 PNG hashes; git diff --check passed."
+    },
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter progressUndoRatingAfter",
+      "result": "passed",
+      "details": "/tmp/anki-T022-undo-skip.log: regression passed, Undo после Skip due learning Card удаляет persisted исключение и разрешает новую effective оценку."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final Undo/Skip regression)",
+      "result": "passed",
+      "details": "build/checks/run-a4q_327g/summary.json: networkDenied=true, все package tests (Core 30, Infrastructure 117, Features 27, DesignSystem 3, XCTest worker 1) и arm64 app-build passed; seed12 fingerprint совпадает."
     }
   ],
   "limitations": [
