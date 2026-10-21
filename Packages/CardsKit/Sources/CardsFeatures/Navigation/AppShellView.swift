@@ -14,14 +14,16 @@ public struct AppShellView: View {
     private let makeStudy: (@MainActor () async throws -> StudySessionModel)?
     private let decks: DecksModel?
 
+    private let today: TodayModel?
     private let library: LibraryModel?
 
-    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil,
+    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil,
                 makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil) {
         self.model = model
         self.decks = decks
         self.makeStudy = makeStudy
         self.library = library
+        self.today = today
     }
 
     public var body: some View {
@@ -59,7 +61,7 @@ public struct AppShellView: View {
                     .accessibilityLabel(model.selection.title)
                     .accessibilityIdentifier("section.title")
                 if model.selection == .today {
-                    Text(model.currentDate, format: .dateTime.weekday(.wide).day().month(.wide).year())
+                    Text(today?.snapshot?.asOf ?? model.currentDate, format: .dateTime.weekday(.wide).day().month(.wide).year())
                         .foregroundStyle(.secondary)
                 }
                 if model.selection == .decks {
@@ -69,29 +71,18 @@ public struct AppShellView: View {
                     if let library { LibraryView(model: library) }
                     else { ProgressView("Открытие карточек…") }
                 } else if model.selection == .today {
-                    CardsPanel("Занятие") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if let makeStudy {
-                                Button("Начать занятие") {
-                                    studyLoading = true; studyError = false
-                                    Task {
-                                        defer { studyLoading = false }
-                                        do { study = try await makeStudy(); showsStudy = true }
-                                        catch { studyError = true }
-                                    }
-                                }.buttonStyle(CardsButtonStyle(.primary)).disabled(studyLoading)
-                                    .accessibilityIdentifier("study.start")
-                                if studyLoading { ProgressView("Открытие занятия…") }
-                                if studyError { Text("Не удалось открыть занятие. Повторите попытку.").foregroundStyle(.red) }
+                    if let today {
+                        TodayView(model: today, opening: studyLoading, openingFailed: studyError, start: {
+                            guard let makeStudy, !studyLoading else { return }
+                            studyLoading = true; studyError = false
+                            Task {
+                                defer { studyLoading = false }
+                                do { study = try await makeStudy(); showsStudy = true }
+                                catch { studyError = true; today.reload() }
                             }
-                            Text("Пробное занятие на трёх примерах. Данные вашей коллекции не меняются.")
-                                .foregroundStyle(.secondary)
-                            Button("Пробное занятие") { showsStudyDemo = true }
-                                .buttonStyle(CardsButtonStyle(.primary))
-                                .accessibilityIdentifier("study.demo")
-                        }
-                    }
-                    Spacer()
+                        }, openDecks: { model.selection = .decks }, openLibrary: { model.selection = .library },
+                           demo: { showsStudyDemo = true })
+                    } else { ProgressView("Загрузка Сегодня…") }
                 } else {
                     SectionPlaceholder(title: String(localized: "Ваша коллекция", bundle: .module),
                                        symbol: model.selection.symbol,
@@ -104,12 +95,12 @@ public struct AppShellView: View {
             .background(CardsColor.window.color)
         }
         .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock, audio: model.makeDemoAudio()) }
-        .sheet(isPresented: $showsStudy) {
+        .sheet(isPresented: $showsStudy, onDismiss: { today?.reload() }) {
             if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
         }
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refreshDate() }
+            if phase == .active { model.refreshDate(); today?.reload() }
         }
     }
 }
