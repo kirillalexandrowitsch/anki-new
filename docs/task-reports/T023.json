@@ -1,0 +1,55 @@
+{
+  "taskID": "T023",
+  "summary": "Экран Сегодня читает согласованный read-only snapshot QueueBuilder и сохранённой scheduled-сессии. Реальные новые/due counters и вклад колод учитывают квоты, scope, burial, Skip; Resume/Start используют существующий durable session service. Добавлены effective дневные оценки/уникальные Card/response time, отдельные empty/future/limit/loading/error состояния, обновления БД/таймера/активации и независимые AX-элементы.",
+  "criteria": [
+    {
+      "text": "Счётчики согласованы с QueueBuilder.",
+      "passed": true,
+      "evidence": "todayCountsMatchQueueLimitsAvailabilityAndPersistedScope сравнивает счётчики с результатом QueueBuilder на реальной SQLite: 26 Card, стандартная квота 20, due review/learning, suspended/buried, scope родителя и лимит 1; сумма вкладов колод совпадает с общей очередью. todayDailyQuotaResetsAtRolloverAndDeletedParentsHideDescendants проверяет фактическую оценку до исчерпания квоты, новый study day и удалённого предка. todayEmptyAndMoreThanOnePageOfDecksNeverCreateASession проверяет 0 и 102 колоды без побочного INSERT session."
+    },
+    {
+      "text": "После оценки/перезапуска кнопка ведёт в корректную сессию.",
+      "passed": true,
+      "evidence": "todayRatingUndoFutureDueRolloverAndReopenUseEffectiveHistory проверяет оценку/Undo, effective метрики, future learning→due, закрытие writer и повторное открытие БД с новой generation/другой текущей timezone: Today сохраняет ID и policy прежней сессии, реальный open возвращает этот ID, а completed создаёт новую сессию. todayObservationUpdatesLibraryEditsRatingsVoidsAndSessionClosure проверяет SaveNote/изменение Card, rating/void, session closure и stale context. todayModelDistinguishesEmptyReadySkippedAndErrorAndRefreshesTime проверяет доступность Start/Resume, no-decks/no-cards/ready/skipped/future-learning/all-done/error и обновление clock. Native CUA на отдельной временной коллекции: SaveNote → Today new=1 → Start → reveal → easy → close → Today new=0/ratings=1/cards=1, следующий срок, после перезапуска Start отсутствует и метрики сохранены."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter today",
+      "result": "passed",
+      "details": "/tmp/anki-T023-today.log: 6 новых интеграционных тестов прошли на временных реальных SQLite базах. Проверены QueueBuilder limits/scope, effective rating/Undo, сохранённая policy/session identity, наблюдение/отмена, library SaveNote, 102 колоды, rollover, time refresh и model error."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (initial implementation)",
+      "result": "passed",
+      "details": "build/checks/run-g014f0nr/summary.json: networkDenied=true, Core 30 / Infrastructure 126 / Features 27 / DesignSystem 3 / XCTest worker 1; arm64 app-build passed, synthetic seed12 fingerprint unchanged. Последующие изменения AX/observation region проверяются финальным прогоном ниже."
+    },
+    {
+      "command": "Native CUA: synthetic collection create deck/card → Today → study reveal/easy/close → relaunch; xcodebuild build CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "Только временная CollectionTestID, без личной коллекции. На финальной AX-сборке отдельные today.due/new/state/nextDue/ratings/cards/duration содержат точные доступные labels; после перезапуска ratings=1/cards=1/due=0/new=0, будущий срок и отсутствие Start. Dark layout просмотрен при 1100×760. /tmp/anki-T023-ax-build.log: BUILD SUCCEEDED."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final source including AX and Today observation regions)",
+      "result": "passed",
+      "details": "build/checks/run-n_0ioan9/summary.json: networkDenied=true; Core 30 / Infrastructure 126 / Features 27 / DesignSystem 3 / XCTest worker 1 прошли, arm64 app-build passed. 6 новых Today тестов включены; fingerprint синтетического seed12 совпадает."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T023; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T023 done после подтверждённых критериев; task graph/report/generated statuses согласованы. 26 Python tests passed, 2474 local links, 48/48 PNG hashes; whitespace checks passed. /tmp/anki-T023-quality.log."
+    }
+  ],
+  "limitations": [
+    "Время ответов — сумма effective ReviewLog.durationMs текущего studyDayKey/timezoneID, а не активное время сессий. Метрики streak/retention/графики и слово дня не подставляются; расширенная статистика относится к следующим задачам.",
+    "Due и rollover без записи в БД обновляются каждые 15 секунд, при активации/возврате на Today и закрытии занятия. PNG, схема SQLite, зависимости и бюджет не изменены; проверки использовали только синтетические временные данные.",
+    "Локальный XCTest UI-прогон не прошёл из-за timeout синтеза ввода до Today; успешный локальный UI-suite не заявляется. Нативный CUA отдельно подтвердил фактический путь через библиотеку/Today/оценку/перезапуск."
+  ],
+  "failedChecks": [
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testPersistentRatingUndoAndReratingSurviveRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "failed",
+      "details": "/tmp/anki-T023-ui.log, exit 65: UITests/AppShellUITests.swift:24 name.typeText, Failed to synthesize event: Timed out while synthesizing event. До новых Today assertions сценарий не дошёл. Проверки сохранены; полный app/UI suite должен пройти на стандартном macos-15 CI до merge."
+    }
+  ]
+}

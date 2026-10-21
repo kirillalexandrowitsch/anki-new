@@ -58,7 +58,7 @@ enum ReviewSQL {
             audioMediaID: content.media.filter { $0.role == .audio }.sorted { $0.orderIndex < $1.orderIndex }.first?.mediaID)
     }
 
-    static func snapshot(_ db: Database, generation: UUID, sessionID: SessionID,
+    static func snapshot(_ db: Database, generation: UUID, sessionID: SessionID?,
                          skipping: Set<CardID> = []) throws -> StudyQueueSnapshot {
         let decks = try Row.fetchAll(db, sql: "SELECT * FROM decks").map { r in
             try Deck(id: DeckID(uuidString: r["id"]), parentID: (r["parentID"] as String?).map { try DeckID(uuidString: $0) },
@@ -82,11 +82,11 @@ enum ReviewSQL {
         }
         let selected = try Row.fetchAll(db, sql: """
             SELECT DISTINCT cardIdentitySnapshot FROM review_logs WHERE sessionID=? AND voidedBy IS NULL
-            """, arguments: [key(sessionID)]).map { try CardID(uuidString: $0["cardIdentitySnapshot"]) }
+            """, arguments: [sessionID.map(key)]).map { try CardID(uuidString: $0["cardIdentitySnapshot"]) }
         let lastNote = try String.fetchOne(db, sql: """
             SELECT c.noteID FROM session_items i JOIN cards c ON c.id=i.cardID
             WHERE i.sessionID=? AND i.stage IN ('question','answer','rated') ORDER BY i.queueOrdinal DESC LIMIT 1
-            """, arguments: [key(sessionID)])
+            """, arguments: [sessionID.map(key)])
         return try StudyQueueSnapshot(generation: generation, decks: decks, cards: cards, events: events,
             session: StudyQueueSession(selectedCardIDs: Set(selected), skippedCardIDs: skipping,
                 lastPresentedNoteID: lastNote.map { try NoteID(uuidString: $0) }))
