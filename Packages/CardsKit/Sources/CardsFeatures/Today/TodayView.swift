@@ -4,6 +4,7 @@ import SwiftUI
 
 public struct TodayView: View {
     @Bindable private var model: TodayModel
+    private let onboarding: OnboardingModel?
     private let opening: Bool
     private let openingFailed: Bool
     private let start: () -> Void
@@ -11,8 +12,9 @@ public struct TodayView: View {
     private let openLibrary: () -> Void
     private let demo: () -> Void
 
-    public init(model: TodayModel, opening: Bool, openingFailed: Bool, start: @escaping () -> Void,
+    public init(model: TodayModel, onboarding: OnboardingModel? = nil, opening: Bool, openingFailed: Bool, start: @escaping () -> Void,
                 openDecks: @escaping () -> Void, openLibrary: @escaping () -> Void, demo: @escaping () -> Void) {
+        self.onboarding = onboarding
         self.model = model; self.opening = opening; self.openingFailed = openingFailed
         self.start = start; self.openDecks = openDecks; self.openLibrary = openLibrary; self.demo = demo
     }
@@ -26,40 +28,45 @@ public struct TodayView: View {
                         Button("Повторить") { model.reload() }.accessibilityIdentifier("today.retry")
                     }
                 } else if let snapshot = model.snapshot {
-                    overview(snapshot)
-                    HStack(spacing: 12) {
-                        metric("Оценок сегодня", value: "\(snapshot.ratings)", id: "ratings")
-                        metric("Карточек сегодня", value: "\(snapshot.uniqueCards)", id: "cards")
-                        metric("Время ответов", value: Duration.milliseconds(snapshot.responseDurationMs)
-                            .formatted(.time(pattern: .minuteSecond)), id: "duration")
-                    }.accessibilityElement(children: .contain).accessibilityIdentifier("today.metrics")
-                    CardsPanel("Ваши колоды") {
-                        if snapshot.decks.isEmpty {
-                            Text("Создайте первую колоду, затем добавьте карточки.").foregroundStyle(.secondary)
-                        } else {
-                            ForEach(snapshot.decks) { row in
-                                HStack {
-                                    Image(systemName: row.deck.iconKey)
-                                        .font(.title2).foregroundStyle(DeckAppearance.color(row.deck.colorKey))
-                                        .frame(width: 36, height: 36)
-                                        .background(DeckAppearance.color(row.deck.colorKey).opacity(0.12),
-                                                    in: RoundedRectangle(cornerRadius: 8))
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(row.deck.name.displayValue).font(.headline).lineLimit(2)
-                                        if !row.deck.description.isEmpty {
-                                            Text(row.deck.description).foregroundStyle(.secondary).lineLimit(1)
+                    if snapshot.decks.isEmpty, let onboarding, onboarding.isRequired {
+                        OnboardingView(model: onboarding, completed: { model.reload() })
+                    } else {
+                        if let onboarding { OnboardingSuccessView(model: onboarding, openDecks: openDecks) }
+                        overview(snapshot)
+                        HStack(spacing: 12) {
+                            metric("Оценок сегодня", value: "\(snapshot.ratings)", id: "ratings")
+                            metric("Карточек сегодня", value: "\(snapshot.uniqueCards)", id: "cards")
+                            metric("Время ответов", value: Duration.milliseconds(snapshot.responseDurationMs)
+                                .formatted(.time(pattern: .minuteSecond)), id: "duration")
+                        }.accessibilityElement(children: .contain).accessibilityIdentifier("today.metrics")
+                        CardsPanel("Ваши колоды") {
+                            if snapshot.decks.isEmpty {
+                                Text("Создайте первую колоду, затем добавьте карточки.").foregroundStyle(.secondary)
+                            } else {
+                                ForEach(snapshot.decks) { row in
+                                    HStack {
+                                        Image(systemName: row.deck.iconKey)
+                                            .font(.title2).foregroundStyle(DeckAppearance.color(row.deck.colorKey))
+                                            .frame(width: 36, height: 36)
+                                            .background(DeckAppearance.color(row.deck.colorKey).opacity(0.12),
+                                                        in: RoundedRectangle(cornerRadius: 8))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(row.deck.name.displayValue).font(.headline).lineLimit(2)
+                                            if !row.deck.description.isEmpty {
+                                                Text(row.deck.description).foregroundStyle(.secondary).lineLimit(1)
+                                            }
                                         }
+                                        Spacer()
+                                        Text("К повторению: \(row.counts.due) · Новых: \(row.counts.new)")
+                                            .foregroundStyle(.secondary)
                                     }
-                                    Spacer()
-                                    Text("К повторению: \(row.counts.due) · Новых: \(row.counts.new)")
-                                        .foregroundStyle(.secondary)
+                                    .padding(.vertical, 6)
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityIdentifier("today.deck.\(row.id.rawValue.uuidString)")
                                 }
-                                .padding(.vertical, 6)
-                                .accessibilityElement(children: .combine)
-                                .accessibilityIdentifier("today.deck.\(row.id.rawValue.uuidString)")
                             }
+                            Button("Открыть колоды", action: openDecks).accessibilityIdentifier("today.decks")
                         }
-                        Button("Открыть колоды", action: openDecks).accessibilityIdentifier("today.decks")
                     }
                 } else {
                     ProgressView("Загрузка Сегодня…").accessibilityIdentifier("today.loading")

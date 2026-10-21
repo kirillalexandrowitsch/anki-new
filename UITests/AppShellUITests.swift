@@ -1,6 +1,82 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testOnboardingCancelDemoRelaunchAndRealStudy() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        let create = app.buttons["onboarding.create"]
+        XCTAssertTrue(create.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["onboarding.import"].isEnabled)
+        XCTAssertTrue(app.staticTexts["onboarding.importUnavailable"].exists)
+        create.click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["onboarding.save"].isEnabled)
+        name.click(); name.typeText("Discarded onboarding")
+        app.checkBoxes["onboarding.demo"].click()
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(create.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["study.start"].exists)
+        create.click()
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertEqual(name.value as? String, "")
+        XCTAssertEqual(app.checkBoxes["onboarding.demo"].value as? Int, 0)
+        name.click(); name.typeText("Synthetic first deck")
+        app.checkBoxes["onboarding.demo"].click()
+        app.buttons["onboarding.save"].click()
+        let start = app.buttons["study.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(todayText("new", in: app), "Новых: 3")
+        XCTAssertEqual(todayText("ratings", in: app), "Оценок сегодня: 0")
+        app.staticTexts["navigation.library"].click()
+        let counts = app.staticTexts["library.counts"]
+        XCTAssertTrue(counts.waitForExistence(timeout: 5))
+        XCTAssertEqual(counts.value as? String, "Карточек: 3 · Записей: 3")
+        app.terminate(); app.launch()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertFalse(create.exists)
+        XCTAssertEqual(todayText("new", in: app), "Новых: 3")
+        app.staticTexts["navigation.library"].click()
+        XCTAssertTrue(counts.waitForExistence(timeout: 5))
+        XCTAssertEqual(counts.value as? String, "Карточек: 3 · Записей: 3")
+        app.staticTexts["navigation.today"].click()
+        start.click()
+        XCTAssertTrue(app.buttons["study.reveal"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["study.grade.3"].exists)
+        app.buttons["study.reveal"].click()
+        XCTAssertTrue(app.buttons["study.grade.3"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor func testOnboardingEmptyDeckHasNoHiddenDemoAfterRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["onboarding.create"].waitForExistence(timeout: 10))
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.click(); name.typeText("Synthetic empty deck")
+        app.buttons["onboarding.save"].click()
+        XCTAssertTrue(app.buttons["onboarding.openDecks"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["study.start"].exists)
+        app.terminate(); app.launch()
+        XCTAssertEqual(todayText("new", in: app), "Новых: 0")
+        XCTAssertFalse(app.buttons["onboarding.create"].exists)
+        XCTAssertFalse(app.buttons["study.start"].exists)
+        app.staticTexts["navigation.decks"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Synthetic empty deck"].waitForExistence(timeout: 5))
+        app.staticTexts["navigation.library"].click()
+        XCTAssertTrue(app.staticTexts["library.counts"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 0 · Записей: 0")
+    }
+
     @MainActor private func todayText(_ id: String, in app: XCUIApplication) -> String {
         let element = app.descendants(matching: .any).matching(identifier: "today.\(id)").firstMatch
         XCTAssertTrue(element.waitForExistence(timeout: 10))

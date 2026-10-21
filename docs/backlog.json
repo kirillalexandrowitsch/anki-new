@@ -866,14 +866,17 @@
       ],
       "verification": "Первый/повторный запуск, отмена и сбой создания между шагами.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "01.1",
         "01.2",
         "01.3",
         "01.4"
-      ]
+      ],
+      "startedAt": "2026-10-21T13:03:42.333550+00:00",
+      "completedAt": "2026-10-21T13:14:41.368650+00:00",
+      "report": "docs/task-reports/T024.json"
     },
     {
       "id": "T025",
@@ -4047,25 +4050,25 @@
       "stateID": "01.1",
       "taskID": "T024",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "01.2",
       "taskID": "T024",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "01.3",
       "taskID": "T024",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "01.4",
       "taskID": "T024",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "02.1",

@@ -16,7 +16,7 @@ struct CollectionRegistry: Codable {
 }
 
 /// All filesystem/SQLite work runs on this actor, never on the UI actor.
-public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, TodayWorkspaceAccess {
+public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
@@ -185,6 +185,10 @@ public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyW
     public func editorWorkspace(generation: UUID) throws -> EditorWorkspace {
         try EditorWorkspace(generation: generation, notes: notes(generation: generation),
                             queries: queries(generation: generation))
+    }
+
+    public func onboarding(generation: UUID) throws -> any OnboardingService {
+        SQLiteOnboardingService(writer: try writer(generation: generation), clock: clock)
     }
 
     public func todayWorkspace(generation: UUID) throws -> TodayWorkspace {

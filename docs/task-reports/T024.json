@@ -1,0 +1,59 @@
+{
+  "taskID": "T024",
+  "summary": "Первый запуск ведёт от welcome к короткому диалогу названия и первой колоде. Демо-три Basic Notes/Cards создаются только по включённому выбору, имеют тег Демо; по умолчанию колода пустая. Создание, FSRS schedules и completion сохраняются атомарно через единый writer с replay и защитой от двух окон. Cancel/Escape не пишет draft. После успеха показаны колода, демо-примеры и реальный Today/Start; импорт явно отключён до T051.",
+  "criteria": [
+    {
+      "text": "Повторный запуск не размножает demo Notes.",
+      "passed": true,
+      "evidence": "onboardingDemoReplaysAcrossCommandsAndReopenWithoutDuplicatingNotes и onboardingConcurrentWindowsCreateOneDeckAndThreeNotes подтверждают один deck и ровно 3 Notes/Cards после replay, нового commandID, двух окон и reopen. XCTest testOnboardingCancelDemoRelaunchAndRealStudy повторно открывает приложение, проверяет library 3/3, Today new=3 и реальный Start/reveal. testOnboardingEmptyDeckHasNoHiddenDemoAfterRelaunch проверяет колоду без демо, 0/0 после relaunch и отсутствие Start."
+    },
+    {
+      "text": "До T051 импортная ветка явно недоступна; после подключения открывает мастер и не создаёт скрытую пустую колоду.",
+      "passed": true,
+      "evidence": "До T051 Button onboarding.import явно disabled; видимое пояснение onboarding.importUnavailable и Help объясняют недоступность. XCTest проверяет isEnabled=false и наличие пояснения; Native CUA подтвердил disabled AX и экран. Нет callback импорта, файлового диалога или SaveDeck от этой кнопки. Будущий маршрут мастера T051 зафиксирован в docs/PRODUCT.md; сам мастер вне объёма T024 и не заявляется готовым."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter onboarding",
+      "result": "passed",
+      "details": "/tmp/anki-T024-onboarding.log: 6 интеграционных тестов на временных SQLite прошли. Replay/reopen и два одновременных окна не дублируют Notes; пустой выбор не создаёт notes/types/scheduler defaults. Fault injection после первой Note и перед completion откатывает колоду, Notes/Cards/schedules, events, journal/defaults/settings; та же команда успешно повторяется. Cancel очищает draft без записи; ошибка сохраняет retryable draft; legacy/deleted decks не получают демо."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-l6rtw8g6/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1; arm64 app build passed, synthetic seed12 fingerprint unchanged. После этого исправлена только AX-группировка success panel; финальный прогон будет записан отдельно."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testOnboardingCancelDemoRelaunchAndRealStudy -only-testing:AnkiNewUITests/AppShellUITests/testOnboardingEmptyDeckHasNoHiddenDemoAfterRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T024-ui-final.log: TEST SUCCEEDED, 2 tests, 0 failures. Escape/Cancel draft discard, checkbox default off, required name, disabled import, actual 3/3 Notes/Cards, empty 0/0, both relaunches and real study reveal/ratings gate passed. Success-panel button identifiers проверяются без ослабления ожиданий."
+    },
+    {
+      "command": "Native CUA: welcome → first deck dialog → optional demo → success/Today; separate empty-deck creation",
+      "result": "passed",
+      "details": "Временные UUID 5C2AB8CE-1338-46D3-9771-2EF92BBEBD24 и 88258782-6E80-4F89-B147-F91AFA7B7A52. При 1100×760 в dark проверены welcome/import unavailable, readable demo preview, success с первой колодой и тремя примерами, Start с new=3 и ratings/cards/time=0; пустая колода имеет new=0 и Add cards. Финальный AX сохраняет отдельные onboarding.dismissSuccess/onboarding.openDecks. Скриншоты просмотрены локально, личная коллекция не открывалась."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final production sources)",
+      "result": "passed",
+      "details": "build/checks/run-qznjrdd0/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1 passed; arm64 app-build passed, seed12 fingerprint unchanged. Включает исправленную AX-группировку success panel."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T024; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T024 done только после критериев. Task graph/report/generated states согласованы; /tmp/anki-T024-quality.log: 26 Python tests passed, 2474 local links, 48/48 PNG hashes, quality passed. Whitespace check passed."
+    }
+  ],
+  "limitations": [
+    "Импорт до T051 намеренно disabled с видимым пояснением; файловый диалог и создание скрытой колоды отсутствуют. Будущий мастер подключается отдельным маршрутом T051.",
+    "Использованы только синтетические временные коллекции. SQLite migrations, исходные PNG, зависимости и финансовая политика не изменены; новых платежей/подписок/API нет. Демо не подставляет статистику: последующие явные оценки пишутся обычным ReviewLog; записи отмечены тегом Демо."
+  ],
+  "failedChecks": [
+    {
+      "command": "xcodebuild test (two T024 onboarding UI tests, initial run)",
+      "result": "failed",
+      "details": "/tmp/anki-T024-ui.log: demo/cancel/relaunch/real study прошёл; empty-deck test не нашёл onboarding.openDecks (UITests/AppShellUITests.swift:67). Native CUA показал корректный видимый success, но все дочерние элементы унаследовали ID onboarding.success. Исправлено явной accessibilityElement(children: .contain); ожидания теста сохранены."
+    }
+  ]
+}
