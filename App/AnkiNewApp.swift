@@ -11,6 +11,7 @@ struct AnkiNewApp: App {
     var body: some Scene {
         WindowGroup {
             MainWindow(composition: composition)
+                .preferredColorScheme(composition.appearance.colorScheme)
         }
         .defaultSize(width: 1100, height: 760)
         .commands { StudyCommands() }
@@ -18,6 +19,7 @@ struct AnkiNewApp: App {
         #if DEBUG
         Window("Дизайн-система", id: "design-system") {
             CardsGallery().frame(minWidth: 700, minHeight: 540)
+                .preferredColorScheme(composition.appearance.colorScheme)
         }
         .defaultSize(width: 1120, height: 900)
         .defaultLaunchBehavior(.suppressed)
@@ -25,7 +27,7 @@ struct AnkiNewApp: App {
         #endif
 
         Settings {
-            SettingsView(audio: composition.audioPreview)
+            PreferencesWindow(composition: composition)
         }
     }
 }
@@ -122,6 +124,29 @@ private struct MainWindow: View {
                     }
                     .padding(32).frame(maxWidth: 460).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
+            }
+    }
+}
+
+/// Settings owns a generation-bound model independently from the main window's drafts.
+private struct PreferencesWindow: View {
+    let composition: CompositionRoot
+    @State private var model: StudyPreferencesModel?
+    @State private var closeToken: UUID?
+    var body: some View {
+        SettingsView(appearance: composition.appearance, study: model,
+            collectionName: composition.collections.context?.name.displayValue, audio: composition.audioPreview)
+            .task { await composition.collections.open() }
+            .task(id: composition.collections.context) {
+                if let closeToken { composition.collections.removeObservation(closeToken) }
+                model?.stop(); model = nil
+                guard let context = composition.collections.context else { return }
+                do {
+                    let loaded = try await composition.makePreferencesModel(context: context)
+                    guard !Task.isCancelled, composition.collections.context == context else { loaded.stop(); return }
+                    model = loaded
+                    closeToken = composition.collections.onClose(context) { loaded.stop() }
+                } catch { model = nil }
             }
     }
 }

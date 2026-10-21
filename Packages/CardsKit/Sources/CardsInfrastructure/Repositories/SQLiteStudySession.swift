@@ -30,7 +30,7 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
     let reviews: SQLiteReviewRepository
 
     static func open(writer: CollectionWriter, configuration: StudyQueueConfiguration,
-                     clock: any CardsCore.Clock) async throws -> SQLiteStudySession {
+                     clock: any CardsCore.Clock, useCollectionPreferences: Bool = false) async throws -> SQLiteStudySession {
         let pair = try await writer.mediaAccess { pool in
             try pool.write { db -> (SessionID, StudyQueueConfiguration) in
                 if let r = try Row.fetchOne(db, sql: "SELECT * FROM study_sessions WHERE mode='scheduled' AND status IN ('active','paused')") {
@@ -38,6 +38,11 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
                     let id = try SessionID(uuidString: r["id"])
                     return try (id, policy.configuration(generation: configuration.generation))
                 }
+                let configuration = try StudyQueueConfiguration(generation: configuration.generation,
+                    scope: configuration.scope, calendar: configuration.calendar,
+                    dailyLimits: useCollectionPreferences ? SQLiteStudyPreferences.fetch(db).value.limits : configuration.dailyLimits,
+                    deckLimits: configuration.deckLimits, sessionLimit: configuration.sessionLimit,
+                    siblingPolicy: configuration.siblingPolicy)
                 let id = SessionID(), now = try ReviewSQL.ms(clock.now())
                 try db.execute(sql: """
                     INSERT INTO study_sessions(id,mode,scopeJSON,startedAt,lastActivityAt,status,studyPolicyJSON)
