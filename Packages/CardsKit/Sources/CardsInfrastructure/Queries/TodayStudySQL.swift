@@ -11,7 +11,8 @@ enum TodayStudySQL {
         if let session {
             configuration = try ReviewSQL.decode(StoredStudyPolicy.self, session["studyPolicyJSON"]).configuration(generation: generation)
         } else {
-            configuration = try StudyQueueConfiguration(generation: generation, calendar: calendar)
+            configuration = try StudyQueueConfiguration(generation: generation, calendar: calendar,
+                dailyLimits: SQLiteStudyPreferences.fetch(db).value.limits)
         }
         let skipped = try session.flatMap { try SQLiteStudySession.savedCheckpoint($0) }?.skipped ?? []
         let source = try ReviewSQL.snapshot(db, generation: generation, sessionID: sessionID, skipping: skipped)
@@ -52,7 +53,7 @@ extension SQLiteCollectionQueries: TodayQueryService {
     }
     func observeStudyToday(asOf: Date, calendar: StudyDayCalculator) async throws -> QueryObservation<TodayStudySnapshot> {
         try await writer.observe(tables: ["notes", "cards", "decks", "card_schedules", "note_types",
-                                         "review_logs", "domain_events", "study_sessions", "session_items"]) {
+                                         "review_logs", "domain_events", "study_sessions", "session_items", "collection_settings"]) {
             try TodayStudySQL.fetch($0, generation: generation, asOf: asOf, calendar: calendar)
         }
     }

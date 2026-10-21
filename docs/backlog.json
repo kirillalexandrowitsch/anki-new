@@ -907,7 +907,7 @@
       ],
       "verification": "Изменение темы/лимита, недопустимый ввод и эмуляция ошибки сохранения.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-05",
@@ -916,7 +916,10 @@
         "16.3",
         "17.1",
         "17.2"
-      ]
+      ],
+      "startedAt": "2026-10-21T17:49:45.109017+00:00",
+      "completedAt": "2026-10-21T18:11:05.816392+00:00",
+      "report": "docs/task-reports/T025.json"
     },
     {
       "id": "T026",
@@ -4038,7 +4041,7 @@
       "stateID": "base-05",
       "taskID": "T025",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "base-06",
@@ -4434,7 +4437,7 @@
       "stateID": "17.1",
       "taskID": "T025",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "17.2",

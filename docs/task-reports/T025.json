@@ -1,0 +1,55 @@
+{
+  "taskID": "T025",
+  "summary": "Четыре нативные вкладки настроек: тема и язык отдельно в UserDefaults, начальные дневные лимиты в SQLite с валидируемым autosave. Произношение доступно в Карточках; Данные объясняют реальное локальное хранение. Лимиты обновляют Сегодня и следующую сессию, сохранённая сессия не меняет policy. Editor drafts по-прежнему требуют явного Save.",
+  "criteria": [
+    {
+      "text": "Настройки переживают перезапуск и не смешиваются с editor drafts.",
+      "passed": true,
+      "evidence": "preferencesSurviveReopenDriveTodayAndKeepSessionPolicy проверяет SQLite reopen, Today, неизменную policy активной сессии и лимиты нового занятия. preferencesAppearancePersistsInSeparateDefaultsWithoutEditorAutosave создаёт новый UserDefaults store и настоящий EditorModel: после изменения настроек draft не меняется, Notes не появляются, discard не сохраняет текст. Ошибка appearance store возвращает persisted value. Native CUA подтвердил закрытие/reopen настроек с сохранённым лимитом 7. Полный XCTest testSettingsAutosaveValidationThemeAndRelaunch подтвердил theme/лимиты после relaunch."
+    },
+    {
+      "text": "Невалидное промежуточное число не фиксируется.",
+      "passed": true,
+      "evidence": "preferencesDebounceInvalidInputAndWriteErrorRestoreSavedValues: пустой текст, знак, отрицательное/дробное число, 10000, overflow, пробел, буквы и не-ASCII цифры не фиксируются; поздний invalid отменяет прежний debounce. Последняя допустимая правка сохраняется, blur выполняет flush, retirement отменяет pending. Реальный SQLite trigger failure возвращает текст 3 и видимую ошибку; persisted value остаётся 3. Native CUA проверил предупреждение для минуса. Тот же UI test проверил invalid минус и сохранённый newLimit=7 после relaunch."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter preferences (final tests)",
+      "result": "passed",
+      "details": "/tmp/anki-T025-preferences-final.log: 5 тестов прошли. Реальная SQLite: replay, revision conflict и rollback на trigger failure; invalid/overflow/debounce, flush и retirement; reopen, Today и сохранённая/новая session policy. Отдельные UserDefaults, ошибка appearance store и настоящий несохранённый EditorModel. Асинхронный результат ожидается с ограниченным timeout."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final sources)",
+      "result": "passed",
+      "details": "build/checks/run-vcog1jf6/summary.json: networkDenied=true, package tests Core 30 / Infrastructure 137 / Features 27 / DesignSystem 3 / XCTest worker 1; arm64 app-build passed. Все 5 preferences tests, реальный SQLite fault injection, отмена pending при retirement и flush допустимого ввода на blur прошли. Seed12 fingerprint неизменён."
+    },
+    {
+      "command": "Native CUA: four Settings tabs, theme, numeric draft, autosave, close/reopen",
+      "result": "passed",
+      "details": "На временных UUID C4FC1FD0-5D80-496E-8A05-CDFAB1AF1293 и 5EC9A5A2-5A6B-4875-B6EC-57CA8A114E17 просмотрены четыре вкладки и референсы base-05/sheet-16/sheet-17. Light/Dark/System, язык с пояснением restart, произношение и честный Data без фиктивных backup-кнопок. Ввод минуса показал предупреждение и сохранённые 20/200; ввод 7 дал сохранённые 7/200, CmdW/reopen сохранили 7. Скриншоты light/dark и текст проверены локально; исходные PNG не менялись."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T025-full-ui.log: TEST SUCCEEDED. Все 11 UI tests и 4 app unit tests прошли. T025 проверяет theme dark/relaunch, сохранённый newLimit=7, invalid минус, неизменный reviewLimit=200 и все четыре вкладки; сохранены CmdW и CmdComma assertions. Прежние Editor/Onboarding/Study/reveal/ratings/Undo/relaunch/navigation/gallery прошли. Временно выбран ABC для корректного XCTest CmdA/CmdW; после прогона исходный com.apple.keylayout.Russian восстановлен и проверен."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T025; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T025 done после выполнения критериев. /tmp/anki-T025-quality-final.log: 26 Python tests passed; 2474 local links; 48/48 PNG hashes; graph/report/generated state consistency passed. Whitespace check passed."
+    }
+  ],
+  "limitations": [
+    "Полный перевод интерфейса, retention и внешний вид Card относятся к T044; выбор языка хранится сейчас и применяется при следующем запуске. Напоминания/управление копиями/импорт не выдаются за готовые функции.",
+    "Новые лимиты применяются после завершения активной/paused сессии; её сохранённая policy и история не переписываются. Числа 0…9999, defaults 20/200 сохраняют совместимость с текущей очередью.",
+    "Новых зависимостей, миграций, платных API и CI artifact/cache uploads нет. Проверочные коллекции/логи/скриншоты не коммитятся."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial selected xcodebuild UI runs (/tmp/anki-T025-ui.log, ui-final.log, ui-retry.log, ui-debug.log)",
+      "result": "failed",
+      "details": "Первый запуск ожидал SegmentedControl, но macOS экспортирует системный theme picker с RadioButtons: сохранена проверка реального выбора и уточнён query. Затем локальная Russian keyboard layout не передавала буквенные XCTest CmdA/CmdW: debugDescription зафиксировал поле 720 вместо 7; Native CUA с физическими сочетаниями работал. Assertions закрытия/значений не удалялись. Сообщения Form разделены на семантические секции; native PreferencesWindow не меняет composition при onDisappear. Финальный полный UI прогон с временно выбранным ABC прошёл без ослабления проверок; исходная Russian раскладка восстановлена."
+    }
+  ]
+}
