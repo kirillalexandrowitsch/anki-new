@@ -9,12 +9,24 @@ final class CompositionRoot {
     let clock: any CardsCore.Clock
     let collections: CollectionCoordinator
     let audio = AudioPlaybackCoordinator()
-    let audioPreferences = AudioPreferences()
+    let audioPreferences: AudioPreferences
+    let appearance: AppearanceModel
     lazy var audioPreview = AudioPreviewModel(service: audio, preferences: audioPreferences)
     private var audioGenerations: Set<UUID> = []
     private let access: any CollectionAccess
 
     init(clock: any CardsCore.Clock = SystemClock(), collectionAccess: (any CollectionAccess)? = nil) {
+        let defaults: UserDefaults
+        #if DEBUG
+        if let value = UserDefaults.standard.string(forKey: "CollectionTestID"), UUID(uuidString: value) != nil {
+            defaults = UserDefaults(suiteName: "anki.synthetic." + value)!
+        } else { defaults = .standard }
+        #else
+        defaults = .standard
+        #endif
+        appearance = AppearanceModel(store: UserDefaultsPreferences(defaults: defaults))
+        // Argument-domain audio overrides remain available in isolated UI suites.
+        audioPreferences = AudioPreferences(defaults: defaults)
         self.clock = clock
         self.access = collectionAccess ?? DefaultCollectionAccess(clock: clock)
         self.collections = CollectionCoordinator(access: access)
@@ -36,6 +48,13 @@ final class CompositionRoot {
     func makeOnboardingModel(context: CollectionContext) async throws -> OnboardingModel {
         guard let provider = access as? any OnboardingWorkspaceAccess else { throw CollectionAccessError.staleContext }
         let model = OnboardingModel(service: try await provider.onboarding(generation: context.generation))
+        await model.load()
+        return model
+    }
+
+    func makePreferencesModel(context: CollectionContext) async throws -> StudyPreferencesModel {
+        guard let provider = access as? any PreferencesWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        let model = StudyPreferencesModel(repository: try await provider.studyPreferences(generation: context.generation))
         await model.load()
         return model
     }
@@ -71,7 +90,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -103,6 +122,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func editorWorkspace(generation: UUID) async throws -> EditorWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.editorWorkspace(generation: generation)
+    }
+
+    func studyPreferences(generation: UUID) async throws -> any StudyPreferencesRepository {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.studyPreferences(generation: generation)
     }
 
     func onboarding(generation: UUID) async throws -> any OnboardingService {
