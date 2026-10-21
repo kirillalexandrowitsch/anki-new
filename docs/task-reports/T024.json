@@ -1,0 +1,94 @@
+{
+  "taskID": "T024",
+  "summary": "Первый запуск ведёт от welcome к короткому диалогу названия и первой колоде. Демо-три Basic Notes/Cards создаются только по включённому выбору, имеют тег Демо; по умолчанию колода пустая. Создание, FSRS schedules и completion сохраняются атомарно через единый writer с replay и защитой от двух окон. Cancel/Escape не пишет draft. После успеха показаны колода, демо-примеры и реальный Today/Start; импорт явно отключён до T051.",
+  "criteria": [
+    {
+      "text": "Повторный запуск не размножает demo Notes.",
+      "passed": true,
+      "evidence": "onboardingDemoReplaysAcrossCommandsAndReopenWithoutDuplicatingNotes и onboardingConcurrentWindowsCreateOneDeckAndThreeNotes подтверждают один deck и ровно 3 Notes/Cards после replay, нового commandID, двух окон и reopen. XCTest testOnboardingCancelDemoRelaunchAndRealStudy повторно открывает приложение, проверяет library 3/3, Today new=3 и реальный Start/reveal. testOnboardingEmptyDeckHasNoHiddenDemoAfterRelaunch проверяет колоду без демо, 0/0 после relaunch и отсутствие Start."
+    },
+    {
+      "text": "До T051 импортная ветка явно недоступна; после подключения открывает мастер и не создаёт скрытую пустую колоду.",
+      "passed": true,
+      "evidence": "До T051 Button onboarding.import явно disabled; видимое пояснение onboarding.importUnavailable и Help объясняют недоступность. XCTest проверяет isEnabled=false и наличие пояснения; Native CUA подтвердил disabled AX и экран. Нет callback импорта, файлового диалога или SaveDeck от этой кнопки. Будущий маршрут мастера T051 зафиксирован в docs/PRODUCT.md; сам мастер вне объёма T024 и не заявляется готовым."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter onboarding",
+      "result": "passed",
+      "details": "/tmp/anki-T024-onboarding.log: 6 интеграционных тестов на временных SQLite прошли. Replay/reopen и два одновременных окна не дублируют Notes; пустой выбор не создаёт notes/types/scheduler defaults. Fault injection после первой Note и перед completion откатывает колоду, Notes/Cards/schedules, events, journal/defaults/settings; та же команда успешно повторяется. Cancel очищает draft без записи; ошибка сохраняет retryable draft; legacy/deleted decks не получают демо."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-l6rtw8g6/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1; arm64 app build passed, synthetic seed12 fingerprint unchanged. После этого исправлена только AX-группировка success panel; финальный прогон будет записан отдельно."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testOnboardingCancelDemoRelaunchAndRealStudy -only-testing:AnkiNewUITests/AppShellUITests/testOnboardingEmptyDeckHasNoHiddenDemoAfterRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T024-ui-final.log: TEST SUCCEEDED, 2 tests, 0 failures. Escape/Cancel draft discard, checkbox default off, required name, disabled import, actual 3/3 Notes/Cards, empty 0/0, both relaunches and real study reveal/ratings gate passed. Success-panel button identifiers проверяются без ослабления ожиданий."
+    },
+    {
+      "command": "Native CUA: welcome → first deck dialog → optional demo → success/Today; separate empty-deck creation",
+      "result": "passed",
+      "details": "Временные UUID 5C2AB8CE-1338-46D3-9771-2EF92BBEBD24 и 88258782-6E80-4F89-B147-F91AFA7B7A52. При 1100×760 в dark проверены welcome/import unavailable, readable demo preview, success с первой колодой и тремя примерами, Start с new=3 и ratings/cards/time=0; пустая колода имеет new=0 и Add cards. Финальный AX сохраняет отдельные onboarding.dismissSuccess/onboarding.openDecks. Скриншоты просмотрены локально, личная коллекция не открывалась."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (final production sources)",
+      "result": "passed",
+      "details": "build/checks/run-qznjrdd0/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1 passed; arm64 app-build passed, seed12 fingerprint unchanged. Включает исправленную AX-группировку success panel."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T024; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T024 done только после критериев. Task graph/report/generated states согласованы; /tmp/anki-T024-quality.log: 26 Python tests passed, 2474 local links, 48/48 PNG hashes, quality passed. Whitespace check passed."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= (full suite after CI repair)",
+      "result": "passed",
+      "details": "/tmp/anki-T024-full-ui.log: TEST SUCCEEDED, все 10 UI tests и 4 app unit tests прошли. Включает новые demo/empty/relaunch tests, прежние оба study.demo пути с явным Skip welcome, empty library, durable rating/Undo/relaunch, deck/editor/navigation/gallery. Диалог onboarding представлен на уровне AppShell вместе с другими модальными маршрутами; все прежние reveal/ratings/pause/skip/menu/close assertions сохранены."
+    },
+    {
+      "command": "python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check (CI repair)",
+      "result": "passed",
+      "details": "/tmp/anki-T024-repair-quality.log: 26 Python tests passed, 2474 local links, 48/48 PNG hashes, generated states and report valid; whitespace passed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (after modal routing repair)",
+      "result": "passed",
+      "details": "build/checks/run-q6d89210/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1 passed; arm64 app-build passed; seed12 fingerprint unchanged. Финальные source включая root modal presenter и отдельный AX label welcome."
+    },
+    {
+      "command": "GitHub PR #85 required checks and post-merge dev CI",
+      "result": "passed",
+      "details": "Implementation candidate 2246485af9c8d24bbad5920034be26e29a475bb5: PR #85 quality=SUCCESS/macos=SUCCESS, run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39609398490. Merged as 7c3f9456c8fbbd6147dddde18393457d51552a15; exact dev push run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39611055695 concluded success with both jobs success."
+    },
+    {
+      "command": "GitHub PR #86 required checks and merge confirmation",
+      "result": "passed",
+      "details": "PR https://github.com/kirillalexandrowitsch/anki-new/pull/86 (dev→stage) required quality/macos SUCCESS, run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39612414378. Merged as 294868e1b6e7e3b9091ac9df8f4a404f7ead8bf0. This confirms PR validation only; missing post-merge push run is recorded separately and is not treated as delivery success."
+    }
+  ],
+  "limitations": [
+    "Импорт до T051 намеренно disabled с видимым пояснением; файловый диалог и создание скрытой колоды отсутствуют. Будущий мастер подключается отдельным маршрутом T051.",
+    "Использованы только синтетические временные коллекции. SQLite migrations, исходные PNG, зависимости и финансовая политика не изменены; новых платежей/подписок/API нет. Демо не подставляет статистику: последующие явные оценки пишутся обычным ReviewLog; записи отмечены тегом Демо."
+  ],
+  "failedChecks": [
+    {
+      "command": "xcodebuild test (two T024 onboarding UI tests, initial run)",
+      "result": "failed",
+      "details": "/tmp/anki-T024-ui.log: demo/cancel/relaunch/real study прошёл; empty-deck test не нашёл onboarding.openDecks (UITests/AppShellUITests.swift:67). Native CUA показал корректный видимый success, но все дочерние элементы унаследовали ID onboarding.success. Исправлено явной accessibilityElement(children: .contain); ожидания теста сохранены."
+    },
+    {
+      "command": "gh run view 39606381428 --log-failed",
+      "result": "failed",
+      "details": "PR #85, Xcode 16.4/macOS 15: 192 package tests passed; app-tests exit 65 at AppShellUITests.swift:82/212/281. testEmptyLibraryOffersCreationAndDistinctCounts ожидал прежний today.state в новом welcome; теперь проверяет явный переход Skip→empty, disabled import и прежние 0/0. Два прежних study.demo теста не получили reveal после открытия; на локальной macOS 26 старый путь прошёл, то есть ошибка зависит от окружения. Для устойчивого представления диалог первой колоды перенесён с вложенного welcome на общий AppShell presenter, а прежние demo-тесты явно пропускают welcome. Все дальнейшие assertions reveal/ratings/pause/skip/close сохранены. Green CI требуется до merge."
+    },
+    {
+      "command": "python3 scripts/deliver.py --task T024; GitHub exact-SHA stage push-run lookup after PR #86",
+      "result": "failed",
+      "details": "Delivery first stopped on a GitHub API TLS handshake timeout after stage merge. A safe retry found #85/#86 already merged and dev push CI successful, but actions/runs?event=push&head_sha=294868e1b6e7e3b9091ac9df8f4a404f7ead8bf0 and the exact-SHA check-runs API returned zero runs/checks more than two hours after stage merge. GitHub Status https://www.githubstatus.com/ reported Actions/event-processing delays on 2026-10-21. No manual workflow or old PR result was substituted for a push pipeline. This report update creates a new T024 candidate via the normal protected PR chain; stage/main delivery still requires fresh successful PR and post-merge push pipelines."
+    }
+  ]
+}

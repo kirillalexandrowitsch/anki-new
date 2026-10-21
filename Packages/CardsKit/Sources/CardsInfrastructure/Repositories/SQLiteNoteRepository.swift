@@ -13,72 +13,77 @@ struct SQLiteNoteRepository: NoteRepository {
     func save(_ command: SaveNoteCommand) async throws -> SavedBasicNote {
         let now = try EpochMilliseconds(date: clock.now()).rawValue
         return try await writer.execute(commandID: command.commandID, kind: "note.save.basic.v1", request: command) { db in
-            try command.content.validate()
-            let key = Self.key(command.noteID)
-            let current = try Row.fetchOne(db, sql: "SELECT * FROM notes WHERE id = ?", arguments: [key])
-            let revision: Revision
-            if let expected = command.expectedRevision {
-                guard let current, current["deletedAt"] == nil else {
-                    throw CollectionRepositoryError.notFound(.note(command.noteID))
-                }
-                let actual = try Revision(current["revision"])
-                guard actual == expected else {
-                    throw CollectionRepositoryError.revisionConflict(entity: .note(command.noteID), expected: expected, actual: actual)
-                }
-                guard current["noteTypeID"] as String == Self.key(BasicNoteType.id) else {
-                    throw CollectionRepositoryError.validation(.invalidField("noteTypeID"))
-                }
-                guard current["contentVersion"] as Int == 1 else {
-                    throw CollectionRepositoryError.validation(.invalidField("contentVersion"))
-                }
-                revision = try expected.advanced()
-            } else {
-                guard current == nil else { throw CollectionRepositoryError.alreadyExists(.note(command.noteID)) }
-                revision = .initial
+            try Self.apply(command, in: db, now: now)
+        }
+    }
+
+    /// Reused by compound commands inside the same writer transaction.
+    static func apply(_ command: SaveNoteCommand, in db: Database, now: Int64) throws -> SavedBasicNote {
+        try command.content.validate()
+        let key = Self.key(command.noteID)
+        let current = try Row.fetchOne(db, sql: "SELECT * FROM notes WHERE id = ?", arguments: [key])
+        let revision: Revision
+        if let expected = command.expectedRevision {
+            guard let current, current["deletedAt"] == nil else {
+                throw CollectionRepositoryError.notFound(.note(command.noteID))
             }
-            try BasicNoteDefaults.installType(db)
-            let fields = try BasicNoteDefaults.json(command.content)
-            let normalized = try EntityName(command.content.front).normalizedValue
-            if current == nil {
-                try db.execute(sql: """
-                    INSERT INTO notes(id, noteTypeID, fieldsJSON, contentVersion, normalizedFront, createdAt, updatedAt)
-                    VALUES (?, ?, ?, 1, ?, ?, ?)
-                    """, arguments: [key, Self.key(BasicNoteType.id), fields, normalized, now, now])
-            } else {
-                try db.execute(sql: """
-                    UPDATE notes SET fieldsJSON = ?, normalizedFront = ?, updatedAt = ?, revision = ? WHERE id = ?
-                    """, arguments: [fields, normalized, now, revision.rawValue, key])
+            let actual = try Revision(current["revision"])
+            guard actual == expected else {
+                throw CollectionRepositoryError.revisionConflict(entity: .note(command.noteID), expected: expected, actual: actual)
             }
-            try Self.replaceTags(db, noteKey: key, names: command.tags)
-            try Self.replaceMedia(db, noteKey: key, refs: command.content.media)
-            if try !Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM cards WHERE noteID = ? AND variantKey = ?)",
-                                  arguments: [key, BasicNoteType.variantKey])! {
-                let parameter = try BasicNoteDefaults.parameterSet(db, deckID: command.initialDeckID, now: now)
-                guard try String.fetchOne(db, sql: "SELECT algorithmVersion FROM scheduler_parameters WHERE id = ?",
-                                          arguments: [parameter]) == "6" else {
-                    throw CollectionRepositoryError.integrityFailure
-                }
-                let card = Self.key(CardID())
-                try db.execute(sql: """
-                    INSERT INTO cards(id, noteID, deckID, variantKey, templateID, createdAt) VALUES (?, ?, ?, ?, ?, ?)
-                    """, arguments: [card, key, Self.key(command.initialDeckID), BasicNoteType.variantKey, BasicNoteType.templateID, now])
-                try db.execute(sql: """
-                    INSERT INTO card_schedules(cardID, algorithmID, algorithmVersion, parameterSetID, phase)
-                    VALUES (?, 'fsrs', '6', ?, 'new')
-                    """, arguments: [card, parameter])
+            guard current["noteTypeID"] as String == Self.key(BasicNoteType.id) else {
+                throw CollectionRepositoryError.validation(.invalidField("noteTypeID"))
             }
-            // Existing variants (including tombstones) and all schedule columns stay untouched.
-            guard let saved = try Self.fetch(db, id: command.noteID) else {
+            guard current["contentVersion"] as Int == 1 else {
+                throw CollectionRepositoryError.validation(.invalidField("contentVersion"))
+            }
+            revision = try expected.advanced()
+        } else {
+            guard current == nil else { throw CollectionRepositoryError.alreadyExists(.note(command.noteID)) }
+            revision = .initial
+        }
+        try BasicNoteDefaults.installType(db)
+        let fields = try BasicNoteDefaults.json(command.content)
+        let normalized = try EntityName(command.content.front).normalizedValue
+        if current == nil {
+            try db.execute(sql: """
+                INSERT INTO notes(id, noteTypeID, fieldsJSON, contentVersion, normalizedFront, createdAt, updatedAt)
+                VALUES (?, ?, ?, 1, ?, ?, ?)
+                """, arguments: [key, Self.key(BasicNoteType.id), fields, normalized, now, now])
+        } else {
+            try db.execute(sql: """
+                UPDATE notes SET fieldsJSON = ?, normalizedFront = ?, updatedAt = ?, revision = ? WHERE id = ?
+                """, arguments: [fields, normalized, now, revision.rawValue, key])
+        }
+        try Self.replaceTags(db, noteKey: key, names: command.tags)
+        try Self.replaceMedia(db, noteKey: key, refs: command.content.media)
+        if try !Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM cards WHERE noteID = ? AND variantKey = ?)",
+                              arguments: [key, BasicNoteType.variantKey])! {
+            let parameter = try BasicNoteDefaults.parameterSet(db, deckID: command.initialDeckID, now: now)
+            guard try String.fetchOne(db, sql: "SELECT algorithmVersion FROM scheduler_parameters WHERE id = ?",
+                                      arguments: [parameter]) == "6" else {
                 throw CollectionRepositoryError.integrityFailure
             }
-            struct Event: Encodable { let schemaVersion = 1; let revision: Revision; let cardID: CardID }
+            let card = Self.key(CardID())
             try db.execute(sql: """
-                INSERT INTO domain_events(id, commandID, type, objectID, occurredAt, payloadVersion, payloadJSON)
-                VALUES (?, ?, 'note.saved', ?, ?, 1, ?)
-                """, arguments: [UUID().uuidString.lowercased(), Self.key(command.commandID), key, now,
-                                  BasicNoteDefaults.json(Event(revision: revision, cardID: saved.card.id))])
-            return saved
+                INSERT INTO cards(id, noteID, deckID, variantKey, templateID, createdAt) VALUES (?, ?, ?, ?, ?, ?)
+                """, arguments: [card, key, Self.key(command.initialDeckID), BasicNoteType.variantKey, BasicNoteType.templateID, now])
+            try db.execute(sql: """
+                INSERT INTO card_schedules(cardID, algorithmID, algorithmVersion, parameterSetID, phase)
+                VALUES (?, 'fsrs', '6', ?, 'new')
+                """, arguments: [card, parameter])
         }
+        // Existing variants (including tombstones) and all schedule columns stay untouched.
+        guard let saved = try Self.fetch(db, id: command.noteID) else {
+            throw CollectionRepositoryError.integrityFailure
+        }
+        struct Event: Encodable { let schemaVersion = 1; let revision: Revision; let cardID: CardID }
+        try db.execute(sql: """
+            INSERT INTO domain_events(id, commandID, type, objectID, occurredAt, payloadVersion, payloadJSON)
+            VALUES (?, ?, 'note.saved', ?, ?, 1, ?)
+            """, arguments: [UUID().uuidString.lowercased(), Self.key(command.commandID), key, now,
+                              BasicNoteDefaults.json(Event(revision: revision, cardID: saved.card.id))])
+        return saved
     }
 
     private static func replaceTags(_ db: Database, noteKey: String, names: [String]) throws {
