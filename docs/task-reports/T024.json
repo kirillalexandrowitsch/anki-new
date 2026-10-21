@@ -58,6 +58,16 @@
       "command": "python3 scripts/check.py --deny-network (after modal routing repair)",
       "result": "passed",
       "details": "build/checks/run-q6d89210/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1 passed; arm64 app-build passed; seed12 fingerprint unchanged. Финальные source включая root modal presenter и отдельный AX label welcome."
+    },
+    {
+      "command": "GitHub PR #85 required checks and post-merge dev CI",
+      "result": "passed",
+      "details": "Implementation candidate 2246485af9c8d24bbad5920034be26e29a475bb5: PR #85 quality=SUCCESS/macos=SUCCESS, run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39609398490. Merged as 7c3f9456c8fbbd6147dddde18393457d51552a15; exact dev push run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39611055695 concluded success with both jobs success."
+    },
+    {
+      "command": "GitHub PR #86 required checks and merge confirmation",
+      "result": "passed",
+      "details": "PR https://github.com/kirillalexandrowitsch/anki-new/pull/86 (dev→stage) required quality/macos SUCCESS, run https://github.com/kirillalexandrowitsch/anki-new/actions/runs/39612414378. Merged as 294868e1b6e7e3b9091ac9df8f4a404f7ead8bf0. This confirms PR validation only; missing post-merge push run is recorded separately and is not treated as delivery success."
     }
   ],
   "limitations": [
@@ -74,6 +84,11 @@
       "command": "gh run view 39606381428 --log-failed",
       "result": "failed",
       "details": "PR #85, Xcode 16.4/macOS 15: 192 package tests passed; app-tests exit 65 at AppShellUITests.swift:82/212/281. testEmptyLibraryOffersCreationAndDistinctCounts ожидал прежний today.state в новом welcome; теперь проверяет явный переход Skip→empty, disabled import и прежние 0/0. Два прежних study.demo теста не получили reveal после открытия; на локальной macOS 26 старый путь прошёл, то есть ошибка зависит от окружения. Для устойчивого представления диалог первой колоды перенесён с вложенного welcome на общий AppShell presenter, а прежние demo-тесты явно пропускают welcome. Все дальнейшие assertions reveal/ratings/pause/skip/close сохранены. Green CI требуется до merge."
+    },
+    {
+      "command": "python3 scripts/deliver.py --task T024; GitHub exact-SHA stage push-run lookup after PR #86",
+      "result": "failed",
+      "details": "Delivery first stopped on a GitHub API TLS handshake timeout after stage merge. A safe retry found #85/#86 already merged and dev push CI successful, but actions/runs?event=push&head_sha=294868e1b6e7e3b9091ac9df8f4a404f7ead8bf0 and the exact-SHA check-runs API returned zero runs/checks more than two hours after stage merge. GitHub Status https://www.githubstatus.com/ reported Actions/event-processing delays on 2026-10-21. No manual workflow or old PR result was substituted for a push pipeline. This report update creates a new T024 candidate via the normal protected PR chain; stage/main delivery still requires fresh successful PR and post-merge push pipelines."
     }
   ]
 }
