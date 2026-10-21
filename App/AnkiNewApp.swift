@@ -36,6 +36,7 @@ private struct MainWindow: View {
     private let collections: CollectionCoordinator
     private let composition: CompositionRoot
     @State private var decks: DecksModel?
+    @State private var today: TodayModel?
     @State private var library: LibraryModel?
     @State private var decksError = false
     @State private var decksCloseToken: UUID?
@@ -48,7 +49,7 @@ private struct MainWindow: View {
     }
 
     var body: some View {
-        AppShellView(model: model, decks: decks, library: library, makeStudy: {
+        AppShellView(model: model, decks: decks, library: library, today: today, makeStudy: {
             guard let context = collections.context else { throw CollectionAccessError.staleContext }
             let study = try await composition.makeStudyModel(context: context)
             guard collections.context == context else { study.stop(); throw CollectionAccessError.staleContext }
@@ -65,6 +66,8 @@ private struct MainWindow: View {
                 decks = nil
                 library?.stop()
                 library = nil
+                today?.stop()
+                today = nil
                 decksError = false
                 guard let context = collections.context else { return }
                 do {
@@ -72,9 +75,12 @@ private struct MainWindow: View {
                     guard !Task.isCancelled, collections.context == context else { loaded.stop(); return }
                     let notes = try await composition.makeLibraryModel(context: context)
                     guard !Task.isCancelled, collections.context == context else { loaded.stop(); notes.stop(); return }
+                    let dashboard = try await composition.makeTodayModel(context: context)
+                    guard !Task.isCancelled, collections.context == context else { loaded.stop(); notes.stop(); dashboard.stop(); return }
+                    today = dashboard
                     library = notes
                     decks = loaded
-                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop() }
+                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop(); dashboard.stop() }
                 } catch {
                     if collections.context == context { decksError = true }
                 }
@@ -84,6 +90,7 @@ private struct MainWindow: View {
                 if let token = decksCloseToken { collections.removeObservation(token) }
                 decks?.stop()
                 library?.stop()
+                today?.stop()
             }
             .overlay {
                 if collections.isOpening {

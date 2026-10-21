@@ -89,6 +89,7 @@ public actor CollectionWriter {
     }
 
     func observe<Value: Equatable & Sendable>(
+        tables: [String] = ["notes", "cards", "decks", "card_schedules", "note_tags", "tags"],
         _ fetch: @escaping @Sendable (Database) throws -> Value
     ) throws -> QueryObservation<Value> {
         try requireActive()
@@ -104,7 +105,7 @@ public actor CollectionWriter {
         // Explicit source regions cover FTS shadow-table writes, empty results and both branches
         // of optional filters. No per-row tracking or main-queue callbacks.
         let observation = ValueObservation.tracking(
-            regions: ["notes", "cards", "decks", "card_schedules", "note_tags", "tags"].map { Table($0) },
+            regions: tables.map { Table($0) },
             fetch: fetch).removeDuplicates()
         state.install(observation.start(in: database.pool, scheduling: .async(onQueue: .global()),
             onError: { state.stop(Self.translate($0)) }, onChange: { state.yield($0) }))

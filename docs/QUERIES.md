@@ -48,3 +48,29 @@ Due — active, unsuspended, unburied, non-new с dueAt <= asOf. New availabilit
 
 Новых библиотек, платных сервисов, CI uploads или личных данных нет. Исходные sheet-02/sheet-20
 прочитаны и не меняются. Проверки — `CollectionQueryTests` и `CollectionDatabaseTests` в пакете.
+
+## Экран «Сегодня» T023
+
+`TodayQueryService` — учебный read-only snapshot/observation того же Infrastructure query
+слоя. В одной read transaction он читает QueueBuilder snapshot и сохранённую active/paused
+scheduled-сессию. Используется её studyPolicyJSON, Skip и выбранные Card; без сессии —
+стандартная configuration, текущая timezone, rollover 04:00. Чтение Today не создаёт сессию.
+Счётчики «Новых» и «К повторению» — только ready QueueBuilder (learning/relearning включены
+в повторение), с квотами, scope, burial и sibling policy. Строки колод показывают вклад
+собственной колоды в эту общую очередь, поэтому их сумма равна верхним счётчикам; это не
+независимые scoped previews. Все активные колоды без удалённых предков доступны без пагинации.
+
+Кнопка «Продолжить занятие» означает наличие active/paused сессии, включая промежуточные
+итоги. Открытие повторно проверяет хранилище через существующий StudyWorkspaceAccess;
+completed/abandoned не возобновляются. При отсутствии сессии и ready Card показывается
+«Начать занятие». Пустые колоды, отсутствие колод, будущий learning, дневной лимит,
+Skip и отсутствие сегодняшней нагрузки имеют разные сообщения; будущие сроки не подгоняются.
+
+Краткие метрики: число effective оценок, DISTINCT Card и сумма response durationMs за
+текущий studyDayKey + timezoneID, без voided ReviewLog. Последняя метрика явно называется
+«Время ответов», а не активным временем сессий. Никаких подстановок streak/retention.
+Observation отслеживает также review_logs, domain_events, study_sessions и session_items.
+Экран обновляет asOf каждые 15 секунд, при активации, возврате на Today и закрытии занятия;
+так due и rollover обновляются без SQL-записи. Loading/error не выдаются за нулевую нагрузку;
+ошибка убирает устаревшую кнопку и предлагает повтор. Close отменяет observation и исключает
+снимки старой generation. Изменений схемы и исходных PNG нет.

@@ -831,12 +831,15 @@
       ],
       "verification": "Пустая, новая и завершённая коллекция; изменение Card в библиотеке обновляет Today.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-01",
         "18.2"
-      ]
+      ],
+      "startedAt": "2026-10-21T11:33:15.278475+00:00",
+      "completedAt": "2026-10-21T11:46:36.930126+00:00",
+      "report": "docs/task-reports/T023.json"
     },
     {
       "id": "T024",
@@ -4008,7 +4011,7 @@
       "stateID": "base-01",
       "taskID": "T023",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "base-02",
@@ -4458,7 +4461,7 @@
       "stateID": "18.2",
       "taskID": "T023",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "18.3",

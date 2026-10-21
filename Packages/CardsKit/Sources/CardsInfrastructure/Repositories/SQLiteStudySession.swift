@@ -2,7 +2,7 @@ import CardsCore
 import Foundation
 import GRDB
 
-private struct StoredStudyPolicy: Codable, Sendable {
+struct StoredStudyPolicy: Codable, Sendable {
     let schemaVersion: Int
     let scope: StudyQueueScope
     let timeZoneID: String
@@ -99,7 +99,7 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
         return row
     }
 
-    private static func savedCheckpoint(_ row: Row) throws -> StudyCheckpoint? {
+    static func savedCheckpoint(_ row: Row) throws -> StudyCheckpoint? {
         // v1 scopeJSON before T022 contained only schemaVersion.
         struct Envelope: Decodable { let checkpoint: StudyCheckpoint? }
         let value = try ReviewSQL.decode(Envelope.self, row["scopeJSON"]).checkpoint
