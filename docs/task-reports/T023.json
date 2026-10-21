@@ -38,6 +38,11 @@
       "command": "python3 scripts/tasks.py finish T023; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T023 done после подтверждённых критериев; task graph/report/generated statuses согласованы. 26 Python tests passed, 2474 local links, 48/48 PNG hashes; whitespace checks passed. /tmp/anki-T023-quality.log."
+    },
+    {
+      "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T023-ui-label-build.log: TEST BUILD SUCCEEDED. Today UI assertions читают explicit accessibilityLabel, а не платформенно-зависимый AXValue; точные ожидаемые строки сохранены. Production source не менялся после финального offline прогона."
     }
   ],
   "limitations": [
@@ -50,6 +55,11 @@
       "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates -only-testing:AnkiNewUITests/AppShellUITests/testPersistentRatingUndoAndReratingSurviveRelaunch CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
       "result": "failed",
       "details": "/tmp/anki-T023-ui.log, exit 65: UITests/AppShellUITests.swift:24 name.typeText, Failed to synthesize event: Timed out while synthesizing event. До новых Today assertions сценарий не дошёл. Проверки сохранены; полный app/UI suite должен пройти на стандартном macos-15 CI до merge."
+    },
+    {
+      "command": "gh run view 39594706811 --log-failed",
+      "result": "failed",
+      "details": "PR #82 macos Xcode 16.4: 186 package tests прошли, app/UI suite exit 65. Две ошибки — AppShellUITests.swift:45 и :242 — точные сравнения Today текста; ожидания существования элементов прошли. Helper предпочитал AXValue перед явно заданным accessibilityLabel. Теперь проверяется сам контрактный label, без изменения ожидаемых строк и критериев. Локальный native AX подтверждает отдельные элементы с точными labels."
     }
   ]
 }

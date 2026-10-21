@@ -4,7 +4,9 @@ final class AppShellUITests: XCTestCase {
     @MainActor private func todayText(_ id: String, in app: XCUIApplication) -> String {
         let element = app.descendants(matching: .any).matching(identifier: "today.\(id)").firstMatch
         XCTAssertTrue(element.waitForExistence(timeout: 10))
-        return (element.value as? String) ?? element.label
+        // Today declares an explicit accessibilityLabel on these semantic groups.
+        // AXValue can be an empty string on macOS 15 even when the label is present.
+        return element.label
     }
 
     @MainActor func testPersistentRatingUndoAndReratingSurviveRelaunch() throws {
