@@ -14,16 +14,18 @@ public struct AppShellView: View {
     private let makeStudy: (@MainActor () async throws -> StudySessionModel)?
     private let decks: DecksModel?
 
+    private let onboarding: OnboardingModel?
     private let today: TodayModel?
     private let library: LibraryModel?
 
-    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil,
+    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, onboarding: OnboardingModel? = nil,
                 makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil) {
         self.model = model
         self.decks = decks
         self.makeStudy = makeStudy
         self.library = library
         self.today = today
+        self.onboarding = onboarding
     }
 
     public var body: some View {
@@ -72,7 +74,7 @@ public struct AppShellView: View {
                     else { ProgressView("Открытие карточек…") }
                 } else if model.selection == .today {
                     if let today {
-                        TodayView(model: today, opening: studyLoading, openingFailed: studyError, start: {
+                        TodayView(model: today, onboarding: onboarding, opening: studyLoading, openingFailed: studyError, start: {
                             guard let makeStudy, !studyLoading else { return }
                             studyLoading = true; studyError = false
                             Task {
@@ -93,6 +95,12 @@ public struct AppShellView: View {
             .padding(CardsSpacing.section)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(CardsColor.window.color)
+        }
+        // Keep modal presenters at the window root; a welcome child must not compete
+        // with the study sheets on macOS 15.
+        .sheet(isPresented: Binding(get: { onboarding?.showsCreator ?? false },
+                                   set: { if !$0 { onboarding?.cancel() } })) {
+            if let onboarding { OnboardingCreatorView(model: onboarding, completed: { today?.reload() }) }
         }
         .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock, audio: model.makeDemoAudio()) }
         .sheet(isPresented: $showsStudy, onDismiss: { today?.reload() }) {

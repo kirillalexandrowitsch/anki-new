@@ -33,6 +33,13 @@ final class CompositionRoot {
         return LibraryModel(workspace: workspace, clock: clock, audio: audio, preferences: audioPreferences)
     }
 
+    func makeOnboardingModel(context: CollectionContext) async throws -> OnboardingModel {
+        guard let provider = access as? any OnboardingWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        let model = OnboardingModel(service: try await provider.onboarding(generation: context.generation))
+        await model.load()
+        return model
+    }
+
     func makeTodayModel(context: CollectionContext) async throws -> TodayModel {
         guard let provider = access as? any TodayWorkspaceAccess else { throw CollectionAccessError.staleContext }
         return try await TodayModel(workspace: provider.todayWorkspace(generation: context.generation), clock: clock)
@@ -64,7 +71,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -96,6 +103,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func editorWorkspace(generation: UUID) async throws -> EditorWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.editorWorkspace(generation: generation)
+    }
+
+    func onboarding(generation: UUID) async throws -> any OnboardingService {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.onboarding(generation: generation)
     }
 
     func todayWorkspace(generation: UUID) async throws -> TodayWorkspace {
