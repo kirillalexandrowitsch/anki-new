@@ -29,7 +29,7 @@ public struct TodayView: View {
                     }
                 } else if let snapshot = model.snapshot {
                     if snapshot.decks.isEmpty, let onboarding, onboarding.isRequired {
-                        OnboardingView(model: onboarding, completed: { model.reload() })
+                        OnboardingView(model: onboarding)
                     } else {
                         if let onboarding { OnboardingSuccessView(model: onboarding, openDecks: openDecks) }
                         overview(snapshot)

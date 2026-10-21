@@ -43,6 +43,21 @@
       "command": "python3 scripts/tasks.py finish T024; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T024 done только после критериев. Task graph/report/generated states согласованы; /tmp/anki-T024-quality.log: 26 Python tests passed, 2474 local links, 48/48 PNG hashes, quality passed. Whitespace check passed."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= (full suite after CI repair)",
+      "result": "passed",
+      "details": "/tmp/anki-T024-full-ui.log: TEST SUCCEEDED, все 10 UI tests и 4 app unit tests прошли. Включает новые demo/empty/relaunch tests, прежние оба study.demo пути с явным Skip welcome, empty library, durable rating/Undo/relaunch, deck/editor/navigation/gallery. Диалог onboarding представлен на уровне AppShell вместе с другими модальными маршрутами; все прежние reveal/ratings/pause/skip/menu/close assertions сохранены."
+    },
+    {
+      "command": "python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check (CI repair)",
+      "result": "passed",
+      "details": "/tmp/anki-T024-repair-quality.log: 26 Python tests passed, 2474 local links, 48/48 PNG hashes, generated states and report valid; whitespace passed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network (after modal routing repair)",
+      "result": "passed",
+      "details": "build/checks/run-q6d89210/summary.json: networkDenied=true; Core 30 / Infrastructure 132 / Features 27 / DesignSystem 3 / XCTest worker 1 passed; arm64 app-build passed; seed12 fingerprint unchanged. Финальные source включая root modal presenter и отдельный AX label welcome."
     }
   ],
   "limitations": [
@@ -54,6 +69,11 @@
       "command": "xcodebuild test (two T024 onboarding UI tests, initial run)",
       "result": "failed",
       "details": "/tmp/anki-T024-ui.log: demo/cancel/relaunch/real study прошёл; empty-deck test не нашёл onboarding.openDecks (UITests/AppShellUITests.swift:67). Native CUA показал корректный видимый success, но все дочерние элементы унаследовали ID onboarding.success. Исправлено явной accessibilityElement(children: .contain); ожидания теста сохранены."
+    },
+    {
+      "command": "gh run view 39606381428 --log-failed",
+      "result": "failed",
+      "details": "PR #85, Xcode 16.4/macOS 15: 192 package tests passed; app-tests exit 65 at AppShellUITests.swift:82/212/281. testEmptyLibraryOffersCreationAndDistinctCounts ожидал прежний today.state в новом welcome; теперь проверяет явный переход Skip→empty, disabled import и прежние 0/0. Два прежних study.demo теста не получили reveal после открытия; на локальной macOS 26 старый путь прошёл, то есть ошибка зависит от окружения. Для устойчивого представления диалог первой колоды перенесён с вложенного welcome на общий AppShell presenter, а прежние demo-тесты явно пропускают welcome. Все дальнейшие assertions reveal/ratings/pause/skip/close сохранены. Green CI требуется до merge."
     }
   ]
 }

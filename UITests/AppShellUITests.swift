@@ -77,6 +77,17 @@ final class AppShellUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 0 · Записей: 0")
     }
 
+    @MainActor private func dismissWelcome(in app: XCUIApplication) {
+        let skip = app.buttons["onboarding.skip"]
+        XCTAssertTrue(skip.waitForExistence(timeout: 10))
+        skip.click()
+        let title = app.descendants(matching: .any).matching(identifier: "onboarding.title").firstMatch
+        let empty = NSPredicate { _, _ in title.label == "У вас пока нет колод" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: empty, object: nil)], timeout: 5), .completed)
+        XCTAssertFalse(app.buttons["study.start"].exists)
+        XCTAssertFalse(app.buttons["onboarding.import"].isEnabled)
+    }
+
     @MainActor private func todayText(_ id: String, in app: XCUIApplication) -> String {
         let element = app.descendants(matching: .any).matching(identifier: "today.\(id)").firstMatch
         XCTAssertTrue(element.waitForExistence(timeout: 10))
@@ -203,6 +214,7 @@ final class AppShellUITests: XCTestCase {
                                "-CollectionTestID", UUID().uuidString]
         app.launch()
         defer { app.terminate() }
+        dismissWelcome(in: app)
         let start = app.buttons["study.demo"]
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         start.click()
@@ -273,6 +285,7 @@ final class AppShellUITests: XCTestCase {
                                "-CollectionTestID", UUID().uuidString]
         app.launch()
         defer { app.terminate() }
+        dismissWelcome(in: app)
         let start = app.buttons["study.demo"]
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         start.click()
@@ -317,7 +330,8 @@ final class AppShellUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
-        XCTAssertEqual(todayText("state", in: app), "Создайте колоду для своей коллекции.")
+        // First launch now has an explicit welcome/empty state, with no hidden cards.
+        dismissWelcome(in: app)
         XCTAssertFalse(app.buttons["study.start"].exists)
         app.staticTexts["navigation.library"].click()
         XCTAssertTrue(app.buttons["library.emptyCreate"].waitForExistence(timeout: 10))

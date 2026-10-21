@@ -4,7 +4,6 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Bindable var model: OnboardingModel
-    let completed: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
@@ -13,6 +12,8 @@ struct OnboardingView: View {
                 .padding(20).accessibilityHidden(true)
             Text(model.showsWelcome ? "Добро пожаловать в Карточки" : "У вас пока нет колод")
                 .font(.largeTitle.weight(.bold)).multilineTextAlignment(.center)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(model.showsWelcome ? "Добро пожаловать в Карточки" : "У вас пока нет колод")
                 .accessibilityIdentifier("onboarding.title")
             Text("Запоминайте английские слова и фразы. Создайте первую колоду и добавьте свой материал.")
                 .foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -39,13 +40,10 @@ struct OnboardingView: View {
         }
         .padding(32).frame(maxWidth: .infinity, minHeight: 400)
         .background(CardsColor.surface.color, in: RoundedRectangle(cornerRadius: 16))
-        .sheet(isPresented: Binding(get: { model.showsCreator }, set: { if !$0 { model.cancel() } })) {
-            OnboardingCreatorView(model: model, completed: completed)
-        }
     }
 }
 
-private struct OnboardingCreatorView: View {
+struct OnboardingCreatorView: View {
     @Bindable var model: OnboardingModel
     let completed: () -> Void
     @FocusState private var nameFocused: Bool

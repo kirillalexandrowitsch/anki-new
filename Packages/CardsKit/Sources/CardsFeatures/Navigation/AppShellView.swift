@@ -96,6 +96,12 @@ public struct AppShellView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(CardsColor.window.color)
         }
+        // Keep modal presenters at the window root; a welcome child must not compete
+        // with the study sheets on macOS 15.
+        .sheet(isPresented: Binding(get: { onboarding?.showsCreator ?? false },
+                                   set: { if !$0 { onboarding?.cancel() } })) {
+            if let onboarding { OnboardingCreatorView(model: onboarding, completed: { today?.reload() }) }
+        }
         .sheet(isPresented: $showsStudyDemo) { StudyDemoView(clock: model.studyClock, audio: model.makeDemoAudio()) }
         .sheet(isPresented: $showsStudy, onDismiss: { today?.reload() }) {
             if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
