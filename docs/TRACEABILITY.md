@@ -21,10 +21,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [01.1 · Добро пожаловать](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Запланировано |
-| [01.2 · Пока нет колод](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Запланировано |
-| [01.3 · Первая колода](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Запланировано |
-| [01.4 · Всё готово](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Запланировано |
+| [01.1 · Добро пожаловать](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Готово |
+| [01.2 · Пока нет колод](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Готово |
+| [01.3 · Первая колода](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Готово |
+| [01.4 · Всё готово](../design-references/sheets/sheet-01.png) | [T024](tasks/T024.md) | Готово |
 
 ## 02 · Главный экран
 
