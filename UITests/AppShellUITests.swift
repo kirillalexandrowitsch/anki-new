@@ -1,6 +1,14 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor private func todayText(_ id: String, in app: XCUIApplication) -> String {
+        let element = app.descendants(matching: .any).matching(identifier: "today.\(id)").firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: 10))
+        // Today declares an explicit accessibilityLabel on these semantic groups.
+        // AXValue can be an empty string on macOS 15 even when the label is present.
+        return element.label
+    }
+
     @MainActor func testPersistentRatingUndoAndReratingSurviveRelaunch() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
@@ -34,7 +42,11 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(app.buttons["note.edit.Synthetic review question"].waitForExistence(timeout: 5))
         app.staticTexts["navigation.today"].click()
         let start = app.buttons["study.start"]
-        XCTAssertTrue(start.waitForExistence(timeout: 5)); start.click()
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        XCTAssertEqual(start.label, "Начать занятие")
+        XCTAssertEqual(todayText("new", in: app), "Новых: 1")
+        XCTAssertEqual(todayText("due", in: app), "К повторению: 0")
+        start.click()
         let reveal = app.buttons["study.reveal"], answer = app.staticTexts["study.answer"]
         XCTAssertTrue(reveal.waitForExistence(timeout: 5)); XCTAssertFalse(answer.exists)
         let studyAudioError = app.staticTexts["study.audioError"]
@@ -51,7 +63,9 @@ final class AppShellUITests: XCTestCase {
         app.buttons["study.pause"].click()
         XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
         app.terminate(); app.launch()
-        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.label, "Продолжить занятие")
+        start.click()
         XCTAssertTrue(app.buttons["study.resume"].waitForExistence(timeout: 5))
         XCTAssertFalse(answer.exists)
         app.buttons["study.resume"].click()
@@ -84,7 +98,9 @@ final class AppShellUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
         // Abrupt termination after the rating must retain the same session's effective count.
         app.terminate(); app.launch()
-        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.label, "Продолжить занятие")
+        start.click()
         XCTAssertTrue(app.staticTexts["study.completed"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["study.count"].value as? String, "Подтверждённых оценок: 1")
         let summary = app.descendants(matching: .any).matching(identifier: "study.summary").firstMatch
@@ -92,6 +108,15 @@ final class AppShellUITests: XCTestCase {
         XCTAssertGreaterThan(summary.descendants(matching: .staticText).count, 0)
         XCTAssertFalse(reveal.exists); XCTAssertFalse(answer.exists)
         XCTAssertTrue(app.buttons["study.checkQueue"].exists) // persisted learning due is still in the future
+        app.buttons["study.close"].click()
+        XCTAssertEqual(todayText("ratings", in: app), "Оценок сегодня: 1")
+        XCTAssertEqual(todayText("cards", in: app), "Карточек сегодня: 1")
+        XCTAssertEqual(todayText("new", in: app), "Новых: 0")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "today.nextDue").firstMatch.exists)
+        // After durable completion there is no resumable session, also after relaunch.
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "today.nextDue").firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(start.exists)
     }
 
     @MainActor func testStudyRevealKeyboardPauseSkipAndEscapeExit() throws {
@@ -216,6 +241,8 @@ final class AppShellUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
+        XCTAssertEqual(todayText("state", in: app), "Создайте колоду для своей коллекции.")
+        XCTAssertFalse(app.buttons["study.start"].exists)
         app.staticTexts["navigation.library"].click()
         XCTAssertTrue(app.buttons["library.emptyCreate"].waitForExistence(timeout: 10))
         // macOS AXStaticText exposes its displayed text as AXValue, not AXLabel.

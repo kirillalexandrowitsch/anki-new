@@ -33,6 +33,11 @@ final class CompositionRoot {
         return LibraryModel(workspace: workspace, clock: clock, audio: audio, preferences: audioPreferences)
     }
 
+    func makeTodayModel(context: CollectionContext) async throws -> TodayModel {
+        guard let provider = access as? any TodayWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        return try await TodayModel(workspace: provider.todayWorkspace(generation: context.generation), clock: clock)
+    }
+
     func makeStudyModel(context: CollectionContext) async throws -> StudySessionModel {
         guard let provider = access as? any StudyWorkspaceAccess else { throw CollectionAccessError.staleContext }
         try await prepareAudio(context: context)
@@ -59,7 +64,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess {
+private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -91,6 +96,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func editorWorkspace(generation: UUID) async throws -> EditorWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.editorWorkspace(generation: generation)
+    }
+
+    func todayWorkspace(generation: UUID) async throws -> TodayWorkspace {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.todayWorkspace(generation: generation)
     }
 
     func studySession(generation: UUID) async throws -> any StudyReviewSessionService {
