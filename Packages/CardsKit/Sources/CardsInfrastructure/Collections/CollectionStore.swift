@@ -195,6 +195,11 @@ public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, Edito
         SQLiteOnboardingService(writer: try writer(generation: generation), clock: clock)
     }
 
+    public func statsWorkspace(generation: UUID) throws -> StatsWorkspace {
+        StatsWorkspace(generation: generation,
+            queries: SQLiteCollectionQueries(writer: try writer(generation: generation), generation: generation))
+    }
+
     public func todayWorkspace(generation: UUID) throws -> TodayWorkspace {
         TodayWorkspace(generation: generation,
             queries: SQLiteCollectionQueries(writer: try writer(generation: generation), generation: generation))

@@ -17,16 +17,18 @@ public struct AppShellView: View {
     private let exporter: CollectionExportModel?
 
     private let onboarding: OnboardingModel?
+    private let statistics: StatisticsModel?
     private let today: TodayModel?
     private let library: LibraryModel?
 
-    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, onboarding: OnboardingModel? = nil,
+    public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, statistics: StatisticsModel? = nil, onboarding: OnboardingModel? = nil,
                 makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil) {
         self.exporter = exporter
         self.model = model
         self.decks = decks
         self.makeStudy = makeStudy
         self.library = library
+        self.statistics = statistics
         self.today = today
         self.onboarding = onboarding
     }
@@ -83,6 +85,9 @@ public struct AppShellView: View {
                         }, openDecks: { commands.perform(.decks) }, openLibrary: { commands.perform(.library) },
                            demo: { showsStudyDemo = true })
                     } else { ProgressView("Загрузка Сегодня…") }
+                } else if model.selection == .statistics {
+                    if let statistics { StatisticsView(model: statistics) }
+                    else { ProgressView("Загрузка статистики…") }
                 } else {
                     SectionPlaceholder(title: String(localized: "Ваша коллекция", bundle: .module),
                                        symbol: model.selection.symbol,
@@ -111,7 +116,7 @@ public struct AppShellView: View {
         .focusedSceneValue(\.appCommandContext, commands)
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refreshDate(); today?.reload() }
+            if phase == .active { model.refreshDate(); today?.reload(); statistics?.reload() }
         }
     }
     private var isModal: Bool {
@@ -151,7 +156,7 @@ public struct AppShellView: View {
         Task {
             defer { studyLoading = false }
             do { study = try await makeStudy(); showsStudy = true }
-            catch { studyError = true; today?.reload() }
+            catch { studyError = true; today?.reload(); statistics?.reload() }
         }
     }
 
