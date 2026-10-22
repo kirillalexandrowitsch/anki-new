@@ -16,6 +16,7 @@ public final class LibraryModel {
         didSet { if search != oldValue { offset = 0; restart() } }
     }
     public let launcher: EditorLauncherModel
+    public let deletion: CardDeletionModel?
     public private(set) var inspectedNote: SavedBasicNote?
     public private(set) var inspectorError: String?
     private let workspace: EditorWorkspace
@@ -26,6 +27,7 @@ public final class LibraryModel {
     public init(workspace: EditorWorkspace, clock: any CardsCore.Clock,
                 audio: (any AudioPlayback)? = nil, preferences: AudioPreferences? = nil) {
         self.workspace = workspace
+        deletion = workspace.deletions.map { CardDeletionModel(service: $0) }
         launcher = EditorLauncherModel(workspace: workspace, clock: clock, audio: audio, preferences: preferences)
     }
     public var selectedRow: LibraryRow? { rows.first { $0.id == selection } }
@@ -108,6 +110,7 @@ public final class LibraryModel {
         observation?.cancel()
         inspectionID = UUID()
         launcher.stop()
+        deletion?.stop()
         rows = []; selection = nil; inspectedNote = nil
     }
 }

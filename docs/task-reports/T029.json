@@ -1,0 +1,76 @@
+{
+  "taskID": "T029",
+  "summary": "Удаление выбранной Card: актуальное подтверждение с областью и связанной Note, атомарные tombstone/suppression/deletion batch и Undo на 5 секунд по persisted continuous clock/boot UUID. Окно отмены переживает перезапуск приложения без продления; библиотека/Today/очередь исключают удалённую Card, расписание/история/Note/медиа сохранены. Поздний Save Note не регенерирует suppressed вариант.",
+  "criteria": [
+    {
+      "text": "Cancel не меняет данные; Undo возвращает Card и её прогресс.",
+      "passed": true,
+      "evidence": "deletionCancelIsReadOnlyAndUndoRestoresFullProgressAfterLateNoteSave сравнивает все rows cards/notes/schedules/review_logs/batches/events/commands/media/tags до/после Cancel. После реальной Good сессии удаление и Undo при 4.999 s сохраняют каждую колонку schedule/history/session/items, CardID и новые поля позднего Save; Card revision повышается. Отдельный тест проверяет единственный выбранный вариант и неизменного sibling. Нативный CUA: Cancel оставил 3 Card; удаление исключило строку; исправленная доступная Undo кнопка вернула Good morning из пустой библиотеки, Today согласован. Ровно 5 s/reboot отвергают Undo, file-backed reopen через 2 s сохраняет только 3 s; wall clock не влияет."
+    },
+    {
+      "text": "Поздний Save Note не создаёт удалённый вариант снова.",
+      "passed": true,
+      "evidence": "Поздний Save сохранённой Note с исходной revision успешно меняет содержимое, но сохраняет тот же CardID с generationState=suppressed/deletedAt и прежним расписанием; library count остаётся 0. Undo сохраняет эти новые поля и возвращает единственную Card. Reopen/timeout тест подтверждает persisted tombstones и отсутствие регенерации. Реализация SQLiteNoteRepository уже оставляет существующие варианты (включая tombstone) нетронутыми; UNIQUE(noteID,variantKey) остаётся защитой. Ни Note, ни строки suppression физически не удаляются."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter deletion",
+      "result": "passed",
+      "details": "/tmp/anki-T029-targeted-final.log: 7 tests passed. Read-only Cancel, 4.999/5.000 s, monotonic/wall time/boot, file-backed reopen, shared media, variant scope, stale queue rating, Library observation, stale generation, rollback delete/Undo через реальные SQL triggers, 12 concurrent identical commands, lost acknowledgements и retired UI."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T029-offline-acceptance.log: финальные package tests и arm64 app build с OS network denial. Seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86; все зависимости pinned, обновление отключено."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewTests",
+      "result": "passed",
+      "details": "/tmp/anki-T029-app-unit-final.log: TEST SUCCEEDED, 4 app unit tests. Финальные UI/Undo accessibility и новый XCUITest скомпилированы; локальная ad-hoc подпись."
+    },
+    {
+      "command": "Native CUA acceptance on isolated -CollectionTestID 00000000-0000-0000-0000-000000000029",
+      "result": "passed",
+      "details": "Синтетическая колода с тремя встроенными demo Notes. Подтверждение называет Card/вариант/связанную запись/число siblings и 5 s, Cancel сохраняет 3/3; inspector и контекстное меню работают. После timeout Hello отсутствует после restart, Today 2. Исправлен перекрытый контейнером accessibilityIdentifier Undo, финальный native AX показывает cardDeletion.undo.Good morning. Реальный click восстановил последнюю Card после empty state (0→1), Today new=1. Sandbox допускает boot UUID/continuous clock. Личная коллекция не открывалась, приложение закрыто."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T029; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T029-quality-final.log: 26 Python tests, 2479 local links, 48/48 original PNG hashes, graph/reports/generated state passed. T029 done после реальной приёмки; git diff --check clean. Финальный offline summary: build/checks/run-l7jx0zs_/summary.json, Core 30/Infrastructure 152/Features 30/DesignSystem 3 и XCTest worker 1 passed; networkDenied=true, arm64 app build passed."
+    },
+    {
+      "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T029-ui-repair-build.log: TEST BUILD SUCCEEDED после исправления UI count helper (value) и native Table selection; /tmp/anki-T029-quality-repair.log: 26 Python tests, 2479 links/48 PNGs, graph/generated state/reports passed. Product source не менялся после full offline/native acceptance; ни одно assertion не удалено."
+    }
+  ],
+  "limitations": [
+    "T029 не выполняет физический purge: Note, media refs, history, schedule и уникальный suppressed variant остаются в базе, purgeAfter фиксирует лишь нижнюю границу 7 дней. GC/оптимизация относится к T085; текущий путь ничего не удаляет из Media даже после expiry, поэтому активное Undo и общие вложения сохранены.",
+    "Перезапуск приложения в том же boot сохраняет остаток монотонного окна; reboot/несопоставимый monotonic timestamp закрывает Undo. Wall undoUntil является metadata, а не авторизацией. Изменение Card revision/недоступные родители блокируют Undo без частичного восстановления.",
+    "Локальный новый XCUITest не прошёл из-за macOS event synthesis timeout при вводе названия колоды на втором дисплее (UITests/AppShellUITests.swift:15). Полная нативная CUA-приёмка и app unit tests прошли; XCUITest оставлен в обязательном macos CI без ослаблений.",
+    "Нет новых зависимостей/миграций, платных API/подписок, CI uploads или изменений PNG. Только синтетические временные данные; логи/xcresults/коллекции не коммитятся."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial targeted deletion tests",
+      "result": "failed",
+      "details": "Исправлены schemaVersion в persisted domain event receipt и недостающие Staging/Media и schedule синтетического sibling в fixture. Все 7 targeted tests и последующий полный offline прогон прошли."
+    },
+    {
+      "command": "Initial local selected xcodebuild test",
+      "result": "failed",
+      "details": "Параллельный запуск с app-build в том же DerivedData дал build.db locked. Последующий последовательный запуск скомпилировался и 4 app unit tests прошли; concurrent Xcode build больше не запускался."
+    },
+    {
+      "command": "Local selected testCardDeletionCancelUndoTimeoutAndReopen",
+      "result": "failed",
+      "details": "/tmp/anki-T029-app-tests-final.log: Failed to synthesize event: Timed out while synthesizing event at name.typeText, second display. Тест не менялся ради локального OS ограничения; новый сценарий остаётся обязательным CI."
+    },
+    {
+      "command": "gh run view 39839520690 --log-failed",
+      "result": "failed",
+      "details": "PR #102 initial macos CI: package tests 215 + XCTest worker passed; new testCardDeletionCancelUndoTimeoutAndReopen failed at count helper line 22. On macOS library.counts exposes text in value, not label (confirmed by native AX and existing passing library UI test). Helper now compares value and selects native Table row by identifier OR semantic label, exactly as existing library acceptance. Cancel/Undo/timeout/restart assertions retained."
+    }
+  ]
+}

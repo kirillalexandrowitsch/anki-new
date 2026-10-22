@@ -134,7 +134,7 @@
 | [11.1 · История обучения](../design-references/sheets/sheet-11.png) | [T041](tasks/T041.md) | Запланировано |
 | [11.2 · Приостановить](../design-references/sheets/sheet-11.png) | [T041](tasks/T041.md) | Запланировано |
 | [11.3 · Сбросить прогресс?](../design-references/sheets/sheet-11.png) | [T041](tasks/T041.md) | Запланировано |
-| [11.4 · Удалить карточку?](../design-references/sheets/sheet-11.png) | [T029](tasks/T029.md) | Запланировано |
+| [11.4 · Удалить карточку?](../design-references/sheets/sheet-11.png) | [T029](tasks/T029.md) | Готово |
 
 ## 12 · Импорт — шаги
 

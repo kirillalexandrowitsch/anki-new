@@ -89,6 +89,10 @@ public struct LibraryView: View {
         .sheet(item: $launcher.editor) { editor in
             EditorView(model: editor) { launcher.editor = nil }
         }
+        .sheet(isPresented: Binding(get: { model.deletion?.isPresented ?? false },
+                                   set: { if !$0 { model.deletion?.cancel() } })) {
+            if let deletion = model.deletion { CardDeletionView(model: deletion) }
+        }
     }
 
     private func createNote() {
@@ -112,6 +116,13 @@ public struct LibraryView: View {
             TableColumn("Колода") { row in Text(row.deckName.displayValue).lineLimit(2) }.width(min: 90, ideal: 130)
             TableColumn("Статус") { row in Text(row.statusTitle) }.width(min: 105, ideal: 120)
             TableColumn("Направление") { row in Text(row.directionTitle) }.width(min: 140, ideal: 160)
+        }
+        .contextMenu(forSelectionType: CardID.self) { ids in
+            if ids.count == 1, let id = ids.first, let deletion = model.deletion {
+                Button("Удалить карточку…", role: .destructive) {
+                    Task { await deletion.prepare(cardID: id) }
+                }.disabled(deletion.isPresented || deletion.isUndoing || model.launcher.editor != nil)
+            }
         }
         .accessibilityIdentifier("library.table")
     }
@@ -158,6 +169,14 @@ public struct LibraryView: View {
                         .accessibilityIdentifier("library.inspector.content")
                 }
                 editButton
+                if let deletion = model.deletion {
+                    Button("Удалить карточку…", systemImage: "trash", role: .destructive) {
+                        showsInspector = false
+                        Task { await deletion.prepare(cardID: row.id) }
+                    }
+                    .disabled(model.isLoading || model.launcher.isLoading || deletion.isUndoing || deletion.isPresented)
+                    .accessibilityIdentifier("cardDeletion.request")
+                }
             } else { Text("Выберите карточку в таблице.").foregroundStyle(.secondary) }
         }.padding(16).background(CardsColor.surface.color, in: RoundedRectangle(cornerRadius: 12))
     }
