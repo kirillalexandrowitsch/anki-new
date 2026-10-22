@@ -1,0 +1,76 @@
+{
+  "taskID": "T027",
+  "summary": "Потоковый CSV/TSV parser и согласованный экспорт всей коллекции через NSSavePanel: CSV/TSV для текста, versioned cardsdeck для записей/вариантов/тегов/медиа без прогресса и cardsbackup для точной копии. Явные capabilities, safe-spreadsheet mode, sandbox-safe атомарная публикация без перезаписи, отмена и ошибки доступа.",
+  "criteria": [
+    {
+      "text": "Файл с кавычками и переносами не ломает строки.",
+      "passed": true,
+      "evidence": "delimitedTextRoundTripsEveryByteBoundaryUnicodeMultilineAndBOM прошёл для CSV/TSV, canonical/safe modes, UTF-8 BOM, комбинируемых Unicode scalars, кириллицы/猫, запятых/табуляций/escaped quotes/CRLF/LF/CR внутри ячеек на всех размерах chunk от 1 байта до длины файла. Integration test экспортирует Basic Note с двумя examples и тегами, читает потоковым parser и сравнивает исходные строки/структуру. Malformed UTF-8, quoting, column count и limit diagnostics проверены отдельно."
+    },
+    {
+      "text": "Собственные архивы не выдаются за APKG, неподдержанные опции неактивны.",
+      "passed": true,
+      "evidence": "cardsdeck manifest: format=cardsdeck, formatVersion/contentVersion=1, includesProgress=false; ZIP payload не содержит SQLite/history/schedules. SHA-256/размеры и bytes media проверены, Basic content сохранён. Расширение .apkg отвергается сервисом. В sandboxed Release через CUA проверены отключённые progress/media для CSV и включённые, но неизменяемые progress/media для cardsbackup; APKG не выбирается. Реально сохранены CSV, cardsdeck и cardsbackup в /tmp/anki-T027-release-export, проверены zipfile/CRC; backup integration восстановил ту же Note в отдельной коллекции."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter 'delimitedText|collectionExport|exportCancel|backupRoundTrip'",
+      "result": "passed",
+      "details": "/tmp/anki-T027-focused-final.log: 5 targeted tests passed. Текстовый round trip, diagnostics, hash/media/archive formats, backup restore, no-overwrite, /System read-only destination, rejected collection root/APKG/stale generation, panel cancellation. Финальные cancellation/safe export и late panel callback дополнительно покрыты полным offline прогоном."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T027-offline-final2.log; build/checks/run-5b2614u6/summary.json: networkDenied=true, package tests Core 30, Infrastructure 140, Features 30, DesignSystem 3 и XCTest worker 1; seed12 fingerprint неизменён; arm64 app build passed. Включены отменённый export без публикации и поздний выбор панели после retirement без вызова сервиса."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewTests",
+      "result": "passed",
+      "details": "/tmp/anki-T027-app-unit.log: TEST SUCCEEDED, 4 app unit tests passed; collection lifecycle и composition regression."
+    },
+    {
+      "command": "Sandboxed Release native UI acceptance via CUA; codesign entitlements; Python zipfile validation",
+      "result": "passed",
+      "details": "Release build: отдельный PRODUCT_BUNDLE_IDENTIFIER=local.anki.synthetic.T027, ARCHS=arm64 ONLY_ACTIVE_ARCH=YES, ad-hoc signature; app-sandbox и user-selected.read-write подтверждены codesign. Проверены File/Экспортировать, disabled capabilities, native panel Cancel без success, реальная запись CSV/Native.cardsdeck/Collection.cardsbackup, Экспорт готов после публикации. CSV header, manifest versions, ZIP CRC и payload names проверены Python. Файлы и тестовая коллекция изолированы; личная коллекция не открывалась."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T027; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T027 done после фактической приёмки. /tmp/anki-T027-quality.log: 26 Python tests, generated state/report graph, 2478 local links и 48/48 исходных PNG hashes passed. Финальный Release build /tmp/anki-T027-release-verified.log: BUILD SUCCEEDED. CUA подтвердил финальные имя Collection.csv и button ID export.complete после реального Accepted.csv save; app закрыт."
+    },
+    {
+      "command": "xcodebuild test -only-testing:AnkiNewTests (same project/scheme/offline flags as above); python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T027-app-unit-repair.log: исправленный UI test скомпилирован, 4 app unit tests passed, TEST SUCCEEDED. /tmp/anki-T027-quality-repair.log: quality passed. Критерии, checks и assertions успешного экспорта не ослаблены."
+    }
+  ],
+  "limitations": [
+    "Импортный мастер, mapping/preview/dedup/apply остаются T051–T054. T027 предоставляет read-only streaming parser; Import UI остаётся отключён. CSV экспортирует Basic v1 и останавливается при неизвестном типе; cardsdeck сохраняет content rows без расписания, exact backup — отдельный формат. Scope начального UI — вся коллекция.",
+    "При sandbox file-only grant payload fsync и атомарный no-overwrite link выполнены; EACCES/EPERM открытия родительского каталога не сообщаются как неуспех уже опубликованного файла. При доступном каталоге fsync сохраняется. Ограничение питания документировано в INTEGRATIONS/BACKUP_STORAGE.",
+    "Локальный XCUITest дважды не дошёл до выполнения тестов: Timed out while enabling automation mode. Native acceptance проведена CUA на sandboxed Release; новый XCUITest сохранён для обязательного macos CI. Успех локального XCUITest не заявляется.",
+    "Новых зависимостей, миграций, платных API/подписок, CI artifacts/cache uploads нет. Использованы синтетические временные данные и принятый ZIPFoundation/GRDB. Логи, screenshots и экспорты не коммитятся."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial targeted test compilation",
+      "result": "failed",
+      "details": "Swift Testing macro не допускал await справа от &&; async assertion разделён. Последующие targeted/full package tests passed."
+    },
+    {
+      "command": "Local selected XCUITest, initial run and retry",
+      "result": "failed",
+      "details": "/tmp/anki-T027-ui-selected.log и /tmp/anki-T027-ui-retry.log: runner failed to initialize, Timed out while enabling automation mode. Тесты не исполнялись; OS permissions/защиты не менялись."
+    },
+    {
+      "command": "Initial sandboxed Release native save",
+      "result": "failed",
+      "details": "Save Panel выдаёт доступ только к выбранному файлу; создание sibling .export directory и fsync родительского каталога были запрещены. Подготовка перенесена в system itemReplacementDirectory на том же томе, публикация учитывает file-only grant; последующие реальные CSV/cardsdeck/cardsbackup saves прошли. Default basename исправлен, custom extension не удваивается."
+    },
+    {
+      "command": "gh run view 39804014877 --log-failed",
+      "result": "failed",
+      "details": "Первый PR CI: quality и 203 package tests passed; новый UI test остановился на AppShellUITests.swift:39 (поиск Save по label после Go To). Уточнены ожидание закрытия Go To, trailing slash для folder path и устойчивый нативный OKButton ID. Все проверки фактического сохранения/CSV содержимого оставлены. Обновлённый полный CI обязателен перед merge."
+    }
+  ]
+}

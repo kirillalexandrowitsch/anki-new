@@ -16,6 +16,9 @@ public struct AppCommands: Commands {
             item("Импортировать…", .importData).keyboardShortcut("i", modifiers: [.command, .shift])
                 .help("Импорт станет доступен после реализации файлового импорта.")
         }
+        CommandGroup(after: .importExport) {
+            item("Экспортировать…", .exportData)
+        }
         CommandGroup(replacing: .appSettings) {
             Button("Настройки…") {
                 if let main { main.perform(.settings) } else { openSettings() }
