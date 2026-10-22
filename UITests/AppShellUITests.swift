@@ -1,6 +1,94 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testMainCommandsKeyboardMenusAndButtonsShareRoutesAndModalGates() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        func menu(_ name: String) { app.menuBars.menuBarItems[name].click() }
+        func closeMenu() { app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: []) }
+        func field(_ id: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(identifier: "editor.\(id)").firstMatch
+        }
+        menu("Файл")
+        XCTAssertFalse(app.menuItems["Импортировать…"].isEnabled)
+        XCTAssertFalse(app.menuItems["Редактировать карточку"].isEnabled)
+        closeMenu()
+        // Global create also mounts the correct section's presenter from Today.
+        app.typeKey("n", modifierFlags: [.command, .shift])
+        let name = app.textFields["deckEditor.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        menu("Переход")
+        XCTAssertFalse(app.menuItems["Сегодня"].isEnabled)
+        closeMenu()
+        name.click(); name.typeText("Synthetic command deck 1234")
+        XCTAssertEqual(name.value as? String, "Synthetic command deck 1234")
+        app.buttons["deckEditor.save"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Synthetic command deck 1234"].waitForExistence(timeout: 5))
+        for (key, title) in [("1", "Сегодня"), ("2", "Колоды"), ("3", "Статистика"), ("4", "Библиотека")] {
+            app.typeKey(key, modifierFlags: .command)
+            XCTAssertEqual(app.staticTexts["section.title"].label, title)
+        }
+        // Button and menu must open the same blank editor, with no implicit save.
+        app.buttons["editorLauncher.create"].click()
+        XCTAssertTrue(field("front").waitForExistence(timeout: 5))
+        XCTAssertEqual(field("front").value as? String, "")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(app.buttons["editorLauncher.create"].waitForExistence(timeout: 5))
+        app.typeKey("1", modifierFlags: .command)
+        menu("Файл"); app.menuItems["Новая карточка"].click()
+        XCTAssertTrue(field("front").waitForExistence(timeout: 5))
+        XCTAssertEqual(field("front").value as? String, "")
+        field("front").click(); field("front").typeText("Words with spaces 1234")
+        field("back").click(); field("back").typeText("Answer 1234 with spaces")
+        XCTAssertEqual(field("front").value as? String, "Words with spaces 1234")
+        menu("Файл")
+        XCTAssertFalse(app.menuItems["Новая карточка"].isEnabled)
+        XCTAssertFalse(app.menuItems["Новая колода"].isEnabled)
+        closeMenu()
+        app.buttons["editor.save"].click()
+        let edit = app.buttons["note.edit.Words with spaces 1234"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.click()
+        XCTAssertTrue(field("front").waitForExistence(timeout: 5))
+        XCTAssertEqual(field("front").value as? String, "Words with spaces 1234")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        app.typeKey("e", modifierFlags: .command)
+        XCTAssertTrue(field("front").waitForExistence(timeout: 5))
+        XCTAssertEqual(field("front").value as? String, "Words with spaces 1234")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        app.typeKey("1", modifierFlags: .command)
+        XCTAssertTrue(app.buttons["study.start"].waitForExistence(timeout: 5))
+        menu("Занятие"); app.menuItems["Начать занятие"].click()
+        XCTAssertTrue(app.buttons["study.reveal"].waitForExistence(timeout: 5))
+        menu("Занятие")
+        XCTAssertFalse(app.menuItems["Хорошо"].isEnabled)
+        app.menuItems["Показать ответ"].click()
+        XCTAssertTrue(app.staticTexts["study.answer"].waitForExistence(timeout: 5))
+        menu("Файл"); XCTAssertFalse(app.menuItems["Новая карточка"].isEnabled); closeMenu()
+        menu("Занятие"); app.menuItems["Хорошо"].click()
+        let count = app.staticTexts["study.count"]
+        let rated = NSPredicate { _, _ in (count.value as? String) == "Подтверждённых оценок: 1" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: rated, object: nil)], timeout: 5), .completed)
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 5))
+        app.buttons["study.close"].click()
+        XCTAssertTrue(app.buttons["navigation.settings"].waitForExistence(timeout: 5))
+        app.typeKey("n", modifierFlags: .command)
+        XCTAssertTrue(field("front").waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(app.buttons["editorLauncher.create"].waitForExistence(timeout: 5))
+        app.typeKey(",", modifierFlags: .command)
+        let settings = app.windows["com_apple_SwiftUI_Settings_window"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        menu("Файл"); XCTAssertFalse(app.menuItems["Новая карточка"].isEnabled); closeMenu()
+    }
+
     @MainActor func testSettingsAutosaveValidationThemeAndRelaunch() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

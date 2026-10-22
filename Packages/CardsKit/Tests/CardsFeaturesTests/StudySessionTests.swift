@@ -242,11 +242,26 @@ private let studyClock = TestClock(date: Date(timeIntervalSince1970: 1_700_000_0
     #expect(!router.route(try event(), keyWindow: window))
     for key in ["1", "2", "3", "4"] { #expect(!router.route(try event(key), keyWindow: window)) }
     #expect(model.phase == .question)
+    // Native text editing receives every key the monitor declines, including spaces.
+    for key in [" ", "1", "2", "3", "4"] {
+        if !router.route(try event(key), keyWindow: window) { text.keyDown(with: try event(key)) }
+    }
+    #expect(text.string == " 1234")
     window.makeFirstResponder(nil)
     #expect(router.route(try event(), keyWindow: window))
     #expect(model.phase == .answer)
     window.makeFirstResponder(text)
     #expect(!router.route(try event("3"), keyWindow: window) && model.canRate)
+    for key in [" ", "1", "2", "3", "4"] {
+        if !router.route(try event(key), keyWindow: window) { text.keyDown(with: try event(key)) }
+    }
+    #expect(text.string == " 1234 1234" && model.confirmedRatings == 0)
+    // A real attached panel must keep all study actions in the underlying window inert.
+    window.beginSheet(other, completionHandler: { _ in })
+    #expect(!router.route(try event("3"), keyWindow: window))
+    #expect(!router.route(try event("w", flags: .command), keyWindow: window))
+    #expect(model.canRate)
+    window.endSheet(other)
     var closeRequests = 0
     router.requestClose = { closeRequests += 1 }
     #expect(router.route(try event("w", flags: .command), keyWindow: window))
@@ -312,4 +327,40 @@ private let studyClock = TestClock(date: Date(timeIntervalSince1970: 1_700_000_0
     #expect(model.activeDurationMs == 0)
     model.setForeground(true); model.resume()
     #expect(model.phase == .question && !model.canRate)
+}
+
+@Test @MainActor func studyMenuButtonAndKeyboardShareStateGatesAndPendingCommand() async throws {
+    let service = SessionService()
+    await service.configure(delayedRate: true)
+    let model = StudySessionModel(service: service, clock: studyClock)
+    await model.load()
+    let context = model.commandContext
+    for id in [AppCommandID.again, .hard, .good, .easy] { #expect(!context.perform(id)) }
+    #expect(context.perform(.reveal))
+    #expect(!context.perform(.reveal))
+    model.requestExit()
+    #expect(!context.perform(.good))
+    model.cancelExit(); model.pause()
+    #expect(!context.perform(.good))
+    model.resume()
+    #expect(context.perform(.good))
+    #expect(model.phase == .committing)
+    #expect(!context.perform(.easy) && !model.handleKey("4"))
+    for _ in 0..<1000 {
+        if await service.waitingRate() { break }
+        await Task.yield()
+    }
+    #expect(await service.submitted().count == 1)
+    #expect(await service.submitted().first?.grade == .good)
+    await service.completeRate()
+    for _ in 0..<1000 {
+        if model.phase == .question { break }
+        await Task.yield()
+    }
+    #expect(model.confirmedRatings == 1 && model.phase == .question)
+    #expect(!context.perform(.good))
+    #expect(model.handleKey(" "))
+    #expect(model.phase == .answer)
+    model.stop()
+    #expect(!context.perform(.good))
 }

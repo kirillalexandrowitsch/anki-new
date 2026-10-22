@@ -257,6 +257,25 @@ extension StudyAudioPlayer {
         else if phase != .completed { requestExit() }
     }
 
+    var commandContext: AppCommandContext {
+        AppCommandContext(isEnabled: { id in
+            switch id {
+            case .reveal: return self.phase == .question && self.acceptsInput
+            case .again, .hard, .good, .easy: return self.canRate
+            default: return false
+            }
+        }, perform: { id in
+            switch id {
+            case .reveal: self.reveal()
+            case .again: _ = self.handleKey("1")
+            case .hard: _ = self.handleKey("2")
+            case .good: _ = self.handleKey("3")
+            case .easy: _ = self.handleKey("4")
+            default: break
+            }
+        })
+    }
+
     /// True only when this session consumes the key. Text input and repeat are filtered by the router.
     public func handleKey(_ key: String) -> Bool {
         guard acceptsInput else { return false }

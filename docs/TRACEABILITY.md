@@ -233,7 +233,7 @@
 | [20.1 · Выпадающий список](../design-references/sheets/sheet-20.png) | [T039](tasks/T039.md) | Запланировано |
 | [20.2 · Сортировка](../design-references/sheets/sheet-20.png) | [T039](tasks/T039.md) | Запланировано |
 | [20.3 · Страницы](../design-references/sheets/sheet-20.png) | [T039](tasks/T039.md) | Запланировано |
-| [20.4 · Сайдбар и клавиатура](../design-references/sheets/sheet-20.png) | [T026](tasks/T026.md) | Запланировано |
+| [20.4 · Сайдбар и клавиатура](../design-references/sheets/sheet-20.png) | [T026](tasks/T026.md) | Готово |
 
 ## 21 · Теги и избранное
 
