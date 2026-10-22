@@ -14,13 +14,15 @@ public struct AppShellView: View {
     @State private var studyLoading = false
     private let makeStudy: (@MainActor () async throws -> StudySessionModel)?
     private let decks: DecksModel?
+    private let exporter: CollectionExportModel?
 
     private let onboarding: OnboardingModel?
     private let today: TodayModel?
     private let library: LibraryModel?
 
     public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, onboarding: OnboardingModel? = nil,
-                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil) {
+                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil) {
+        self.exporter = exporter
         self.model = model
         self.decks = decks
         self.makeStudy = makeStudy
@@ -102,6 +104,9 @@ public struct AppShellView: View {
         .sheet(isPresented: $showsStudy, onDismiss: { today?.reload() }) {
             if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
         }
+        .sheet(isPresented: Binding(get: { exporter?.isPresented ?? false }, set: { exporter?.isPresented = $0 })) {
+            if let exporter { CollectionExportView(model: exporter) }
+        }
         .environment(\.appCommands, commands)
         .focusedSceneValue(\.appCommandContext, commands)
         .tint(CardsColor.accent.color)
@@ -110,7 +115,7 @@ public struct AppShellView: View {
         }
     }
     private var isModal: Bool {
-        showsStudy || showsStudyDemo || studyLoading || onboarding?.showsCreator == true ||
+        showsStudy || showsStudyDemo || studyLoading || exporter?.isPresented == true || onboarding?.showsCreator == true ||
         decks?.editor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true
     }
 
@@ -119,6 +124,7 @@ public struct AppShellView: View {
             guard !isModal else { return false }
             if id.section != nil || id == .settings { return true }
             switch id {
+            case .exportData: return exporter != nil
             case .newDeck: return decks != nil
             case .newNote: return library != nil
             case .editNote: return model.selection == .library && library?.selectedRow != nil && library?.isLoading == false
@@ -128,6 +134,7 @@ public struct AppShellView: View {
         }, perform: { id in
             if let section = id.section { model.selection = section; return }
             switch id {
+            case .exportData: exporter?.present()
             case .settings: openSettings()
             case .newDeck: model.selection = .decks; decks?.create()
             case .newNote: model.selection = .library; library?.createNote()

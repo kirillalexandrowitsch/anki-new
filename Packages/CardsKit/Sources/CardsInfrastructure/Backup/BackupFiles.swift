@@ -60,6 +60,34 @@ enum BackupFiles {
             sha256: digest.finalize().map { String(format: "%02x", $0) }.joined())
     }
 
+    /// Foundation grants a sandbox-accessible replacement directory on the target
+    /// volume. A Save Panel grants the selected file, not arbitrary sibling paths.
+    static func exportWorkDirectory(for destination: URL) throws -> URL {
+        try manager.url(for: .itemReplacementDirectory, in: .userDomainMask,
+                        appropriateFor: destination, create: true)
+    }
+
+    static func publishExport(_ source: URL, to destination: URL) throws {
+        try syncFile(source)
+        try Task.checkCancellation()
+        // Same-volume no-overwrite publication also works with a Save Panel's
+        // file-only grant. Never request broader directory permission from UI.
+        guard Darwin.link(source.path, destination.path) == 0 else {
+            throw CollectionAccessError.fileSystem(errno)
+        }
+        let parent = destination.deletingLastPathComponent()
+        let descriptor = Darwin.open(parent.path, O_RDONLY | O_DIRECTORY)
+        if descriptor < 0 {
+            let code = errno
+            // The selected file is granted, but opening its parent for fsync is
+            // denied by App Sandbox. The complete payload was fsynced above.
+            guard code == EACCES || code == EPERM else { throw CollectionAccessError.fileSystem(code) }
+            return
+        }
+        defer { Darwin.close(descriptor) }
+        guard fsync(descriptor) == 0 else { throw CollectionAccessError.fileSystem(errno) }
+    }
+
     static func syncFile(_ url: URL) throws {
         let file = try FileHandle(forWritingTo: url)
         defer { try? file.close() }
