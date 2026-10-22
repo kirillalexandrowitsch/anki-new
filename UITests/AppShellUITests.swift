@@ -17,12 +17,18 @@ final class AppShellUITests: XCTestCase {
         app.buttons["onboarding.save"].click()
         app.staticTexts["navigation.library"].click()
         func counts(_ expected: String) {
-            let value = app.descendants(matching: .any).matching(identifier: "library.counts").firstMatch
+            let value = app.staticTexts["library.counts"]
             XCTAssertTrue(value.waitForExistence(timeout: 10))
-            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", expected), object: value)], timeout: 10), .completed)
+            let matches = NSPredicate { _, _ in value.value as? String == expected }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: matches, object: nil)], timeout: 10), .completed)
+        }
+        func helloRow() -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(
+                format: "identifier == %@ OR label BEGINSWITH %@",
+                "library.select.Hello", "Выбрать карточку Hello,")).firstMatch
         }
         func request() {
-            let select = app.buttons["library.select.Hello"]
+            let select = helloRow()
             XCTAssertTrue(select.waitForExistence(timeout: 10)); select.click()
             if !app.buttons["cardDeletion.request"].exists { app.buttons["library.inspector"].click() }
             app.buttons["cardDeletion.request"].click()
@@ -43,7 +49,7 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
         app.staticTexts["navigation.library"].click()
         counts("Карточек: 2 · Записей: 2")
-        XCTAssertFalse(app.buttons["library.select.Hello"].exists)
+        XCTAssertFalse(helloRow().exists)
         XCTAssertFalse(undo.exists)
     }
 

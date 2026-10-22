@@ -38,6 +38,11 @@
       "command": "python3 scripts/tasks.py finish T029; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "/tmp/anki-T029-quality-final.log: 26 Python tests, 2479 local links, 48/48 original PNG hashes, graph/reports/generated state passed. T029 done после реальной приёмки; git diff --check clean. Финальный offline summary: build/checks/run-l7jx0zs_/summary.json, Core 30/Infrastructure 152/Features 30/DesignSystem 3 и XCTest worker 1 passed; networkDenied=true, arm64 app build passed."
+    },
+    {
+      "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T029-ui-repair-build.log: TEST BUILD SUCCEEDED после исправления UI count helper (value) и native Table selection; /tmp/anki-T029-quality-repair.log: 26 Python tests, 2479 links/48 PNGs, graph/generated state/reports passed. Product source не менялся после full offline/native acceptance; ни одно assertion не удалено."
     }
   ],
   "limitations": [
@@ -61,6 +66,11 @@
       "command": "Local selected testCardDeletionCancelUndoTimeoutAndReopen",
       "result": "failed",
       "details": "/tmp/anki-T029-app-tests-final.log: Failed to synthesize event: Timed out while synthesizing event at name.typeText, second display. Тест не менялся ради локального OS ограничения; новый сценарий остаётся обязательным CI."
+    },
+    {
+      "command": "gh run view 39839520690 --log-failed",
+      "result": "failed",
+      "details": "PR #102 initial macos CI: package tests 215 + XCTest worker passed; new testCardDeletionCancelUndoTimeoutAndReopen failed at count helper line 22. On macOS library.counts exposes text in value, not label (confirmed by native AX and existing passing library UI test). Helper now compares value and selects native Table row by identifier OR semantic label, exactly as existing library acceptance. Cancel/Undo/timeout/restart assertions retained."
     }
   ]
 }
