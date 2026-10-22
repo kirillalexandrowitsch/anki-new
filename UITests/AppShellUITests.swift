@@ -33,10 +33,17 @@ final class AppShellUITests: XCTestCase {
         XCTAssertTrue(folder.waitForExistence(timeout: 5))
         folder.click()
         folder.typeKey("a", modifierFlags: .command)
-        folder.typeText(temporary.path)
-        app.typeKey(XCUIKeyboardKey.return.rawValue, modifierFlags: [])
-        let nativeSave = app.buttons.matching(NSPredicate(format: "label IN %@", ["Сохранить", "Save"])).firstMatch
-        XCTAssertTrue(nativeSave.waitForExistence(timeout: 5))
+        folder.typeText(temporary.path + "/")
+        folder.typeKey(XCUIKeyboardKey.return.rawValue, modifierFlags: [])
+        // Go To may first accept its path completion. Await the actual modal
+        // transition before addressing the Save Panel underneath it.
+        if !folder.waitForNonExistence(timeout: 2) {
+            folder.typeKey(XCUIKeyboardKey.return.rawValue, modifierFlags: [])
+        }
+        XCTAssertTrue(folder.waitForNonExistence(timeout: 5))
+        let nativeSave = app.buttons["OKButton"]
+        XCTAssertTrue(nativeSave.waitForExistence(timeout: 10))
+        XCTAssertTrue(nativeSave.isEnabled)
         nativeSave.click()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "export.complete").firstMatch.waitForExistence(timeout: 15))
         let file = temporary.appendingPathComponent("Collection.csv")

@@ -38,6 +38,11 @@
       "command": "python3 scripts/tasks.py finish T027; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T027 done после фактической приёмки. /tmp/anki-T027-quality.log: 26 Python tests, generated state/report graph, 2478 local links и 48/48 исходных PNG hashes passed. Финальный Release build /tmp/anki-T027-release-verified.log: BUILD SUCCEEDED. CUA подтвердил финальные имя Collection.csv и button ID export.complete после реального Accepted.csv save; app закрыт."
+    },
+    {
+      "command": "xcodebuild test -only-testing:AnkiNewTests (same project/scheme/offline flags as above); python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T027-app-unit-repair.log: исправленный UI test скомпилирован, 4 app unit tests passed, TEST SUCCEEDED. /tmp/anki-T027-quality-repair.log: quality passed. Критерии, checks и assertions успешного экспорта не ослаблены."
     }
   ],
   "limitations": [
@@ -61,6 +66,11 @@
       "command": "Initial sandboxed Release native save",
       "result": "failed",
       "details": "Save Panel выдаёт доступ только к выбранному файлу; создание sibling .export directory и fsync родительского каталога были запрещены. Подготовка перенесена в system itemReplacementDirectory на том же томе, публикация учитывает file-only grant; последующие реальные CSV/cardsdeck/cardsbackup saves прошли. Default basename исправлен, custom extension не удваивается."
+    },
+    {
+      "command": "gh run view 39804014877 --log-failed",
+      "result": "failed",
+      "details": "Первый PR CI: quality и 203 package tests passed; новый UI test остановился на AppShellUITests.swift:39 (поиск Save по label после Go To). Уточнены ожидание закрытия Go To, trailing slash для folder path и устойчивый нативный OKButton ID. Все проверки фактического сохранения/CSV содержимого оставлены. Обновлённый полный CI обязателен перед merge."
     }
   ]
 }
