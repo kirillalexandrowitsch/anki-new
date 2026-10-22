@@ -1,0 +1,59 @@
+{
+  "taskID": "T026",
+  "summary": "Единые UI command IDs и focused scene context: меню, кнопки и shortcuts создают/редактируют карточки и колоды, выбирают главные разделы, запускают Study и открывают нативные настройки. Study использует одинаковые state gates для меню/кнопок/Space/1–4; ввод текста и attached sheet защищены native responder routing.",
+  "criteria": [
+    {
+      "text": "Одна команда имеет одинаковый результат из разных точек входа.",
+      "passed": true,
+      "evidence": "testMainCommandsKeyboardMenusAndButtonsShareRoutesAndModalGates прошёл в полном XCUITest прогоне: глобальное создание колоды из Today через ⇧⌘N, ⌘1–4, создание карточки кнопкой и меню из другого раздела, редактирование кнопкой/⌘E, Study start/reveal/grade через меню, отключённые Import/Edit/New/navigation в недопустимом контексте, возврат после Study к ⌘N и нативным ⌘, Settings. studyMenuButtonAndKeyboardShareStateGatesAndPendingCommand проверяет общий gate и единственную pending write. Полный Xcode regression прогон прошёл: 12 UI tests и 4 app unit tests."
+    },
+    {
+      "text": "В активном поле Space и цифры вводятся, а не ставят оценку.",
+      "passed": true,
+      "evidence": "studyKeyboardRouterRespectsTextFocusOtherWindowsModifiersAndRepeat передаёт Space/1–4 настоящему NSTextView в question и answer: получен текст « 1234 1234», подтверждённых оценок 0. Другой key window, modifiers, repeat и реальная attached sheet не перехватываются. 28 Features tests passed (/tmp/anki-T026-features-final.log). T026 XCUITest дополнительно подтвердил точные значения полей «Words with spaces 1234» и «Answer 1234 with spaces» в модальном редакторе."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter CardsFeaturesTests",
+      "result": "passed",
+      "details": "/tmp/anki-T026-features-final.log: 28 tests passed. Новый state-gate test подтверждает disabled grades до reveal, pause/exit gate, committing до async, одну pending grade и скрытую следующую карточку. Расширенный native router test проверяет реальный текстовый ввод и attached panel."
+    },
+    {
+      "command": "python3 -m unittest discover -s scripts -p 'test_*.py' -v",
+      "result": "passed",
+      "details": "/tmp/anki-T026-python.log: 26 tests passed."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T026-ui-full.log: TEST SUCCEEDED; 12 UI tests и 4 app unit tests. Новый T026 test: routes, меню/shortcuts/кнопки, disabled items, реальный Study, текст Space/1234, фокус после Study и Settings. Сохранены все прежние Editor/Onboarding/Settings/Study/reveal/grades/pause/skip/Undo/relaunch/⌘W tests. Для буквенных XCTest shortcuts временно выбран ABC; исходный com.apple.keylayout.Russian восстановлен и проверен. Финальная синхронизация disabled-state двух кнопок Library дополнительно компилируется локальным offline check; маршруты/handlers не менялись."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "build/checks/run-s2moq7ec/summary.json: networkDenied=true; все package suites прошли (Core 30, Infrastructure 137, Features 28, DesignSystem 3, XCTest worker 1), seed12 fingerprint неизменён; финальная arm64 app-build passed. Native responder тесты повторно прошли с восстановленной русской раскладкой. Финальные disabled-state кнопок Library скомпилированы."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T026; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T026 done после фактической приёмки. /tmp/anki-T026-quality.log: 26 Python tests, graph/report/generated consistency, 2477 local links и 48/48 исходных PNG hashes passed. Whitespace check passed."
+    }
+  ],
+  "limitations": [
+    "Импорт честно отключён до реализации сервиса в профильных задачах; T026 создаёт его стабильный ID и пункт меню. Редактируемые сочетания — T047, полные системные меню — T069.",
+    "Новых зависимостей, миграций, платных API/подписок и CI artifact/cache uploads нет. Все проверки используют синтетические временные коллекции; личные данные, логи и скриншоты в Git не добавляются."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial expanded Features test compile",
+      "result": "failed",
+      "details": "Тест уточнён под AppKit API keyDown(with:) и синхронный beginSheet(completionHandler:). Последующий прогон всех 28 Features tests passed."
+    },
+    {
+      "command": "Initial selected T026 XCUITest (/tmp/anki-T026-ui-selected.log)",
+      "result": "failed",
+      "details": "Проверки меню, создания, редактирования и оценки прошли, но тест пытался завершить уже естественно завершённую очередь единственной карточки. Assertion заменён на ожидание настоящего summary/Закрыть, после которого проверяется возврат клавиатуры к редактору. Прежние тесты подтверждения выхода не менялись. Полный последующий прогон всех 12 UI tests и 4 app unit tests passed."
+    }
+  ]
+}

@@ -14,7 +14,7 @@ struct AnkiNewApp: App {
                 .preferredColorScheme(composition.appearance.colorScheme)
         }
         .defaultSize(width: 1100, height: 760)
-        .commands { StudyCommands() }
+        .commands { AppCommands() }
 
         #if DEBUG
         Window("Дизайн-система", id: "design-system") {
