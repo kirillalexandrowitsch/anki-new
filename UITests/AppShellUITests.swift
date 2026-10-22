@@ -1,6 +1,52 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testExportNativeSavePanelCancelAndVerifiedCSVSuccess() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        defer { app.terminate(); try? FileManager.default.removeItem(at: temporary) }
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        dismissWelcome(in: app)
+        app.menuBars.menuBarItems["Файл"].click()
+        let export = app.menuItems["Экспортировать…"]
+        XCTAssertTrue(export.isEnabled)
+        export.click()
+        let save = app.buttons["export.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.checkBoxes["Включить прогресс"].isEnabled)
+        XCTAssertFalse(app.checkBoxes["Включить медиафайлы"].isEnabled)
+        save.click()
+        let name = app.textFields["saveAsNameTextField"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "export.complete").firstMatch.exists)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: temporary.path).isEmpty)
+        save.click()
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        app.typeKey("g", modifierFlags: [.command, .shift])
+        let folder = app.textFields["PathTextField"]
+        XCTAssertTrue(folder.waitForExistence(timeout: 5))
+        folder.click()
+        folder.typeKey("a", modifierFlags: .command)
+        folder.typeText(temporary.path)
+        app.typeKey(XCUIKeyboardKey.return.rawValue, modifierFlags: [])
+        let nativeSave = app.buttons.matching(NSPredicate(format: "label IN %@", ["Сохранить", "Save"])).firstMatch
+        XCTAssertTrue(nativeSave.waitForExistence(timeout: 5))
+        nativeSave.click()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "export.complete").firstMatch.waitForExistence(timeout: 15))
+        let file = temporary.appendingPathComponent("Collection.csv")
+        let text = try String(contentsOf: file, encoding: .utf8)
+        XCTAssertTrue(text.hasPrefix("\"note_id\",\"front\",\"back\""))
+        XCTAssertEqual(text.components(separatedBy: "\r\n").count, 2) // Empty collection: header only.
+        app.buttons["Готово"].click()
+        XCTAssertFalse(save.exists)
+    }
+
     @MainActor func testMainCommandsKeyboardMenusAndButtonsShareRoutesAndModalGates() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

@@ -16,7 +16,7 @@ struct CollectionRegistry: Codable {
 }
 
 /// All filesystem/SQLite work runs on this actor, never on the UI actor.
-public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
@@ -258,9 +258,7 @@ public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyW
         defer { operationInProgress = false }
         let scoped = destination.startAccessingSecurityScopedResource()
         defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
-        let parent = destination.deletingLastPathComponent()
-        let work = parent.appendingPathComponent(".backup-" + UUID().uuidString.lowercased())
-        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: false)
+        let work = try BackupFiles.exportWorkDirectory(for: destination)
         defer { try? FileManager.default.removeItem(at: work) }
         let source = containerURL(owned.context.id)
         let now = clock.now()
@@ -270,12 +268,40 @@ public actor CollectionStore: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyW
         let archive = work.appendingPathComponent("backup.cardsbackup")
         try BackupArchive.create(staging: work.appendingPathComponent("snapshot"), archiveURL: archive)
         _ = try BackupArchive.extract(archive, to: work.appendingPathComponent("verify"))
-        try BackupFiles.syncFile(archive)
-        try Task.checkCancellation()
-        guard Darwin.link(archive.path, destination.path) == 0 else {
-            throw CollectionAccessError.fileSystem(errno)
+        try BackupFiles.publishExport(archive, to: destination)
+    }
+
+    public func export(to destination: URL, format: CollectionExportFormat, safeSpreadsheet: Bool = false, generation: UUID) async throws {
+        guard destination.pathExtension.lowercased() == format.fileExtension else {
+            throw CollectionExportError.invalidDestination
         }
-        try MediaFiles.synchronizeDirectory(parent)
+        if format == .cardsbackup {
+            try await createBackup(to: destination, generation: generation)
+            return
+        }
+        guard let owned = active, !owned.closing, owned.context.generation == generation else {
+            throw CollectionAccessError.staleContext
+        }
+        guard !operationInProgress else { throw CollectionBackupError.operationInProgress }
+        guard BackupFiles.outside(destination, root: root),
+              !FileManager.default.fileExists(atPath: destination.path) else {
+            throw CollectionExportError.invalidDestination
+        }
+        operationInProgress = true
+        defer { operationInProgress = false }
+        let scoped = destination.startAccessingSecurityScopedResource()
+        defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
+        let work = try BackupFiles.exportWorkDirectory(for: destination)
+        defer { try? FileManager.default.removeItem(at: work) }
+        let snapshot = work.appendingPathComponent("snapshot")
+        let source = containerURL(owned.context.id)
+        let now = clock.now()
+        try await owned.writer.mediaAccess { pool in
+            try BackupArchive.snapshot(pool: pool, source: source, staging: snapshot, now: now)
+        }
+        let candidate = work.appendingPathComponent("export." + format.fileExtension)
+        try CollectionExporter.create(snapshot: snapshot, destination: candidate, format: format, safe: safeSpreadsheet)
+        try BackupFiles.publishExport(candidate, to: destination)
     }
 
     /// Full validation precedes invalidation of the old generation. Startup recovers any interrupted swap.

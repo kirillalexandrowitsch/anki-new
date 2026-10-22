@@ -3,7 +3,7 @@ import SwiftUI
 /// Stable IDs belong to UI routing, independently of persistence command UUIDs.
 public enum AppCommandID: String, CaseIterable, Sendable {
     case today, decks, statistics, library
-    case newNote, newDeck, editNote, importData, settings, startStudy
+    case newNote, newDeck, editNote, importData, exportData, settings, startStudy
     case reveal, again, hard, good, easy
 
     var section: MainSection? {

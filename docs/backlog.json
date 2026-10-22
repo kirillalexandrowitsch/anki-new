@@ -985,7 +985,7 @@
       ],
       "verification": "Round trip текста, повреждённая кодировка, отмена панели и запись в недоступную папку.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "12.1",
@@ -993,7 +993,10 @@
         "13.4",
         "24.2",
         "24.3"
-      ]
+      ],
+      "startedAt": "2026-10-22T14:59:57.613113+00:00",
+      "completedAt": "2026-10-22T15:19:43.074881+00:00",
+      "report": "docs/task-reports/T027.json"
     },
     {
       "id": "T028",

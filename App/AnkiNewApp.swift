@@ -41,6 +41,7 @@ private struct MainWindow: View {
     @State private var today: TodayModel?
     @State private var onboarding: OnboardingModel?
     @State private var library: LibraryModel?
+    @State private var exporter: CollectionExportModel?
     @State private var decksError = false
     @State private var decksCloseToken: UUID?
     @State private var studyCloseToken: UUID?
@@ -59,7 +60,7 @@ private struct MainWindow: View {
             if let token = studyCloseToken { collections.removeObservation(token) }
             studyCloseToken = collections.onClose(context) { study.stop() }
             return study
-        })
+        }, exporter: exporter)
             .frame(minWidth: 800, minHeight: 540)
             .task { await collections.open() }
             .task(id: collections.context) {
@@ -73,6 +74,8 @@ private struct MainWindow: View {
                 onboarding = nil
                 today?.stop()
                 today = nil
+                exporter?.stop()
+                exporter = nil
                 decksError = false
                 guard let context = collections.context else { return }
                 do {
@@ -86,11 +89,13 @@ private struct MainWindow: View {
                     guard !Task.isCancelled, collections.context == context else {
                         loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); return
                     }
+                    let exportModel = try composition.makeExportModel(context: context)
+                    exporter = exportModel
                     onboarding = firstRun
                     today = dashboard
                     library = notes
                     decks = loaded
-                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop() }
+                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); exportModel.stop() }
                 } catch {
                     if collections.context == context { decksError = true }
                 }
@@ -98,6 +103,7 @@ private struct MainWindow: View {
             .onDisappear {
                 if let token = studyCloseToken { collections.removeObservation(token) }
                 if let token = decksCloseToken { collections.removeObservation(token) }
+                exporter?.stop()
                 decks?.stop()
                 onboarding?.stop()
                 library?.stop()
