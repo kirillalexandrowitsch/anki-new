@@ -38,6 +38,7 @@ private struct MainWindow: View {
     private let collections: CollectionCoordinator
     private let composition: CompositionRoot
     @State private var decks: DecksModel?
+    @State private var statistics: StatisticsModel?
     @State private var today: TodayModel?
     @State private var onboarding: OnboardingModel?
     @State private var library: LibraryModel?
@@ -53,7 +54,7 @@ private struct MainWindow: View {
     }
 
     var body: some View {
-        AppShellView(model: model, decks: decks, library: library, today: today, onboarding: onboarding, makeStudy: {
+        AppShellView(model: model, decks: decks, library: library, today: today, statistics: statistics, onboarding: onboarding, makeStudy: {
             guard let context = collections.context else { throw CollectionAccessError.staleContext }
             let study = try await composition.makeStudyModel(context: context)
             guard collections.context == context else { study.stop(); throw CollectionAccessError.staleContext }
@@ -72,6 +73,8 @@ private struct MainWindow: View {
                 library = nil
                 onboarding?.stop()
                 onboarding = nil
+                statistics?.stop()
+                statistics = nil
                 today?.stop()
                 today = nil
                 exporter?.stop()
@@ -89,13 +92,18 @@ private struct MainWindow: View {
                     guard !Task.isCancelled, collections.context == context else {
                         loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); return
                     }
+                    let stats = try await composition.makeStatisticsModel(context: context)
+                    guard !Task.isCancelled, collections.context == context else {
+                        loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); stats.stop(); return
+                    }
+                    statistics = stats
                     let exportModel = try composition.makeExportModel(context: context)
                     exporter = exportModel
                     onboarding = firstRun
                     today = dashboard
                     library = notes
                     decks = loaded
-                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); exportModel.stop() }
+                    decksCloseToken = collections.onClose(context) { loaded.stop(); notes.stop(); dashboard.stop(); firstRun.stop(); exportModel.stop(); stats.stop() }
                 } catch {
                     if collections.context == context { decksError = true }
                 }
@@ -107,6 +115,8 @@ private struct MainWindow: View {
                 decks?.stop()
                 onboarding?.stop()
                 library?.stop()
+                statistics?.stop()
+                statistics = nil
                 today?.stop()
             }
             .overlay {

@@ -1,6 +1,61 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testStatisticsEmptyPeriodAndRealRatingPersistAfterRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        func stats(_ id: String) -> String {
+            let element = app.descendants(matching: .any).matching(identifier: "statistics.\(id)").firstMatch
+            XCTAssertTrue(element.waitForExistence(timeout: 10))
+            return (element.value as? String).flatMap { $0.isEmpty ? nil : $0 } ?? element.label
+        }
+        app.staticTexts["navigation.statistics"].click()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "statistics.empty").firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(stats("ratings"), "0")
+        XCTAssertEqual(stats("success"), "Нет данных")
+        app.radioButtons["7 дней"].click()
+        XCTAssertEqual(stats("cards"), "0")
+        app.staticTexts["navigation.today"].click()
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.click(); name.typeText("Synthetic Statistics")
+        app.checkBoxes["onboarding.demo"].click()
+        app.buttons["onboarding.save"].click()
+        let start = app.buttons["study.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.click()
+        XCTAssertTrue(app.buttons["study.reveal"].waitForExistence(timeout: 5))
+        app.buttons["study.reveal"].click()
+        app.buttons["study.grade.4"].click()
+        XCTAssertTrue(app.buttons["study.undoRating"].waitForExistence(timeout: 5))
+        app.buttons["study.undoRating"].click()
+        XCTAssertTrue(app.staticTexts["study.answer"].waitForExistence(timeout: 5))
+        app.buttons["study.grade.3"].click()
+        XCTAssertTrue(app.buttons["study.reveal"].waitForExistence(timeout: 5))
+        app.buttons["study.exit"].click()
+        XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5))
+        app.buttons["study.exit.confirm"].click()
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 5))
+        app.buttons["study.close"].click()
+        app.staticTexts["navigation.statistics"].click()
+        XCTAssertEqual(stats("ratings"), "1")
+        XCTAssertEqual(stats("cards"), "1")
+        XCTAssertEqual(stats("grade.3"), "Хорошо: 1")
+        XCTAssertEqual(stats("grade.4"), "Легко: 0")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "statistics.activity").firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "statistics.empty").firstMatch.exists)
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["navigation.statistics"].waitForExistence(timeout: 10))
+        app.staticTexts["navigation.statistics"].click()
+        XCTAssertEqual(stats("ratings"), "1")
+        XCTAssertEqual(stats("grade.3"), "Хорошо: 1")
+    }
+
     @MainActor func testExportNativeSavePanelCancelAndVerifiedCSVSuccess() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

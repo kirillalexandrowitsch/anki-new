@@ -1,0 +1,61 @@
+{
+  "taskID": "T028",
+  "summary": "Первичная статистика реальной коллекции: StatsQueryService с effective ReviewLog, общая SQL-проекция с Today/ReviewRepository, периоды 7/30/365 учебных дней, DISTINCT Card, четыре оценки, успешность, время ответов и сохранённое активное время начатых в периоде сессий. Swift Charts, loading/error/no-data, наблюдение за Undo/checkpoint, generation lifecycle и доступные подписи.",
+  "criteria": [
+    {
+      "text": "Undo меняет все связанные метрики согласованно.",
+      "passed": true,
+      "evidence": "statsManualLogMatchesEveryMetricAndUndoAcrossScreens: вручную заданный сценарий 4 оценок (Again/Hard/Good/Easy), 2 Card, два дня, 10000 ms response, 12345 ms active дал 75%; Undo Easy дал 3 оценки, 2 Card, [1,1,1,0], 6000 ms, 2/3 и пустой последний день. Today и session progress согласованы. Активное время не вычитается при Undo согласно T022. Observation тест проверил SQL commit, rating/Undo/checkpoint, закрытие и reopen; перенос/удаление текущих Card/deck не изменили исторические итоги. CUA подтвердил раскрытый ответ после Undo и итоговую единственную Good вместо отменённой Easy."
+    },
+    {
+      "text": "Графики не используют числа из PNG вместо реальных запросов.",
+      "passed": true,
+      "evidence": "Chart(value.days) строит BarMark по StatsSnapshot дневных SQL GROUP BY, с нулями пропусков. statsManualLogMatchesEveryMetricAndUndoAcrossScreens сверяет все 7 значений [0,0,0,0,0,3,1] и суммы; empty/voided-only дают nil success, а Again-only настоящий 0%. CUA в изолированной коллекции подтвердил пустой экран (Нет данных), затем 1 оценку/1 Card/100%, grade Good=1/Easy=0, реальный столбец, периоды 7/30 дней и те же данные после перезапуска. Исходные PNG прочитаны, их числа/данные в код не перенесены; 48/48 hashes сохранены."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter 'stats|today'",
+      "result": "passed",
+      "details": "/tmp/anki-T028-targeted.log: 11 tests passed, включая 5 новых stats tests. Ручной fixture, Undo, empty/voided-only, DISTINCT между днями, границы периода, DST (23-hour day), saved timezone policy, несмешивание timezone, generation close/reopen, model loading/error/period/time refresh."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T028-offline.log; build/checks/run-vozidaa2/summary.json: networkDenied=true, package Core 30/Infrastructure 145/Features 30/DesignSystem 3 и XCTest worker 1, seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86; arm64 app build passed."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewTests",
+      "result": "passed",
+      "details": "/tmp/anki-T028-app-unit-final.log: TEST SUCCEEDED, 4 app unit tests. Финальные Swift Charts, accessibility и новый XCUITest скомпилированы."
+    },
+    {
+      "command": "Native app acceptance via CUA on ad-hoc Debug build with isolated -CollectionTestID 00000000-0000-0000-0000-000000000028",
+      "result": "passed",
+      "details": "Пустая статистика, отсутствие выдуманного процента, 7/30 дней, создание трёх synthetic demo Card, reveal/Easy/Undo/revealed/Good, finish, Statistics 1 rating/1 Card/100%, Good=1/Easy=0, activity chart и active duration. Повторный запуск сохранил данные. Финальная AX проверка подтвердила statistics.ratings/cards/success/activeDuration и grade.1…4; график показывает daily bars с unit day. Личная коллекция не открывалась; приложение закрыто."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T028; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T028-quality-final.log: 26 Python tests passed, task graph/reports/generated state, 2479 local links и 48/48 PNG hashes; T028 done после фактической приёмки. git diff --check без ошибок."
+    }
+  ],
+  "limitations": [
+    "В SQLite T022 хранится суммарное activeDurationMs без отдельных временных интервалов. UI и QUERIES.md явно определяют метрику как полное сохранённое время scheduled-сессий, начатых в периоде и той же timezone. Сессии до начала периода исключены, пересёкшие его конец включены целиком. Undo сохраняет затраченное активное время, удаляя response duration отменённой оценки.",
+    "Сохранённые studyDayKey/timezoneID не перегруппировываются. Активная/paused policy берётся как в Today, иначе текущая timezone/04:00; timezone видима на экране. Произвольные даты, исторический deck scope и day inspector остаются T042.",
+    "Локальный новый XCUITest дошёл до пустой статистики и смены периода, затем macOS event synthesis не смог ввести название колоды на втором дисплее. Полный локальный XCUITest не объявлен успешным; нативная CUA приёмка выполнена, новый сценарий остаётся в обязательном macos CI.",
+    "Нет новых зависимостей, миграций, платных API/подписок, CI uploads или изменений PNG. Только синтетические временные данные, логи/xcresults не коммитятся."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial targeted test compilation",
+      "result": "failed",
+      "details": "ReviewSQL.ms возвращает Int64?; тест границы исправлен на first.start.addingTimeInterval(-0.001). Последующие targeted/full offline tests прошли."
+    },
+    {
+      "command": "Local selected XCUITest + app unit tests",
+      "result": "failed",
+      "details": "/tmp/anki-T028-app-tests.log: 4 app unit tests passed; testStatisticsEmptyPeriodAndRealRatingPersistAfterRelaunch failed at onboarding.name typeText with Failed to synthesize event: Timed out while synthesizing event (UITests/AppShellUITests.swift:27). До этого empty metrics и 7-day picker прошли. OS permissions не менялись. Проверки не ослаблены; CUA завершил полный сценарий, финальный app unit прогон passed."
+    }
+  ]
+}

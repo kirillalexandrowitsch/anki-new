@@ -122,11 +122,8 @@ struct SQLiteReviewRepository: ReviewRepository {
 
     func effectiveStatistics() async throws -> EffectiveReviewStatistics {
         try await writer.read { db in
-            let row = try Row.fetchOne(db, sql: """
-                SELECT count(*) AS ratings, count(DISTINCT cardIdentitySnapshot) AS cards, coalesce(sum(durationMs),0) AS duration
-                FROM review_logs WHERE voidedBy IS NULL
-                """)!
-            return EffectiveReviewStatistics(ratings: row["ratings"], uniqueCards: row["cards"], durationMs: row["duration"])
+            let stats = try StatsSQL.totals(db, predicate: "1", arguments: [])
+            return EffectiveReviewStatistics(ratings: stats.ratings, uniqueCards: stats.uniqueCards, durationMs: stats.responseDurationMs)
         }
     }
 

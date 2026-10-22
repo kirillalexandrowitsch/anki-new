@@ -10,7 +10,7 @@
 |---|---|---|
 | [base-01 · Сегодня](../design-references/screens/base-01.png) | [T023](tasks/T023.md) | Готово |
 | [base-02 · Колоды](../design-references/screens/base-02.png) | [T031](tasks/T031.md) | Запланировано |
-| [base-03 · Статистика](../design-references/screens/base-03.png) | [T028](tasks/T028.md) | Запланировано |
+| [base-03 · Статистика](../design-references/screens/base-03.png) | [T028](tasks/T028.md) | Готово |
 | [base-04 · Библиотека](../design-references/screens/base-04.png) | [T016](tasks/T016.md) | Готово |
 | [base-05 · Настройки](../design-references/screens/base-05.png) | [T025](tasks/T025.md) | Готово |
 | [base-06 · Повторение — вопрос](../design-references/screens/base-06.png) | [T019](tasks/T019.md) | Готово |
