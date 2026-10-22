@@ -184,7 +184,8 @@ public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, Edito
 
     public func editorWorkspace(generation: UUID) throws -> EditorWorkspace {
         try EditorWorkspace(generation: generation, notes: notes(generation: generation),
-                            queries: queries(generation: generation))
+                            queries: queries(generation: generation),
+                            deletions: SQLiteCardDeletion(writer: writer(generation: generation), clock: clock))
     }
 
     public func studyPreferences(generation: UUID) throws -> any StudyPreferencesRepository {
