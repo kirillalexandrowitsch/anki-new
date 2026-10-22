@@ -12,7 +12,7 @@
 | [base-02 · Колоды](../design-references/screens/base-02.png) | [T031](tasks/T031.md) | Запланировано |
 | [base-03 · Статистика](../design-references/screens/base-03.png) | [T028](tasks/T028.md) | Запланировано |
 | [base-04 · Библиотека](../design-references/screens/base-04.png) | [T016](tasks/T016.md) | Готово |
-| [base-05 · Настройки](../design-references/screens/base-05.png) | [T025](tasks/T025.md) | Запланировано |
+| [base-05 · Настройки](../design-references/screens/base-05.png) | [T025](tasks/T025.md) | Готово |
 | [base-06 · Повторение — вопрос](../design-references/screens/base-06.png) | [T019](tasks/T019.md) | Готово |
 
 ## 01 · Первый запуск
@@ -197,7 +197,7 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [17.1 · Тёмная тема](../design-references/sheets/sheet-17.png) | [T025](tasks/T025.md) | Запланировано |
+| [17.1 · Тёмная тема](../design-references/sheets/sheet-17.png) | [T025](tasks/T025.md) | Готово |
 | [17.2 · Язык](../design-references/sheets/sheet-17.png) | [T044](tasks/T044.md) | Запланировано |
 | [17.3 · Напоминание](../design-references/sheets/sheet-17.png) | [T045](tasks/T045.md) | Запланировано |
 | [17.4 · Восстановить копию](../design-references/sheets/sheet-17.png) | [T046](tasks/T046.md) | Запланировано |

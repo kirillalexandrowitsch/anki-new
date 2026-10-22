@@ -1,6 +1,53 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testSettingsAutosaveValidationThemeAndRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        func openSettings() -> XCUIElement {
+            XCTAssertTrue(app.buttons["navigation.settings"].waitForExistence(timeout: 10))
+            app.buttons["navigation.settings"].click()
+            let window = app.windows["com_apple_SwiftUI_Settings_window"]
+            XCTAssertTrue(window.waitForExistence(timeout: 5))
+            return window
+        }
+        let settings = openSettings()
+        let theme = settings.descendants(matching: .any).matching(identifier: "settings.theme").firstMatch
+        XCTAssertTrue(theme.exists)
+        settings.radioButtons["Тёмная"].click()
+        settings.toolbars.buttons["Повторение"].click()
+        let field = settings.textFields["settings.newLimit"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        func replace(_ text: String) {
+            field.click(); field.typeKey("a", modifierFlags: .command); field.typeText(text)
+        }
+        replace("7")
+        let saved = NSPredicate { _, _ in
+            let status = settings.staticTexts["settings.savedLimits"]
+            return status.label == "Сохранено: новых 7, повторений 200" || (status.value as? String) == "Сохранено: новых 7, повторений 200"
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: saved, object: nil)], timeout: 5), .completed, settings.debugDescription)
+        // Wait past debounce by moving through another real tab and back.
+        settings.toolbars.buttons["Данные"].click()
+        XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.data").firstMatch.waitForExistence(timeout: 5))
+        settings.toolbars.buttons["Повторение"].click()
+        replace("-")
+        XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.invalidNumber").firstMatch.waitForExistence(timeout: 5))
+        settings.toolbars.buttons["Основные"].click()
+        settings.typeKey("w", modifierFlags: .command)
+        app.terminate(); app.launch()
+        let reopened = openSettings()
+        XCTAssertEqual(reopened.radioButtons["Тёмная"].value as? Int, 1)
+        reopened.toolbars.buttons["Повторение"].click()
+        XCTAssertTrue(reopened.textFields["settings.newLimit"].waitForExistence(timeout: 5))
+        XCTAssertEqual(reopened.textFields["settings.newLimit"].value as? String, "7")
+        XCTAssertEqual(reopened.textFields["settings.reviewLimit"].value as? String, "200")
+    }
+
     @MainActor func testOnboardingCancelDemoRelaunchAndRealStudy() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
@@ -363,15 +410,19 @@ final class AppShellUITests: XCTestCase {
         for (route, tab) in [("general", "Основные"), ("review", "Повторение"),
                              ("cards", "Карточки"), ("data", "Данные")] {
             settings.toolbars.buttons[tab].click()
-            if route == "general" {
-                XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.audio.autoplay").firstMatch.exists, settings.debugDescription)
+            switch route {
+            case "general": XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.theme").firstMatch.exists)
+            case "review": XCTAssertTrue(settings.textFields["settings.newLimit"].waitForExistence(timeout: 5))
+            case "cards":
+                XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.audio.autoplay").firstMatch.exists)
                 XCTAssertTrue(settings.buttons["settings.audio.preview"].exists)
-            } else { XCTAssertTrue(settings.staticTexts["settings.\(route)"].exists) }
+            default: XCTAssertTrue(settings.descendants(matching: .any).matching(identifier: "settings.data").firstMatch.exists)
+            }
         }
         // Verify the app menu's native Command-comma entry also opens Settings.
         settings.typeKey("w", modifierFlags: .command)
         let closed = NSPredicate { _, _ in !settings.exists }
-        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: closed, object: nil)], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: closed, object: nil)], timeout: 5), .completed, settings.debugDescription)
         app.typeKey(",", modifierFlags: .command)
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
     }
