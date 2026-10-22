@@ -55,7 +55,7 @@
     {
       "command": "Local selected XCUITest + app unit tests",
       "result": "failed",
-      "details": "/tmp/anki-T028-app-tests.log: 4 app unit tests passed; testStatisticsEmptyPeriodAndRealRatingPersistAfterRelaunch failed at onboarding.name typeText with Timed out while synthesizing event / Failed to get matching snapshots. До этого empty metrics и 7-day picker прошли. OS permissions не менялись. Проверки не ослаблены; CUA завершил полный сценарий, финальный app unit прогон passed."
+      "details": "/tmp/anki-T028-app-tests.log: 4 app unit tests passed; testStatisticsEmptyPeriodAndRealRatingPersistAfterRelaunch failed at onboarding.name typeText with Failed to synthesize event: Timed out while synthesizing event (UITests/AppShellUITests.swift:27). До этого empty metrics и 7-day picker прошли. OS permissions не менялись. Проверки не ослаблены; CUA завершил полный сценарий, финальный app unit прогон passed."
     }
   ]
 }
