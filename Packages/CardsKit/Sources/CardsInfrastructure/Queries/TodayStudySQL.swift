@@ -34,16 +34,13 @@ enum TodayStudySQL {
             let order = $0.name.displayValue.localizedStandardCompare($1.name.displayValue)
             return order == .orderedSame ? $0.id.rawValue.uuidString < $1.id.rawValue.uuidString : order == .orderedAscending
         }.map { TodayDeckRow(deck: $0, counts: counts(readyByDeck[$0.id] ?? [])) }
-        let stats = try Row.fetchOne(db, sql: """
-            SELECT count(*) AS ratings, count(DISTINCT cardIdentitySnapshot) AS cards,
-                coalesce(sum(durationMs),0) AS duration FROM review_logs
-            WHERE voidedBy IS NULL AND studyDayKey=? AND timezoneID=?
-            """, arguments: [queue.day.key.rawValue, queue.day.timeZoneID])!
+        let stats = try StatsSQL.totals(db, predicate: "studyDayKey=? AND timezoneID=?",
+            arguments: [queue.day.key.rawValue, queue.day.timeZoneID])
         let futurePhase = queue.futureDue.flatMap { future in source.cards.first { $0.card.id == future.cardID }?.schedule?.phase }
         return TodayStudySnapshot(generation: generation, asOf: asOf, day: queue.day, counts: counts(queue.ready), decks: decks,
             resumableSessionID: sessionID, nextAvailableAt: queue.futureDue?.availableAt,
             futureIsLearning: futurePhase == .learning || futurePhase == .relearning,
-            emptyReasons: queue.emptyReasons, ratings: stats["ratings"], uniqueCards: stats["cards"], responseDurationMs: stats["duration"])
+            emptyReasons: queue.emptyReasons, ratings: stats.ratings, uniqueCards: stats.uniqueCards, responseDurationMs: stats.responseDurationMs)
     }
 }
 

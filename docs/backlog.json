@@ -1023,12 +1023,15 @@
       ],
       "verification": "Сверка ручного fixture log со всеми показателями, пустой период и отменённая оценка.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-03",
         "14.4"
-      ]
+      ],
+      "startedAt": "2026-10-22T17:29:05.799572+00:00",
+      "completedAt": "2026-10-22T17:44:52.653903+00:00",
+      "report": "docs/task-reports/T028.json"
     },
     {
       "id": "T029",
@@ -4035,7 +4038,7 @@
       "stateID": "base-03",
       "taskID": "T028",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "base-04",

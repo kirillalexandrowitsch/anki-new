@@ -59,6 +59,11 @@ final class CompositionRoot {
         return model
     }
 
+    func makeStatisticsModel(context: CollectionContext) async throws -> StatisticsModel {
+        guard let provider = access as? any StatsWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        return try await StatisticsModel(workspace: provider.statsWorkspace(generation: context.generation), clock: clock)
+    }
+
     func makeTodayModel(context: CollectionContext) async throws -> TodayModel {
         guard let provider = access as? any TodayWorkspaceAccess else { throw CollectionAccessError.staleContext }
         return try await TodayModel(workspace: provider.todayWorkspace(generation: context.generation), clock: clock)
@@ -97,7 +102,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, StatsWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -139,6 +144,11 @@ private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAcce
     func onboarding(generation: UUID) async throws -> any OnboardingService {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.onboarding(generation: generation)
+    }
+
+    func statsWorkspace(generation: UUID) async throws -> StatsWorkspace {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.statsWorkspace(generation: generation)
     }
 
     func todayWorkspace(generation: UUID) async throws -> TodayWorkspace {
