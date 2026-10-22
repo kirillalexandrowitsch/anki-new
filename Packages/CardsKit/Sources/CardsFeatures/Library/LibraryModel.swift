@@ -30,6 +30,11 @@ public final class LibraryModel {
     }
     public var selectedRow: LibraryRow? { rows.first { $0.id == selection } }
     public var hasMore: Bool { offset + rows.count < cardCount }
+    public func createNote() { Task { await launcher.open() } }
+    public func editSelectedNote() {
+        guard let row = selectedRow, !isLoading else { return }
+        Task { await launcher.open(noteID: row.noteID) }
+    }
     public func reload() { restart(clear: false) }
     public func page(_ delta: Int) {
         guard !isLoading, delta < 0 ? offset > 0 : hasMore else { return }

@@ -4,6 +4,7 @@ import SwiftUI
 public struct AppShellView: View {
     @Bindable private var model: AppShellModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openSettings) private var openSettings
 
     @State private var showsStudyDemo = false
 
@@ -36,7 +37,7 @@ public struct AppShellView: View {
                     .padding(24)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                List(selection: $model.selection) {
+                List(selection: Binding(get: { model.selection }, set: { commands.perform(.navigation($0)) })) {
                     ForEach(MainSection.allCases) { section in
                         Label(section.title, systemImage: section.symbol)
                             .tag(section)
@@ -45,12 +46,13 @@ public struct AppShellView: View {
                 }
                 .listStyle(.sidebar)
 
-                SettingsLink {
+                Button { commands.perform(.settings) } label: {
                     Label(String(localized: "Настройки", bundle: .module), systemImage: "gearshape")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
                 }
                 .buttonStyle(.plain)
+                .disabled(!commands.isEnabled(.settings))
                 .accessibilityIdentifier("navigation.settings")
                 .padding(12)
             }
@@ -75,14 +77,8 @@ public struct AppShellView: View {
                 } else if model.selection == .today {
                     if let today {
                         TodayView(model: today, onboarding: onboarding, opening: studyLoading, openingFailed: studyError, start: {
-                            guard let makeStudy, !studyLoading else { return }
-                            studyLoading = true; studyError = false
-                            Task {
-                                defer { studyLoading = false }
-                                do { study = try await makeStudy(); showsStudy = true }
-                                catch { studyError = true; today.reload() }
-                            }
-                        }, openDecks: { model.selection = .decks }, openLibrary: { model.selection = .library },
+                            commands.perform(.startStudy)
+                        }, openDecks: { commands.perform(.decks) }, openLibrary: { commands.perform(.library) },
                            demo: { showsStudyDemo = true })
                     } else { ProgressView("Загрузка Сегодня…") }
                 } else {
@@ -106,9 +102,50 @@ public struct AppShellView: View {
         .sheet(isPresented: $showsStudy, onDismiss: { today?.reload() }) {
             if let study { StudyView(model: study, title: "Занятие") { showsStudy = false } }
         }
+        .environment(\.appCommands, commands)
+        .focusedSceneValue(\.appCommandContext, commands)
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refreshDate(); today?.reload() }
         }
     }
+    private var isModal: Bool {
+        showsStudy || showsStudyDemo || studyLoading || onboarding?.showsCreator == true ||
+        decks?.editor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true
+    }
+
+    private var commands: AppCommandContext {
+        AppCommandContext(isEnabled: { id in
+            guard !isModal else { return false }
+            if id.section != nil || id == .settings { return true }
+            switch id {
+            case .newDeck: return decks != nil
+            case .newNote: return library != nil
+            case .editNote: return model.selection == .library && library?.selectedRow != nil && library?.isLoading == false
+            case .startStudy: return makeStudy != nil && today?.canOpenStudy == true
+            default: return false // Import remains unavailable until its actual service exists.
+            }
+        }, perform: { id in
+            if let section = id.section { model.selection = section; return }
+            switch id {
+            case .settings: openSettings()
+            case .newDeck: model.selection = .decks; decks?.create()
+            case .newNote: model.selection = .library; library?.createNote()
+            case .editNote: library?.editSelectedNote()
+            case .startStudy: startStudy()
+            default: break
+            }
+        })
+    }
+
+    private func startStudy() {
+        guard let makeStudy, !studyLoading else { return }
+        studyLoading = true; studyError = false
+        Task {
+            defer { studyLoading = false }
+            do { study = try await makeStudy(); showsStudy = true }
+            catch { studyError = true; today?.reload() }
+        }
+    }
+
 }

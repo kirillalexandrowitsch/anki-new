@@ -4,6 +4,7 @@ import SwiftUI
 
 public struct DecksView: View {
     @Bindable private var model: DecksModel
+    @Environment(\.appCommands) private var commands
     @State private var focus: DeckFocus?
     @State private var returnFocus: DeckFocus = .create
 
@@ -20,7 +21,7 @@ public struct DecksView: View {
                                  primary: true, wantsFocus: focus == .create) {
                     returnFocus = .create
                     focus = nil
-                    model.create()
+                    if let commands { commands.perform(.newDeck) } else { model.create() }
                 }
             }
             if let error = model.errorMessage {
