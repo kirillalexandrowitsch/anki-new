@@ -1058,11 +1058,14 @@
       ],
       "verification": "Cancel/delete/undo/timeout и restart во время окна отмены; fake monotonic clock.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "11.4"
-      ]
+      ],
+      "startedAt": "2026-10-22T19:08:37.712866+00:00",
+      "completedAt": "2026-10-22T19:21:55.885055+00:00",
+      "report": "docs/task-reports/T029.json"
     },
     {
       "id": "T030",
@@ -4320,7 +4323,7 @@
       "stateID": "11.4",
       "taskID": "T029",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "12.1",

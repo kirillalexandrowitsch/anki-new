@@ -113,6 +113,9 @@ public struct AppShellView: View {
             if let exporter { CollectionExportView(model: exporter) }
         }
         .environment(\.appCommands, commands)
+        .safeAreaInset(edge: .bottom) {
+            if let deletion = library?.deletion { CardDeletionUndoView(model: deletion).padding(.horizontal, 24).padding(.bottom, 8) }
+        }
         .focusedSceneValue(\.appCommandContext, commands)
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
@@ -121,7 +124,7 @@ public struct AppShellView: View {
     }
     private var isModal: Bool {
         showsStudy || showsStudyDemo || studyLoading || exporter?.isPresented == true || onboarding?.showsCreator == true ||
-        decks?.editor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true
+        decks?.editor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true || library?.deletion?.isPresented == true
     }
 
     private var commands: AppCommandContext {

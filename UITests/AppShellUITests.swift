@@ -1,6 +1,58 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testCardDeletionCancelUndoTimeoutAndReopen() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.click(); name.typeText("Synthetic Deletion")
+        app.checkBoxes["onboarding.demo"].click()
+        app.buttons["onboarding.save"].click()
+        app.staticTexts["navigation.library"].click()
+        func counts(_ expected: String) {
+            let value = app.staticTexts["library.counts"]
+            XCTAssertTrue(value.waitForExistence(timeout: 10))
+            let matches = NSPredicate { _, _ in value.value as? String == expected }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: matches, object: nil)], timeout: 10), .completed)
+        }
+        func helloRow() -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(
+                format: "identifier == %@ OR label BEGINSWITH %@",
+                "library.select.Hello", "Выбрать карточку Hello,")).firstMatch
+        }
+        func request() {
+            let select = helloRow()
+            XCTAssertTrue(select.waitForExistence(timeout: 10)); select.click()
+            if !app.buttons["cardDeletion.request"].exists { app.buttons["library.inspector"].click() }
+            app.buttons["cardDeletion.request"].click()
+            XCTAssertTrue(app.buttons["cardDeletion.confirm"].waitForExistence(timeout: 5))
+        }
+        counts("Карточек: 3 · Записей: 3")
+        request()
+        app.buttons["cardDeletion.cancel"].click()
+        counts("Карточек: 3 · Записей: 3")
+        request(); app.buttons["cardDeletion.confirm"].click()
+        let undo = app.buttons["cardDeletion.undo.Hello"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 5)); undo.click()
+        counts("Карточек: 3 · Записей: 3")
+        request(); app.buttons["cardDeletion.confirm"].click()
+        counts("Карточек: 2 · Записей: 2")
+        XCTAssertTrue(undo.waitForNonExistence(timeout: 8))
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["navigation.library"].waitForExistence(timeout: 10))
+        app.staticTexts["navigation.library"].click()
+        counts("Карточек: 2 · Записей: 2")
+        XCTAssertFalse(helloRow().exists)
+        XCTAssertFalse(undo.exists)
+    }
+
     @MainActor func testStatisticsEmptyPeriodAndRealRatingPersistAfterRelaunch() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
