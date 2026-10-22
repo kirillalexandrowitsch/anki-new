@@ -5,6 +5,7 @@ import SwiftUI
 public struct LibraryView: View {
     @Bindable private var model: LibraryModel
     @State private var showsInspector = false
+    @Environment(\.appCommands) private var commands
     public init(model: LibraryModel) { self.model = model }
 
     public var body: some View {
@@ -13,8 +14,8 @@ public struct LibraryView: View {
             HStack {
                 Text("Все ваши слова и выражения").foregroundStyle(.secondary)
                 Spacer()
-                Button("Добавить карточку", systemImage: "plus") { Task { await launcher.open() } }
-                    .buttonStyle(.borderedProminent).disabled(launcher.isLoading)
+                Button("Добавить карточку", systemImage: "plus") { createNote() }
+                    .buttonStyle(.borderedProminent).disabled(commands?.isEnabled(.newNote) == false || launcher.isLoading)
                     .accessibilityIdentifier("editorLauncher.create")
             }
             HStack {
@@ -44,7 +45,8 @@ public struct LibraryView: View {
                          : "Попробуйте другое слово или очистите поиск.")
                 } actions: {
                     if model.search.isEmpty {
-                        Button("Добавить первую карточку") { Task { await launcher.open() } }
+                        Button("Добавить первую карточку") { createNote() }
+                            .disabled(commands?.isEnabled(.newNote) == false || launcher.isLoading)
                             .accessibilityIdentifier("library.emptyCreate")
                     } else { Button("Очистить поиск") { model.search = "" } }
                 }
@@ -89,6 +91,9 @@ public struct LibraryView: View {
         }
     }
 
+    private func createNote() {
+        if let commands { commands.perform(.newNote) } else { model.createNote() }
+    }
     private var countSummary: String { "Карточек: \(model.cardCount) · Записей: \(model.noteCount)" }
 
     private var table: some View {
@@ -113,11 +118,10 @@ public struct LibraryView: View {
 
     private var editButton: some View {
         Button("Редактировать", systemImage: "pencil") {
-            guard let row = model.selectedRow else { return }
             showsInspector = false
-            Task { await model.launcher.open(noteID: row.noteID) }
+            if let commands { commands.perform(.editNote) } else { model.editSelectedNote() }
         }
-        .disabled(model.selectedRow == nil || model.launcher.isLoading)
+        .disabled(commands?.isEnabled(.editNote) == false || model.selectedRow == nil || model.isLoading || model.launcher.isLoading)
         .accessibilityIdentifier("note.edit.\(model.selectedRow?.front ?? "")")
     }
 

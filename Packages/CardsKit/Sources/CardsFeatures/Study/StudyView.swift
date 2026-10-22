@@ -78,6 +78,7 @@ public struct StudyView: View {
         .background(StudyKeyRouter(model: model, requestClose: requestClose))
         .background(EditorWindowCloseGuard(requestClose: requestClose))
         .onExitCommand { model.escape() }
+        .focusedSceneValue(\.studyCommandContext, model.commandContext)
         .focusedSceneValue(\.studyCloseAction, StudyCloseAction(
             isEnabled: model.phase != .committing, perform: requestClose))
         .task {
@@ -129,7 +130,7 @@ public struct StudyView: View {
                     }.padding(24).frame(maxWidth: .infinity).accessibilityElement(children: .contain)
                 }
                 if model.phase == .question {
-                    Button("Показать ответ · Пробел") { model.reveal() }
+                    Button("Показать ответ · Пробел") { model.commandContext.perform(.reveal) }
                         .buttonStyle(CardsButtonStyle(.primary)).accessibilityIdentifier("study.reveal")
                     Button("Пропустить") { Task { await model.skip() } }.accessibilityIdentifier("study.skip")
                 } else {
@@ -176,12 +177,21 @@ public struct StudyView: View {
     }
 
     private func rating(_ grade: Grade, _ title: String, _ symbol: String, _ color: Color) -> some View {
-        Button { Task { await model.rate(grade) } } label: {
+        Button { model.commandContext.perform(command(for: grade)) } label: {
             VStack(spacing: 8) { Label(title, systemImage: symbol); Text("\(grade.rawValue)").font(.caption) }
                 .frame(maxWidth: .infinity).padding(12)
         }
         .buttonStyle(.bordered).tint(color).disabled(!model.canRate)
         .accessibilityIdentifier("study.grade.\(grade.rawValue)")
+    }
+
+    private func command(for grade: Grade) -> AppCommandID {
+        switch grade {
+        case .again: .again
+        case .hard: .hard
+        case .good: .good
+        case .easy: .easy
+        }
     }
 
     private var completionTitle: String {

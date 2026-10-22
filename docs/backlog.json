@@ -946,12 +946,15 @@
       ],
       "verification": "Клавиатурный проход Today → study → editor и проверка отключённых menu items.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "20.4",
         "16.4"
-      ]
+      ],
+      "startedAt": "2026-10-22T12:43:33.091079+00:00",
+      "completedAt": "2026-10-22T12:58:30.424843+00:00",
+      "report": "docs/task-reports/T026.json"
     },
     {
       "id": "T027",
@@ -4527,7 +4530,7 @@
       "stateID": "20.4",
       "taskID": "T026",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "21.1",
