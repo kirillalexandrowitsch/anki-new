@@ -84,13 +84,20 @@ final class CompositionRoot {
         }
     }
 
+    func makeExportModel(context: CollectionContext) throws -> CollectionExportModel {
+        guard let provider = access as? any CollectionExportAccess else { throw CollectionAccessError.staleContext }
+        return CollectionExportModel { url, format, safe in
+            try await provider.export(to: url, format: format, safeSpreadsheet: safe, generation: context.generation)
+        }
+    }
+
     func makeShellModel() -> AppShellModel {
         AppShellModel(clock: clock, audio: audio, preferences: audioPreferences)
     }
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -147,6 +154,11 @@ private actor DefaultCollectionAccess: DeckWorkspaceAccess, EditorWorkspaceAcces
     func media(generation: UUID) async throws -> any MediaRepository {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.media(generation: generation)
+    }
+
+    func export(to destination: URL, format: CollectionExportFormat, safeSpreadsheet: Bool, generation: UUID) async throws {
+        guard let store else { throw CollectionAccessError.staleContext }
+        try await store.export(to: destination, format: format, safeSpreadsheet: safeSpreadsheet, generation: generation)
     }
 
     func close(generation: UUID) async throws { try await store?.close(generation: generation) }
