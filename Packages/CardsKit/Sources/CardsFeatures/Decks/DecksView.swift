@@ -8,7 +8,8 @@ public struct DecksView: View {
     @State private var focus: DeckFocus?
     @State private var returnFocus: DeckFocus = .create
     private enum DeckFocus: Hashable { case create, edit(DeckID) }
-    public init(model: DecksModel) { self.model = model }
+    private let addNote: ((DeckID) -> Void)?
+    public init(model: DecksModel, addNote: ((DeckID) -> Void)? = nil) { self.model = model; self.addNote = addNote }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -94,6 +95,12 @@ public struct DecksView: View {
                 model.completeMove(result, from: move.original.parentID)
             }
         }
+        .sheet(isPresented: Binding(get: { model.inspectedID != nil }, set: { if !$0 { model.inspectedID = nil } }), onDismiss: restoreFocus) {
+            DeckPropertiesView(model: model) { model.inspectedID = nil }
+        }
+        .sheet(item: $model.studySetup, onDismiss: { model.closeStudySetup(); restoreFocus() }) { setup in
+            DeckStudySetupView(model: setup) { model.closeStudySetup() }
+        }
     }
 
     private func restoreFocus() {
@@ -151,13 +158,28 @@ public struct DecksView: View {
                 }
                 Spacer()
                 Menu {
-                    Button("Добавить подколоду") { model.create(parentID: row.id) }
+                    Button("Настроить занятие…") { returnFocus = .edit(row.id); focus = nil; model.setupStudy(row.deck) }
+                        .disabled(!model.canSetupStudy || model.isMutating).accessibilityIdentifier("deck.study")
+                    Button("Добавить карточку") { addNote?(row.id) }.disabled(addNote == nil || model.isMutating)
+                        .accessibilityIdentifier("deck.addNote")
+                    Button("Редактировать") { returnFocus = .edit(row.id); model.edit(row.deck) }
+                        .accessibilityIdentifier("deck.menuEdit")
+                    Button(row.deck.isFavorite ? "Убрать из избранного" : "В избранное") {
+                        Task { await model.toggleFavorite(row.deck) }
+                    }.disabled(model.isMutating).accessibilityIdentifier("deck.menuFavorite")
+                    Divider()
+                    Button("Свойства колоды") { returnFocus = .edit(row.id); model.inspectedID = row.id }
+                        .accessibilityIdentifier("deck.properties")
+                    Button("Добавить подколоду") { returnFocus = .edit(row.id); focus = nil; model.create(parentID: row.id) }
                         .accessibilityIdentifier("deck.addChild")
                     Button("Переместить колоду") {
                         returnFocus = .edit(row.id); focus = nil; model.move(row.deck)
                     }.accessibilityIdentifier("deck.move")
+                    Divider()
+                    Button("Экспорт колоды — пока недоступен") {}.disabled(true)
+                    Button("Удаление колоды — пока недоступно") {}.disabled(true)
                 } label: { Image(systemName: "ellipsis") }
-                .menuStyle(.borderlessButton).fixedSize()
+                .menuStyle(.borderlessButton).fixedSize().disabled(model.isMutating)
                 .accessibilityLabel("Действия с колодой \(row.deck.name.displayValue)")
                 .accessibilityIdentifier("deck.actions.\(row.deck.name.displayValue)")
             }
