@@ -18,6 +18,7 @@ public final class DecksModel {
     public var editor: DeckEditorModel?
     public var inspectedID: DeckID?
     public var studySetup: DeckStudySetupModel?
+    public let deletion: DeckDeletionModel?
     private let studyService: (any DeckStudyService)?
     private let makeStudy: (@MainActor (any StudyReviewSessionService) -> StudySessionModel)?
     public var canSetupStudy: Bool { studyService != nil && makeStudy != nil }
@@ -41,6 +42,7 @@ public final class DecksModel {
                 preferences: (any DeckBrowserPreferencesStore)? = nil,
                 studyService: (any DeckStudyService)? = nil,
                 makeStudy: (@MainActor (any StudyReviewSessionService) -> StudySessionModel)? = nil) {
+        deletion = workspace.deletions.map { DeckDeletionModel(service: $0) }
         self.workspace = workspace; self.clock = clock; self.preferences = preferences
         self.studyService = studyService; self.makeStudy = makeStudy
         self.browser = preferences?.loadDeckBrowser() ?? .init()
@@ -133,6 +135,10 @@ public final class DecksModel {
             for try await snapshot in source {
                 guard active, !Task.isCancelled, snapshot.generation == workspace.generation,
                       request == refreshID else { return }
+                if let inspectedID, !snapshot.rows.contains(where: { $0.id == inspectedID }) { self.inspectedID = nil }
+                if let undoMove, !snapshot.rows.contains(where: { $0.id == undoMove.deck.id }) {
+                    self.undoMove = nil; canUndoMove = false
+                }
                 rows = snapshot.rows; hierarchy = DeckHierarchy(rows: snapshot.rows); deckCount = snapshot.deckCount; isLoading = false
             }
         } catch {
@@ -142,7 +148,7 @@ public final class DecksModel {
         }
     }
     public func stop() {
-        active = false; closeStudySetup(); inspectedID = nil; observation?.cancel(); editor?.stop(); moveEditor?.stop()
+        active = false; deletion?.stop(); closeStudySetup(); inspectedID = nil; observation?.cancel(); editor?.stop(); moveEditor?.stop()
         editor = nil; moveEditor = nil; rows = []; hierarchy = DeckHierarchy(rows: []); undoMove = nil; canUndoMove = false
     }
 }

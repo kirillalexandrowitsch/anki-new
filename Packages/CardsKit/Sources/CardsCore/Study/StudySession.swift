@@ -54,6 +54,11 @@ public protocol StudySessionService: Sendable {
     func rate(_ command: StudyRatingCommand) async throws
 }
 
+/// Read-only availability check for a presentation held by an open window.
+public protocol StudyAvailabilityService: StudySessionService {
+    func isAvailable(cardID: CardID) async throws -> Bool
+}
+
 public enum StudyCheckpointPhase: String, Codable, Sendable { case question, answer, paused, summary }
 
 /// Contains identities and UI progress only; render content is always read afresh.
