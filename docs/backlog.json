@@ -1115,7 +1115,7 @@
       ],
       "verification": "XCUITest smoke плюс ручной запуск Release arm64; приложить протокол и screenshots.",
       "size": "L",
-      "status": "planned",
+      "status": "done",
       "milestone": "M1",
       "stateIDs": [
         "base-01",
@@ -1140,7 +1140,10 @@
         "09.2",
         "09.3",
         "09.4"
-      ]
+      ],
+      "startedAt": "2026-10-23T08:59:45.722260+00:00",
+      "completedAt": "2026-10-23T09:14:44.883655+00:00",
+      "report": "docs/task-reports/T030.json"
     },
     {
       "id": "T031",
