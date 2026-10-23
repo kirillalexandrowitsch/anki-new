@@ -16,3 +16,21 @@ import Foundation
         guard load() == value else { throw CollectionRepositoryError.permissionDenied }
     }
 }
+
+@MainActor public final class UserDefaultsDeckBrowserPreferences: DeckBrowserPreferencesStore {
+    private let defaults: UserDefaults
+    private let key: String
+    public init(defaults: UserDefaults = .standard, collectionID: CollectionID) {
+        self.defaults = defaults
+        self.key = "decks.browser." + collectionID.rawValue.uuidString.lowercased()
+    }
+    public func loadDeckBrowser() -> DeckBrowserPreferences {
+        guard let data = defaults.data(forKey: key),
+              let value = try? JSONDecoder().decode(DeckBrowserPreferences.self, from: data) else { return .init() }
+        return value
+    }
+    public func saveDeckBrowser(_ value: DeckBrowserPreferences) throws {
+        defaults.set(try JSONEncoder().encode(value), forKey: key)
+        guard loadDeckBrowser() == value else { throw CollectionRepositoryError.permissionDenied }
+    }
+}

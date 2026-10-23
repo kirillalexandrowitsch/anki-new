@@ -13,6 +13,7 @@ final class CompositionRoot {
     let appearance: AppearanceModel
     lazy var audioPreview = AudioPreviewModel(service: audio, preferences: audioPreferences)
     private var audioGenerations: Set<UUID> = []
+    private let defaults: UserDefaults
     private let access: any CollectionAccess
 
     init(clock: any CardsCore.Clock = SystemClock(), collectionAccess: (any CollectionAccess)? = nil) {
@@ -24,6 +25,7 @@ final class CompositionRoot {
         #else
         defaults = .standard
         #endif
+        self.defaults = defaults
         appearance = AppearanceModel(store: UserDefaultsPreferences(defaults: defaults))
         // Argument-domain audio overrides remain available in isolated UI suites.
         audioPreferences = AudioPreferences(defaults: defaults)
@@ -35,7 +37,7 @@ final class CompositionRoot {
     func makeDecksModel(context: CollectionContext) async throws -> DecksModel {
         guard let provider = access as? any DeckWorkspaceAccess else { throw CollectionAccessError.staleContext }
         let workspace = try await provider.deckWorkspace(generation: context.generation)
-        return DecksModel(workspace: workspace, clock: clock)
+        return DecksModel(workspace: workspace, clock: clock, preferences: UserDefaultsDeckBrowserPreferences(defaults: defaults, collectionID: context.id))
     }
 
     func makeLibraryModel(context: CollectionContext) async throws -> LibraryModel {
