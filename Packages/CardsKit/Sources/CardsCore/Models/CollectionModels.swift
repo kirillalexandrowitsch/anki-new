@@ -20,23 +20,25 @@ public struct Deck: Equatable, Codable, Sendable, Identifiable {
     public let description: String
     public let iconKey: String
     public let colorKey: String
+    public let isFavorite: Bool
     public let revision: Revision
     public let deletedAt: Date?
 
     public init(id: DeckID, parentID: DeckID? = nil, name: EntityName,
-                description: String = "", iconKey: String = "rectangle.stack", colorKey: String = "accent", revision: Revision = .initial, deletedAt: Date? = nil) {
+                description: String = "", iconKey: String = "rectangle.stack", colorKey: String = "accent", isFavorite: Bool = false, revision: Revision = .initial, deletedAt: Date? = nil) {
         self.id = id
         self.parentID = parentID
         self.name = name
         self.description = description
         self.iconKey = iconKey
         self.colorKey = colorKey
+        self.isFavorite = isFavorite
         self.revision = revision
         self.deletedAt = deletedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, parentID, name, description, iconKey, colorKey, revision, deletedAt
+        case id, parentID, name, description, iconKey, colorKey, isFavorite, revision, deletedAt
     }
 
     public init(from decoder: any Decoder) throws {
@@ -47,6 +49,7 @@ public struct Deck: Equatable, Codable, Sendable, Identifiable {
                   description: try c.decode(String.self, forKey: .description),
                   iconKey: try c.decodeIfPresent(String.self, forKey: .iconKey) ?? "rectangle.stack",
                   colorKey: try c.decodeIfPresent(String.self, forKey: .colorKey) ?? "accent",
+                  isFavorite: try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false,
                   revision: try c.decode(Revision.self, forKey: .revision),
                   deletedAt: try c.decodeIfPresent(Date.self, forKey: .deletedAt))
     }

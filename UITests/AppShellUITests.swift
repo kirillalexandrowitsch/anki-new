@@ -1,6 +1,88 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testDeckTreeGridFavoriteMoveUndoAndPersistedLayout() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        app.staticTexts["navigation.decks"].click()
+        func element(_ id: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(identifier: id).firstMatch
+        }
+        func action(_ name: String, _ action: String) {
+            let menu = element("deck.actions." + name)
+            XCTAssertTrue(menu.waitForExistence(timeout: 5))
+            let scroll = app.scrollViews["decks.scroll"]
+            for _ in 0..<6 {
+                if scroll.frame.contains(menu.frame) { break }
+                scroll.scroll(byDeltaX: 0, deltaY: menu.frame.midY > scroll.frame.maxY ? -160 : 160)
+            }
+            XCTAssertTrue(menu.isHittable); menu.click()
+            XCTAssertTrue(app.menuItems[action].waitForExistence(timeout: 5))
+            app.menuItems[action].click()
+        }
+        func saveDeck(_ name: String) {
+            let input = app.textFields["deckEditor.name"]
+            XCTAssertTrue(input.waitForExistence(timeout: 5)); input.click(); input.typeText(name)
+            app.buttons["deckEditor.save"].click()
+            XCTAssertTrue(input.waitForNonExistence(timeout: 5))
+        }
+        for name in ["Root", "Other"] { app.buttons["decks.create"].click(); saveDeck(name) }
+        action("Root", "Добавить подколоду"); saveDeck("Child")
+        let rootDisclosure = app.buttons["deck.disclosure.Root"]
+        XCTAssertTrue(rootDisclosure.waitForExistence(timeout: 5)); rootDisclosure.click()
+        XCTAssertTrue(app.buttons["deck.edit.Child"].waitForExistence(timeout: 5))
+        action("Child", "Добавить подколоду"); saveDeck("Leaf")
+        app.buttons["deck.disclosure.Child"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
+        rootDisclosure.click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForNonExistence(timeout: 5))
+        rootDisclosure.click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
+        action("Root", "Переместить колоду")
+        XCTAssertTrue(app.buttons["deckMove.root"].waitForExistence(timeout: 5))
+        for invalid in ["Root", "Child", "Leaf"] {
+            XCTAssertFalse(app.buttons["deckMove.destination." + invalid].exists)
+        }
+        XCTAssertFalse(app.buttons["deckMove.save"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        app.buttons["deck.favorite.Leaf"].click()
+        element("decks.favorites").click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["deck.edit.Root"].exists)
+        let treeCounts = element("deck.counts.Leaf").value as? String ?? element("deck.counts.Leaf").label
+        XCTAssertTrue(treeCounts.contains("Карточек: 0"))
+        app.buttons["decks.grid"].click()
+        XCTAssertTrue(element("decks.gridContent").waitForExistence(timeout: 5))
+        XCTAssertEqual(element("deck.counts.Leaf").value as? String ?? element("deck.counts.Leaf").label, treeCounts)
+        let search = app.textFields["decks.search"]
+        search.click(); search.typeText("missing")
+        XCTAssertTrue(app.staticTexts["Нет подходящих колод"].waitForExistence(timeout: 5))
+        app.buttons["decks.reset"].click()
+        app.buttons["decks.tree"].click()
+        action("Leaf", "Переместить колоду")
+        app.buttons["deckMove.destination.Other"].click()
+        app.buttons["deckMove.save"].click()
+        let undo = app.buttons["decks.undoMove"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 5)); undo.click()
+        XCTAssertTrue(undo.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
+        app.terminate(); app.launch()
+        app.staticTexts["navigation.decks"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 10))
+        app.buttons["decks.grid"].click()
+        app.terminate(); app.launch()
+        app.staticTexts["navigation.decks"].click()
+        XCTAssertTrue(element("decks.gridContent").waitForExistence(timeout: 10))
+        element("decks.favorites").click()
+        XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["deck.edit.Root"].exists)
+    }
+
     /// M1 acceptance uses real editor-created Notes and persisted scheduled reviews.
     @MainActor func testFirstVerticalCreateFourGradesStatisticsAndReopen() throws {
         let app = XCUIApplication()

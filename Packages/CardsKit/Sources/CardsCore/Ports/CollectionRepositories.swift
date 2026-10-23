@@ -38,10 +38,11 @@ public struct SaveDeckCommand: Equatable, Codable, Sendable {
     public let description: String
     public let iconKey: String
     public let colorKey: String
+    public let favorite: Bool?
 
     public init(commandID: CommandID, deckID: DeckID, expectedRevision: Revision?,
                 parentID: DeckID? = nil, name: EntityName, description: String = "",
-                iconKey: String = "rectangle.stack", colorKey: String = "accent") {
+                iconKey: String = "rectangle.stack", colorKey: String = "accent", favorite: Bool? = nil) {
         self.commandID = commandID
         self.deckID = deckID
         self.expectedRevision = expectedRevision
@@ -50,10 +51,11 @@ public struct SaveDeckCommand: Equatable, Codable, Sendable {
         self.description = description
         self.iconKey = iconKey
         self.colorKey = colorKey
+        self.favorite = favorite
     }
 
     private enum CodingKeys: String, CodingKey {
-        case commandID, deckID, expectedRevision, parentID, name, description, iconKey, colorKey
+        case commandID, deckID, expectedRevision, parentID, name, description, iconKey, colorKey, favorite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -65,7 +67,8 @@ public struct SaveDeckCommand: Equatable, Codable, Sendable {
                   name: try c.decode(EntityName.self, forKey: .name),
                   description: try c.decode(String.self, forKey: .description),
                   iconKey: try c.decodeIfPresent(String.self, forKey: .iconKey) ?? "rectangle.stack",
-                  colorKey: try c.decodeIfPresent(String.self, forKey: .colorKey) ?? "accent")
+                  colorKey: try c.decodeIfPresent(String.self, forKey: .colorKey) ?? "accent",
+                  favorite: try c.decodeIfPresent(Bool.self, forKey: .favorite))
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -79,6 +82,7 @@ public struct SaveDeckCommand: Equatable, Codable, Sendable {
         // Preserve the canonical v1 request for replay of commands saved before T013.
         if iconKey != "rectangle.stack" { try c.encode(iconKey, forKey: .iconKey) }
         if colorKey != "accent" { try c.encode(colorKey, forKey: .colorKey) }
+        try c.encodeIfPresent(favorite, forKey: .favorite)
     }
 
 }

@@ -1,0 +1,70 @@
+{
+  "taskID": "T031",
+  "summary": "Добавлены полный лес вложенных колод, раскрытие уровней, адаптивная сетка, поиск/сброс фильтров, избранное, создание подколоды и MoveDeck с отменой. Вид и раскрытие сохраняются по CollectionID; дерево и сетка используют один наблюдаемый snapshot с собственными счётчиками колод. Схема SQLite, зависимости и исходные PNG не меняются.",
+  "criteria": [
+    {
+      "text": "Нельзя создать цикл или переместить колоду в себя.",
+      "passed": true,
+      "evidence": "deckMoveRejectsCyclesDuplicatesAndStaleUndoAndReplaysAfterReopen: root→self/child/leaf отклоняются, отсутствующий родитель/дубликат/устаревшая revision не меняют сохранённые данные; перенос сохраняет потомков, Undo проверяет revision, replay возвращает исходный результат после reopen. XCUITest testDeckTreeGridFavoriteMoveUndoAndPersistedLayout прошёл (78.776 s): в диалоге root недоступны root/child/leaf, Cancel/Escape, реальный перенос leaf и Undo."
+    },
+    {
+      "text": "Сетка и дерево показывают согласованные счётчики и избранное.",
+      "passed": true,
+      "evidence": "deckBrowserSharesCountsFavoritesFiltersAndPersistentExpansionAcrossViewsAndReopen: реальная SQLite Note/Card в leaf, одинаковые CardCounts дерева/сетки (leaf=1 card/1 new, root=0), star/unstar, поиск скрытого потомка и пустое избранное со сбросом, observation при переносе/Undo, persistence favorite/сетки/expanded после reopen и отдельные preferences коллекций. deckHierarchySnapshotIsCompleteBeyondOneHundredAndExcludesDeletedAncestry: полный лес104, обычная страница100, три уровня и исключённые удалённые предки. Локальный XCUITest дополнительно проверяет равенство отображаемых counters, favorites, grid/tree, пустой поиск и два relaunch."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter 'deckMove|deckHierarchy|deckBrowser|preT013'",
+      "result": "passed",
+      "details": "/tmp/anki-T031-targeted-final.log: 4 tests passed. Реальные writer/query/collection lifecycle, >100 колод, cycles/duplicates/revisions/idempotency, move/undo, favorite add/remove, counters и preferences; старый journal request/result без favorite/isFavorite воспроизводится."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T031-offline-final.log; build/checks/run-2odfntut/summary.json: networkDenied=true, 219 Swift Testing tests (Core30/Infrastructure156/Features30/DesignSystem3) и XCTest worker1 passed; native arm64 app build passed. Synthetic seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testDeckTreeGridFavoriteMoveUndoAndPersistedLayout -resultBundlePath build/T031-smoke-final.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T031-ui-final.log: TEST SUCCEEDED, 1 test/0 failures, 78.776 s. Три уровня, disclosure, запрет выбора поддерева, Escape, favorite, grid/tree counters, пустой поиск/reset, scroll к offscreen menu, move/undo, expansion и layout/favorite после relaunch."
+    },
+    {
+      "command": "XCUITest testDeckCreateDuplicateCancelEscapeEditAndRelaunch in build/T031-smoke.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T031-ui.log: существующий регрессионный тест passed (49.302 s); создание, appearance, дубликат, Cancel/Escape, возврат фокуса, edit/relaunch. Общий первоначальный run был failed из-за нового offscreen-menu сценария; причина и успешный повтор записаны отдельно."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testDeckTreeGridFavoriteMoveUndoAndPersistedLayout -resultBundlePath build/T031-verified.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T031-verified.log: TEST SUCCEEDED, 1 test/0 failures. Финальная версия без диагностических screenshot attachments; все функциональные assertions сохранены, включая циклы/три уровня/счётчики/избранное/пустой фильтр/перенос/Undo/два relaunch."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T031; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T031 done после всех acceptance checks; graph/reports/generated state passed, 26 Python tests, 2492 local links, 48/48 original PNG hashes, budget/PR route policy passed. /tmp/anki-T031-quality-final.log; working diff без whitespace errors."
+    }
+  ],
+  "limitations": [
+    "Счётчики относятся к самой колоде; новые/due — сырая доступность без дневных квот, что подписано в UI. Parent totals не суммируют поддерево. Настройка scoped занятия/полное меню свойств остаются T032.",
+    "Полное дерево загружается единым snapshot без pagination, UI использует LazyVStack/LazyVGrid. Экстремально большие коллекции требуют отдельного performance-профилирования; покрыт случай104 видимых колод за пределами страницы100.",
+    "Новые платные зависимости, API, CI uploads/cache, изменения оригинальных PNG отсутствуют. Тесты используют временные синтетические коллекции и отдельные UserDefaults suites. xcresult/логи/непроверенные screen captures остаются в ignored build, не публикуются."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial targeted Swift test compile",
+      "result": "failed",
+      "details": "Swift Testing macro отклонил try внутри RHS short-circuit &&. Assertion разделён на две самостоятельные проверки без ослабления условий; targeted4 и полный offline219 passed."
+    },
+    {
+      "command": "Initial two-selector XCUITest run (build/T031-smoke.xcresult)",
+      "result": "failed",
+      "details": "Регрессионный editor test passed; новый тест пытался открыть offscreen Leaf menu после reset/grid→tree. Добавлены scroll identifier и явная прокрутка к hittable control; все assertions сохранены. Повтор build/T031-smoke-final.xcresult: 1 test/0 failures."
+    },
+    {
+      "command": "Optional window screenshot run (build/T031-window.xcresult)",
+      "result": "failed",
+      "details": "XCUITest не смог создать изображение окна на дополнительном дисплее (negative desktop coordinates). Удалены необязательные manual screenshot attachments нового теста; функциональные assertions и сценарий не менялись. Снимки/xcresult из build не публикуются."
+    }
+  ]
+}

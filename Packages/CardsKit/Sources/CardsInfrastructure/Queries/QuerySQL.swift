@@ -117,6 +117,14 @@ enum QuerySQL {
         let (eligibleSQL, eligibleArgs) = eligible(query.filter)
         let (aggregateSQL, aggregateArgs) = aggregates(asOf: asOf)
         var deckWhere = ["d.deletedAt IS NULL"]
+        if query.hierarchy {
+            deckWhere.append("""
+                d.id IN (WITH RECURSIVE tree(id) AS (
+                    SELECT id FROM decks WHERE parentID IS NULL AND deletedAt IS NULL
+                    UNION SELECT d.id FROM decks d JOIN tree ON d.parentID = tree.id WHERE d.deletedAt IS NULL
+                ) SELECT id FROM tree)
+                """)
+        }
         var args = StatementArguments()
         if let deck = query.filter.deckID {
             deckWhere.append(deckPredicate(descendants: query.filter.includeDescendants, column: "d.id"))
@@ -141,12 +149,12 @@ enum QuerySQL {
                 coalesce(t.review, 0) AS review, coalesce(t.suspended, 0) AS suspended,
                 coalesce(t.buried, 0) AS buried, coalesce(t.availableNew, 0) AS availableNew, coalesce(t.due, 0) AS due
             FROM page p LEFT JOIN totals t ON t.deckID = p.id ORDER BY p.sortOrder, p.normalizedName, p.id
-            """, arguments: eligibleArgs + args + [query.page.limit, query.page.offset] + aggregateArgs)
+            """, arguments: eligibleArgs + args + [query.hierarchy ? -1 : query.page.limit, query.hierarchy ? 0 : query.page.offset] + aggregateArgs)
         return try DeckSnapshot(generation: generation, rows: rows.map { row in
             let parent: String? = row["parentID"]
             return try DeckQueryRow(deck: Deck(id: DeckID(uuidString: row["id"]),
                 parentID: parent.map { try DeckID(uuidString: $0) }, name: EntityName(row["name"]),
-                description: row["description"], iconKey: row["iconKey"], colorKey: row["colorKey"], revision: Revision(row["revision"])), counts: counts(row))
+                description: row["description"], iconKey: row["iconKey"], colorKey: row["colorKey"], isFavorite: row["favorite"], revision: Revision(row["revision"])), counts: counts(row))
         }, deckCount: count, page: query.page, asOf: asOf)
     }
 

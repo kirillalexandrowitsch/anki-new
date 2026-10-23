@@ -54,3 +54,16 @@ public protocol StudyPreferencesRepository: Sendable {
 public protocol PreferencesWorkspaceAccess: CollectionAccess {
     func studyPreferences(generation: UUID) async throws -> any StudyPreferencesRepository
 }
+
+public enum DeckBrowserLayout: String, Codable, CaseIterable, Sendable { case tree, grid }
+public struct DeckBrowserPreferences: Equatable, Codable, Sendable {
+    public var layout: DeckBrowserLayout
+    public var expanded: Set<DeckID>
+    public init(layout: DeckBrowserLayout = .tree, expanded: Set<DeckID> = []) {
+        self.layout = layout; self.expanded = expanded
+    }
+}
+@MainActor public protocol DeckBrowserPreferencesStore {
+    func loadDeckBrowser() -> DeckBrowserPreferences
+    func saveDeckBrowser(_ value: DeckBrowserPreferences) throws
+}
