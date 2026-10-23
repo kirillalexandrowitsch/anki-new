@@ -73,7 +73,10 @@ public struct AppShellView: View {
                         .foregroundStyle(.secondary)
                 }
                 if model.selection == .decks {
-                    if let decks { DecksView(model: decks) }
+                    if let decks { DecksView(model: decks, addNote: library.map { library in { id in
+                        model.selection = .library
+                        Task { await library.launcher.open(initialDeckID: id) }
+                    } }) }
                     else { ProgressView("Открытие колод…") }
                 } else if model.selection == .library {
                     if let library { LibraryView(model: library) }
@@ -124,7 +127,7 @@ public struct AppShellView: View {
     }
     private var isModal: Bool {
         showsStudy || showsStudyDemo || studyLoading || exporter?.isPresented == true || onboarding?.showsCreator == true ||
-        decks?.editor != nil || decks?.moveEditor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true || library?.deletion?.isPresented == true
+        decks?.editor != nil || decks?.moveEditor != nil || decks?.inspectedID != nil || decks?.studySetup != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true || library?.deletion?.isPresented == true
     }
 
     private var commands: AppCommandContext {
