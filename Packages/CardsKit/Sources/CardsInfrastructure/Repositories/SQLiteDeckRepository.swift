@@ -69,8 +69,11 @@ struct SQLiteDeckRepository: DeckRepository {
                                   command.description, command.iconKey, command.colorKey, revision.rawValue, key, command.expectedRevision!.rawValue])
             guard db.changesCount == 1 else { throw CollectionRepositoryError.integrityFailure }
         }
+        if let favorite = command.favorite {
+            try db.execute(sql: "UPDATE decks SET favorite = ? WHERE id = ?", arguments: [favorite, key])
+        }
         return Deck(id: command.deckID, parentID: command.parentID, name: command.name,
-                    description: command.description, iconKey: command.iconKey, colorKey: command.colorKey, revision: revision)
+                    description: command.description, iconKey: command.iconKey, colorKey: command.colorKey, isFavorite: command.favorite ?? current?.isFavorite ?? false, revision: revision)
     }
 
     private static func fetch(_ db: Database, id: DeckID) throws -> Deck? {
@@ -79,6 +82,6 @@ struct SQLiteDeckRepository: DeckRepository {
         let parent: String? = row["parentID"]
         return try Deck(id: id, parentID: parent.map { try DeckID(uuidString: $0) },
                         name: EntityName(row["name"]), description: row["description"], iconKey: row["iconKey"], colorKey: row["colorKey"],
-                        revision: Revision(row["revision"]))
+                        isFavorite: row["favorite"], revision: Revision(row["revision"]))
     }
 }

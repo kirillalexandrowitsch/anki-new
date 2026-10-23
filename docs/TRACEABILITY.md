@@ -9,7 +9,7 @@
 | ID и экран | Основная задача | Статус |
 |---|---|---|
 | [base-01 · Сегодня](../design-references/screens/base-01.png) | [T023](tasks/T023.md) | Готово |
-| [base-02 · Колоды](../design-references/screens/base-02.png) | [T031](tasks/T031.md) | Запланировано |
+| [base-02 · Колоды](../design-references/screens/base-02.png) | [T031](tasks/T031.md) | Готово |
 | [base-03 · Статистика](../design-references/screens/base-03.png) | [T028](tasks/T028.md) | Готово |
 | [base-04 · Библиотека](../design-references/screens/base-04.png) | [T016](tasks/T016.md) | Готово |
 | [base-05 · Настройки](../design-references/screens/base-05.png) | [T025](tasks/T025.md) | Готово |
@@ -43,10 +43,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [03.1 · Вложенные колоды](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Запланировано |
-| [03.2 · Сетка](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Запланировано |
-| [03.3 · Избранные](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Запланировано |
-| [03.4 · Нет подходящих колод](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Запланировано |
+| [03.1 · Вложенные колоды](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Готово |
+| [03.2 · Сетка](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Готово |
+| [03.3 · Избранные](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Готово |
+| [03.4 · Нет подходящих колод](../design-references/sheets/sheet-03.png) | [T031](tasks/T031.md) | Готово |
 
 ## 04 · Управление колодами
 
@@ -56,7 +56,7 @@
 |---|---|---|
 | [04.1 · Новая колода](../design-references/sheets/sheet-04.png) | [T013](tasks/T013.md) | Готово |
 | [04.2 · Редактировать колоду](../design-references/sheets/sheet-04.png) | [T013](tasks/T013.md) | Готово |
-| [04.3 · Переместить колоду](../design-references/sheets/sheet-04.png) | [T031](tasks/T031.md) | Запланировано |
+| [04.3 · Переместить колоду](../design-references/sheets/sheet-04.png) | [T031](tasks/T031.md) | Готово |
 | [04.4 · Удалить колоду?](../design-references/sheets/sheet-04.png) | [T033](tasks/T033.md) | Запланировано |
 
 ## 05 · Меню и параметры колоды
@@ -244,7 +244,7 @@
 | [21.1 · Выбор тегов](../design-references/sheets/sheet-21.png) | [T038](tasks/T038.md) | Запланировано |
 | [21.2 · Создать тег](../design-references/sheets/sheet-21.png) | [T038](tasks/T038.md) | Запланировано |
 | [21.3 · Массовые теги](../design-references/sheets/sheet-21.png) | [T038](tasks/T038.md) | Запланировано |
-| [21.4 · Избранная колода](../design-references/sheets/sheet-21.png) | [T031](tasks/T031.md) | Запланировано |
+| [21.4 · Избранная колода](../design-references/sheets/sheet-21.png) | [T031](tasks/T031.md) | Готово |
 
 ## 22 · Редактор — дополнительные действия
 
