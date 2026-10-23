@@ -76,7 +76,7 @@ struct SQLiteDeckRepository: DeckRepository {
                     description: command.description, iconKey: command.iconKey, colorKey: command.colorKey, isFavorite: command.favorite ?? current?.isFavorite ?? false, revision: revision)
     }
 
-    private static func fetch(_ db: Database, id: DeckID) throws -> Deck? {
+    static func fetch(_ db: Database, id: DeckID) throws -> Deck? {
         guard let row = try Row.fetchOne(db, sql: "SELECT * FROM decks WHERE id = ? AND deletedAt IS NULL",
                                          arguments: [id.rawValue.uuidString.lowercased()]) else { return nil }
         let parent: String? = row["parentID"]

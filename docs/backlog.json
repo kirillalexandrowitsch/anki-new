@@ -1246,11 +1246,14 @@
       ],
       "verification": "Cancel, вложенное удаление, общая Note в двух колодах и сбой транзакции.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M2",
       "stateIDs": [
         "04.4"
-      ]
+      ],
+      "startedAt": "2026-10-23T20:44:44.662948+00:00",
+      "completedAt": "2026-10-23T20:57:12.071948+00:00",
+      "report": "docs/task-reports/T033.json"
     },
     {
       "id": "T034",
@@ -4164,7 +4167,7 @@
       "stateID": "04.4",
       "taskID": "T033",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "05.1",

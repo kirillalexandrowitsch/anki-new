@@ -25,7 +25,7 @@ struct StoredStudyPolicy: Codable, Sendable {
 }
 
 /// The collection writer serializes every decision with rating/undo. No cached success or queue.
-struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
+struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService, StudyAvailabilityService {
     let sessionID: SessionID
     let reviews: SQLiteReviewRepository
 
@@ -103,6 +103,29 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
                 }
                 return .question(value)
             }
+        }
+    }
+
+    func isAvailable(cardID: CardID) async throws -> Bool {
+        let scope = reviews.configuration.scope
+        return try await reviews.writer.read { db in
+            guard let deck = try String.fetchOne(db, sql: """
+                SELECT c.deckID FROM cards c JOIN notes n ON n.id=c.noteID
+                WHERE c.id=? AND c.deletedAt IS NULL AND c.generationState='active'
+                    AND c.suspended=0 AND n.deletedAt IS NULL
+                """, arguments: [ReviewSQL.key(cardID)]) else { return false }
+            let path = try Row.fetchAll(db, sql: """
+                WITH RECURSIVE path(id,parentID,deletedAt) AS (
+                    SELECT id,parentID,deletedAt FROM decks WHERE id=?
+                    UNION SELECT d.id,d.parentID,d.deletedAt FROM decks d JOIN path p ON d.id=p.parentID
+                ) SELECT id,deletedAt FROM path
+                """, arguments: [deck])
+            guard !path.isEmpty, path.allSatisfy({ $0["deletedAt"] == nil }) else { return false }
+            if case .decks(let roots) = scope {
+                let ids = try Set(path.map { try DeckID(uuidString: $0["id"]) })
+                return !roots.isDisjoint(with: ids)
+            }
+            return true
         }
     }
 

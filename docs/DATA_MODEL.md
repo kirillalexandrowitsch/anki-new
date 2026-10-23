@@ -192,3 +192,14 @@ T006 реализует первоначальную SQLite-схему v1 в `Ca
 Восстановление сначала распаковывает и проверяет отдельный контейнер: manifest, hash каждого файла, SQLite integrity и foreign keys, schema/collection IDs. Затем закрываются observers/connections, текущая папка переименовывается в rollback, staging занимает её место, открывается новый контекст. Внешний swap journal и rollback лежат вне заменяемой папки. При падении между rename startup выбирает последнее проверенное состояние. Старые WAL/SHM не примешиваются к восстановленной БД.
 
 Резервирование при работающей БД выполняется через согласованный snapshot [SQLite Backup API](https://www.sqlite.org/backup.html) / GRDB backup. Координатор запрещает изменения и media GC на время фиксации manifest ссылок; копируются именно файлы snapshot, затем блокировка снимается. В архиве нет временных lock, staging, cache и открытых WAL-файлов.
+
+### Удаление поддерева колод (T033)
+
+`deck.delete.v1` сохраняет подтверждённый снимок ID/ревизий колод, карточек и Note,
+включая ID живых внешних вариантов. Равенство снимка проверяется внутри writer
+transaction перед мутацией. Все незатёртые Card поддерева получают tombstone,
+`generationState=suppressed` и новую revision; Note получает tombstone только при
+отсутствии живых внешних вариантов. `deletion_batches.kind=deck.v1` хранит снимок,
+`undoUntil=NULL`, `purgeAfter=deletedAt+7 дней`; UI отмену колоды не обещает.
+Schedules, review/session history и media не удаляются. Повтор команды возвращает
+исходный receipt, сбой откатывает tombstones, batch, event и processed command вместе.
