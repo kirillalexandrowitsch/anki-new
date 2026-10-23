@@ -48,7 +48,8 @@
   "limitations": [
     "Счётчики относятся к самой колоде; новые/due — сырая доступность без дневных квот, что подписано в UI. Parent totals не суммируют поддерево. Настройка scoped занятия/полное меню свойств остаются T032.",
     "Полное дерево загружается единым snapshot без pagination, UI использует LazyVStack/LazyVGrid. Экстремально большие коллекции требуют отдельного performance-профилирования; покрыт случай104 видимых колод за пределами страницы100.",
-    "Новые платные зависимости, API, CI uploads/cache, изменения оригинальных PNG отсутствуют. Тесты используют временные синтетические коллекции и отдельные UserDefaults suites. xcresult/логи/непроверенные screen captures остаются в ignored build, не публикуются."
+    "Новые платные зависимости, API, CI uploads/cache, изменения оригинальных PNG отсутствуют. Тесты используют временные синтетические коллекции и отдельные UserDefaults suites. xcresult/логи/непроверенные screen captures остаются в ignored build, не публикуются.",
+    "Локальные последние repair UI attempts остановились на отсутствующем синтезированном клавиатурном вводе; успешными не объявлены. Проверка владельца ранее выполнена в T031-verified, а текущая версия теста дополнительно требует strictly-green hosted CI перед merge. Новые системные разрешения/обход TCC не добавляются."
   ],
   "failedChecks": [
     {
@@ -65,6 +66,16 @@
       "command": "Optional window screenshot run (build/T031-window.xcresult)",
       "result": "failed",
       "details": "XCUITest не смог создать изображение окна на дополнительном дисплее (negative desktop coordinates). Удалены необязательные manual screenshot attachments нового теста; функциональные assertions и сценарий не менялись. Снимки/xcresult из build не публикуются."
+    },
+    {
+      "command": "gh run view 39943422958 --log-failed",
+      "result": "failed",
+      "details": "Первый hosted macOS run: package219 + worker1 passed, app-tests failed только testDeckTreeGridFavoriteMoveUndoAndPersistedLayout на AppShellUITests.swift:55 (Leaf не появилась после favorites filter). UI test теперь прокручивает также favorite button, ждёт закрытия Move sheet и committed favorite label+enabled перед фильтрацией. Критерии/assertions не удалены; добавлены проверки видимости и подтверждения записи."
+    },
+    {
+      "command": "Local CI repair UI runs build/T031-ci-repair.xcresult and build/T031-ci-repair-final.xcresult",
+      "result": "failed",
+      "details": "На локальном Mac синтезированный typeText(\"Root\") перестал заполнять поле: первый run остановился на незакрывшемся editor, второй с app.activate и явным value assertion зафиксировал пустую строку вместо Root (AppShellUITests.swift:36). Сохранение при пустом имени корректно недоступно; эти runs не засчитаны. Ранее локальные T031-smoke-final и T031-verified проходили полностью. Product sources после них не менялись. Исправленный UI test должен пройти обязательный hosted macOS CI перед merge; его итог подтверждается PR checks, не этим предположением."
     }
   ]
 }

@@ -13,21 +13,28 @@ final class AppShellUITests: XCTestCase {
         func element(_ id: String) -> XCUIElement {
             app.descendants(matching: .any).matching(identifier: id).firstMatch
         }
-        func action(_ name: String, _ action: String) {
-            let menu = element("deck.actions." + name)
-            XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        func reveal(_ target: XCUIElement) {
+            XCTAssertTrue(target.waitForExistence(timeout: 10))
             let scroll = app.scrollViews["decks.scroll"]
             for _ in 0..<6 {
-                if scroll.frame.contains(menu.frame) { break }
-                scroll.scroll(byDeltaX: 0, deltaY: menu.frame.midY > scroll.frame.maxY ? -160 : 160)
+                if scroll.frame.contains(target.frame) { break }
+                scroll.scroll(byDeltaX: 0, deltaY: target.frame.midY > scroll.frame.maxY ? -160 : 160)
             }
-            XCTAssertTrue(menu.isHittable); menu.click()
+            XCTAssertTrue(scroll.frame.contains(target.frame))
+            XCTAssertTrue(target.isHittable)
+        }
+        func action(_ name: String, _ action: String) {
+            let menu = element("deck.actions." + name)
+            reveal(menu); menu.click()
             XCTAssertTrue(app.menuItems[action].waitForExistence(timeout: 5))
             app.menuItems[action].click()
         }
         func saveDeck(_ name: String) {
             let input = app.textFields["deckEditor.name"]
-            XCTAssertTrue(input.waitForExistence(timeout: 5)); input.click(); input.typeText(name)
+            XCTAssertTrue(input.waitForExistence(timeout: 5))
+            app.activate(); input.click(); input.typeText(name)
+            XCTAssertEqual(input.value as? String, name)
+            XCTAssertTrue(app.buttons["deckEditor.save"].isEnabled)
             app.buttons["deckEditor.save"].click()
             XCTAssertTrue(input.waitForNonExistence(timeout: 5))
         }
@@ -50,7 +57,12 @@ final class AppShellUITests: XCTestCase {
         }
         XCTAssertFalse(app.buttons["deckMove.save"].isEnabled)
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
-        app.buttons["deck.favorite.Leaf"].click()
+        XCTAssertTrue(app.buttons["deckMove.save"].waitForNonExistence(timeout: 10))
+        let favorite = app.buttons["deck.favorite.Leaf"]
+        reveal(favorite); favorite.click()
+        let committedFavorite = NSPredicate { _, _ in favorite.label == "Убрать из избранного" && favorite.isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: committedFavorite, object: nil)],
+                                     timeout: 10), .completed)
         element("decks.favorites").click()
         XCTAssertTrue(app.buttons["deck.edit.Leaf"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["deck.edit.Root"].exists)
