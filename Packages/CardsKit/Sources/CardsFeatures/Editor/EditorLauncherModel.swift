@@ -18,7 +18,7 @@ public final class EditorLauncherModel {
                 audio: (any AudioPlayback)? = nil, preferences: AudioPreferences? = nil) {
         self.workspace = workspace; self.clock = clock; self.audioService = audio; self.preferences = preferences
     }
-    public func open(noteID: NoteID? = nil) async {
+    public func open(noteID: NoteID? = nil, initialDeckID: DeckID? = nil) async {
         guard active, editor == nil, !isLoading else { return }
         isLoading = true; errorMessage = nil
         defer { isLoading = false }
@@ -45,7 +45,11 @@ public final class EditorLauncherModel {
             if let audioService, let preferences {
                 audio = AudioPreviewModel(service: audioService, preferences: preferences, generation: workspace.generation)
             } else { audio = nil }
-            editor = EditorModel(repository: workspace.notes, decks: decks, original: original, audio: audio)
+            if let initialDeckID, !decks.contains(where: { $0.id == initialDeckID }) {
+                throw CollectionRepositoryError.notFound(.deck(initialDeckID))
+            }
+            let model = EditorModel(repository: workspace.notes, decks: decks, original: original, initialDeckID: initialDeckID, audio: audio)
+            editor = model
         } catch { if active { errorMessage = "Не удалось открыть редактор. Повторите попытку." } }
     }
     public func stop() { active = false; editor?.stop(); editor = nil }

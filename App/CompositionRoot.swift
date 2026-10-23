@@ -37,7 +37,15 @@ final class CompositionRoot {
     func makeDecksModel(context: CollectionContext) async throws -> DecksModel {
         guard let provider = access as? any DeckWorkspaceAccess else { throw CollectionAccessError.staleContext }
         let workspace = try await provider.deckWorkspace(generation: context.generation)
-        return DecksModel(workspace: workspace, clock: clock, preferences: UserDefaultsDeckBrowserPreferences(defaults: defaults, collectionID: context.id))
+        guard let studyProvider = access as? any DeckStudyWorkspaceAccess else { throw CollectionAccessError.staleContext }
+        try await prepareAudio(context: context)
+        let service = try await studyProvider.deckStudy(generation: context.generation)
+        return DecksModel(workspace: workspace, clock: clock,
+            preferences: UserDefaultsDeckBrowserPreferences(defaults: defaults, collectionID: context.id),
+            studyService: service, makeStudy: { [self] service in
+                StudySessionModel(service: service, clock: clock,
+                    audio: AudioPreviewModel(service: audio, preferences: audioPreferences, generation: context.generation))
+            })
     }
 
     func makeLibraryModel(context: CollectionContext) async throws -> LibraryModel {
@@ -104,7 +112,7 @@ final class CompositionRoot {
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, AudioMediaAccess, StatsWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, DeckStudyWorkspaceAccess, AudioMediaAccess, StatsWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -156,6 +164,11 @@ private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAcce
     func todayWorkspace(generation: UUID) async throws -> TodayWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.todayWorkspace(generation: generation)
+    }
+
+    func deckStudy(generation: UUID) async throws -> any DeckStudyService {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.deckStudy(generation: generation)
     }
 
     func studySession(generation: UUID) async throws -> any StudyReviewSessionService {
