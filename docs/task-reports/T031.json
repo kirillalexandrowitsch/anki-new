@@ -1,6 +1,6 @@
 {
   "taskID": "T031",
-  "summary": "Добавлены полный лес вложенных колод, раскрытие уровней, адаптивная сетка, поиск/сброс фильтров, избранное, создание подколоды и MoveDeck с отменой. Вид и раскрытие сохраняются по CollectionID; дерево и сетка используют один наблюдаемый snapshot с собственными счётчиками колод. Схема SQLite, зависимости и исходные PNG не меняются.",
+  "summary": "Добавлены полный лес вложенных колод, раскрытие уровней, адаптивная сетка, поиск/сброс фильтров, избранное, создание подколоды и MoveDeck с отменой. Вид и раскрытие сохраняются по CollectionID; дерево и сетка используют один наблюдаемый snapshot с собственными счётчиками колод. Схема SQLite, зависимости и исходные PNG не меняются. Диалог переноса включён в общую modal gate команд окна.",
   "criteria": [
     {
       "text": "Нельзя создать цикл или переместить колоду в себя.",
@@ -43,13 +43,29 @@
       "command": "python3 scripts/tasks.py finish T031; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T031 done после всех acceptance checks; graph/reports/generated state passed, 26 Python tests, 2492 local links, 48/48 original PNG hashes, budget/PR route policy passed. /tmp/anki-T031-quality-final.log; working diff без whitespace errors."
+    },
+    {
+      "command": "gh run view 39945646186 --json status,conclusion,jobs",
+      "result": "passed",
+      "details": "Обязательный hosted macOS CI для 43413e4 завершился success: quality и macos SUCCESS; полный package219 и UI acceptance с видимой/подтверждённой звездой прошли. PR108 merged в dev (4e7be901cfdb6811383e4a1c68ebb012c037b274). Дополнительная modal gate repair описана ниже и требует собственного текущего CI перед merge."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T031-modal-offline.log; build/checks/run-n4h8skf4/summary.json: networkDenied=true, package tests и native arm64 app build passed после подключения Move modal gate."
+    },
+    {
+      "command": "xcodebuild build-for-testing -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=",
+      "result": "passed",
+      "details": "/tmp/anki-T031-modal-build-tests.log: TEST BUILD SUCCEEDED. Текущая версия UI tests компилируется, добавлены assertions disabled для Файл→Новая колода/Новая карточка и Переход→Сегодня поверх Move sheet, закрытие меню не закрывает сам Move dialog. Исполнение проверяет обязательный hosted macOS CI; локальный keyboard-input blocker не обходится."
     }
   ],
   "limitations": [
     "Счётчики относятся к самой колоде; новые/due — сырая доступность без дневных квот, что подписано в UI. Parent totals не суммируют поддерево. Настройка scoped занятия/полное меню свойств остаются T032.",
     "Полное дерево загружается единым snapshot без pagination, UI использует LazyVStack/LazyVGrid. Экстремально большие коллекции требуют отдельного performance-профилирования; покрыт случай104 видимых колод за пределами страницы100.",
     "Новые платные зависимости, API, CI uploads/cache, изменения оригинальных PNG отсутствуют. Тесты используют временные синтетические коллекции и отдельные UserDefaults suites. xcresult/логи/непроверенные screen captures остаются в ignored build, не публикуются.",
-    "Локальные последние repair UI attempts остановились на отсутствующем синтезированном клавиатурном вводе; успешными не объявлены. Проверка владельца ранее выполнена в T031-verified, а текущая версия теста дополнительно требует strictly-green hosted CI перед merge. Новые системные разрешения/обход TCC не добавляются."
+    "Локальные последние repair UI attempts остановились на отсутствующем синтезированном клавиатурном вводе; успешными не объявлены. Проверка владельца ранее выполнена в T031-verified, а текущая версия теста дополнительно требует strictly-green hosted CI перед merge. Новые системные разрешения/обход TCC не добавляются.",
+    "После первого merge чтение AppShellView.isModal обнаружило пропуск moveEditor в общей блокировке команд. Продвижение было остановлено до stage; repair добавляет moveEditor в тот же gate и UI assertions, не меняя критерии или остальные команды. Текущий commit допускается к продвижению только после новых SUCCESS quality/macos."
   ],
   "failedChecks": [
     {
