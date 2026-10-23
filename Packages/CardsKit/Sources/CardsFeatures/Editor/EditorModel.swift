@@ -23,11 +23,11 @@ public final class EditorModel: Identifiable {
     private var baseline: EditorDraft
     private var attempt: (draft: EditorDraft, commandID: CommandID)?
 
-    public init(repository: any NoteRepository, decks: [Deck], original: SavedBasicNote? = nil, audio: AudioPreviewModel? = nil) {
+    public init(repository: any NoteRepository, decks: [Deck], original: SavedBasicNote? = nil, initialDeckID: DeckID? = nil, audio: AudioPreviewModel? = nil) {
         self.audio = audio
         self.repository = repository; self.decks = decks; self.original = original
         noteID = original?.note.id ?? NoteID()
-        let initial = original.map(EditorDraft.init) ?? EditorDraft(deckID: decks.first?.id)
+        let initial = original.map(EditorDraft.init) ?? EditorDraft(deckID: initialDeckID ?? decks.first?.id)
         baseline = initial; draft = initial
     }
     public var isDirty: Bool { draft != baseline }

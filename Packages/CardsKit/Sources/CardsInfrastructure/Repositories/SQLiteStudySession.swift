@@ -30,10 +30,12 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
     let reviews: SQLiteReviewRepository
 
     static func open(writer: CollectionWriter, configuration: StudyQueueConfiguration,
-                     clock: any CardsCore.Clock, useCollectionPreferences: Bool = false) async throws -> SQLiteStudySession {
+                     clock: any CardsCore.Clock, useCollectionPreferences: Bool = false,
+                     deckRequest: DeckStudyRequest? = nil) async throws -> SQLiteStudySession {
         let pair = try await writer.mediaAccess { pool in
             try pool.write { db -> (SessionID, StudyQueueConfiguration) in
                 if let r = try Row.fetchOne(db, sql: "SELECT * FROM study_sessions WHERE mode='scheduled' AND status IN ('active','paused')") {
+                    if deckRequest != nil { throw DeckStudyError.activeSession }
                     let policy = try ReviewSQL.decode(StoredStudyPolicy.self, r["studyPolicyJSON"])
                     let id = try SessionID(uuidString: r["id"])
                     return try (id, policy.configuration(generation: configuration.generation))
@@ -43,6 +45,12 @@ struct SQLiteStudySession: StudyReviewSessionService, StudyProgressService {
                     dailyLimits: useCollectionPreferences ? SQLiteStudyPreferences.fetch(db).value.limits : configuration.dailyLimits,
                     deckLimits: configuration.deckLimits, sessionLimit: configuration.sessionLimit,
                     siblingPolicy: configuration.siblingPolicy)
+                if let deckRequest {
+                    let snapshot = try ReviewSQL.snapshot(db, generation: configuration.generation, sessionID: nil, skipping: [])
+                    try SQLiteDeckStudy.validate(deckRequest, snapshot: snapshot)
+                    let queue = try QueueBuilder().build(snapshot, configuration: configuration, now: clock.now())
+                    guard !queue.ready.isEmpty else { throw DeckStudyError.emptyQueue }
+                }
                 let id = SessionID(), now = try ReviewSQL.ms(clock.now())
                 try db.execute(sql: """
                     INSERT INTO study_sessions(id,mode,scopeJSON,startedAt,lastActivityAt,status,studyPolicyJSON)

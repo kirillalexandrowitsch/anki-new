@@ -1,6 +1,98 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    @MainActor func testDeckMenuPropertiesSetupCancelAndScopedStart() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        app.activate(); name.click(); name.typeText("Setup Root")
+        app.checkBoxes["onboarding.demo"].click()
+        app.buttons["onboarding.save"].click()
+        app.staticTexts["navigation.decks"].click()
+        func element(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        func action(_ deck: String, _ title: String) {
+            let menu = element("deck.actions." + deck)
+            XCTAssertTrue(menu.waitForExistence(timeout: 10)); menu.click()
+            XCTAssertTrue(app.menuItems[title].waitForExistence(timeout: 5)); app.menuItems[title].click()
+        }
+        action("Setup Root", "Свойства колоды")
+        let counts = app.staticTexts["deckProperties.counts"]
+        XCTAssertTrue(counts.waitForExistence(timeout: 5))
+        XCTAssertEqual(counts.value as? String, "Карточек: 3 · Записей: 3")
+        app.menuBars.menuBarItems["Файл"].click()
+        XCTAssertFalse(app.menuItems["Новая колода"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        app.buttons["deckProperties.close"].click()
+        action("Setup Root", "Настроить занятие…")
+        let new = app.textFields["deckStudy.new"]
+        XCTAssertTrue(new.waitForExistence(timeout: 5))
+        let loaded = NSPredicate { _, _ in new.value as? String == "20" && app.buttons["deckStudy.start"].isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: loaded, object: nil)], timeout: 10), .completed)
+        new.click(); new.typeKey("a", modifierFlags: .command); new.typeText("1")
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(new.waitForNonExistence(timeout: 5))
+        action("Setup Root", "Настроить занятие…")
+        XCTAssertTrue(new.waitForExistence(timeout: 5))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: loaded, object: nil)], timeout: 10), .completed)
+        app.buttons["deckStudy.cancel"].click()
+        action("Setup Root", "Добавить подколоду")
+        let child = app.textFields["deckEditor.name"]
+        XCTAssertTrue(child.waitForExistence(timeout: 5)); child.click(); child.typeText("Setup Child")
+        app.buttons["deckEditor.save"].click()
+        XCTAssertTrue(child.waitForNonExistence(timeout: 5))
+        app.buttons["deck.disclosure.Setup Root"].click()
+        action("Setup Child", "Настроить занятие…")
+        XCTAssertTrue(app.staticTexts["deckStudy.reason"].waitForExistence(timeout: 5))
+        let empty = NSPredicate { _, _ in
+            let text = app.staticTexts["deckStudy.reason"]
+            return ((text.value as? String) ?? text.label).contains("нет карточек")
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: empty, object: nil)], timeout: 10), .completed)
+        XCTAssertFalse(app.buttons["deckStudy.start"].isEnabled)
+        app.buttons["deckStudy.cancel"].click()
+        action("Setup Child", "Добавить карточку")
+        let front = element("editor.front"), back = element("editor.back")
+        XCTAssertTrue(front.waitForExistence(timeout: 5))
+        front.click(); front.typeText("Scoped child question")
+        back.click(); back.typeText("Scoped child answer")
+        app.buttons["editor.save"].click()
+        XCTAssertTrue(front.waitForNonExistence(timeout: 5))
+        app.staticTexts["navigation.decks"].click()
+        action("Setup Child", "Настроить занятие…")
+        let start = app.buttons["deckStudy.start"]
+        let ready = NSPredicate { _, _ in start.exists && start.isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 10), .completed)
+        start.click()
+        XCTAssertTrue(app.buttons["study.reveal"].waitForExistence(timeout: 10))
+        let question = app.staticTexts["study.question"]
+        XCTAssertEqual(question.value as? String, "Scoped child question")
+        XCTAssertFalse(app.staticTexts["study.answer"].exists)
+        app.buttons["study.reveal"].click()
+        app.buttons["study.grade.4"].click()
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 10))
+        app.buttons["study.close"].click()
+        XCTAssertTrue(start.waitForNonExistence(timeout: 5))
+        action("Setup Root", "Редактировать")
+        XCTAssertTrue(app.textFields["deckEditor.name"].waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        let menu = element("deck.actions.Setup Root")
+        XCTAssertTrue(menu.waitForExistence(timeout: 5)); menu.click()
+        XCTAssertFalse(app.menuItems["Экспорт колоды — пока недоступен"].isEnabled)
+        XCTAssertFalse(app.menuItems["Удаление колоды — пока недоступно"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        action("Setup Root", "В избранное")
+        let favorite = app.buttons["deck.favorite.Setup Root"]
+        let committed = NSPredicate { _, _ in favorite.label == "Убрать из избранного" && favorite.isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: committed, object: nil)], timeout: 10), .completed)
+    }
+
     @MainActor func testDeckTreeGridFavoriteMoveUndoAndPersistedLayout() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

@@ -1212,13 +1212,16 @@
       ],
       "verification": "Все menu routes, пустая колода, child scope и сохранение постоянных настроек после Cancel.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M2",
       "stateIDs": [
         "05.1",
         "05.2",
         "05.3"
-      ]
+      ],
+      "startedAt": "2026-10-23T18:44:39.114424+00:00",
+      "completedAt": "2026-10-23T18:53:02.376717+00:00",
+      "report": "docs/task-reports/T032.json"
     },
     {
       "id": "T033",
@@ -4167,19 +4170,19 @@
       "stateID": "05.1",
       "taskID": "T032",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "05.2",
       "taskID": "T032",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "05.3",
       "taskID": "T032",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "05.4",

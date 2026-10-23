@@ -65,9 +65,9 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [05.1 · Меню колоды](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Запланировано |
-| [05.2 · Настроить занятие](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Запланировано |
-| [05.3 · Свойства колоды](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Запланировано |
+| [05.1 · Меню колоды](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Готово |
+| [05.2 · Настроить занятие](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Готово |
+| [05.3 · Свойства колоды](../design-references/sheets/sheet-05.png) | [T032](tasks/T032.md) | Готово |
 | [05.4 · Экспорт колоды](../design-references/sheets/sheet-05.png) | [T060](tasks/T060.md) | Запланировано |
 
 ## 06 · Ответ и оценки

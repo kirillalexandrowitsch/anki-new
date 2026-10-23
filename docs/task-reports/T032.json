@@ -1,0 +1,55 @@
+{
+  "taskID": "T032",
+  "summary": "Добавлены контекстное меню колоды, наблюдаемые свойства и настройка отдельного занятия. Область — выбранная колода/подколода с потомками; временные new/review/session limits, точный QueueBuilder preview и причины недоступности Start. Создание сессии атомарно повторяет проверку области/очереди и не заменяет активную сессию. Постоянные настройки не записываются; сохранённая политика переживает reopen. Добавление карточки из меню выбирает исходную колоду без ложного dirty draft. Новые модальные окна подключены к общему gate команд.",
+  "criteria": [
+    {
+      "text": "Меню не предлагает активных пустых заглушек.",
+      "passed": true,
+      "evidence": "Локальный XCUITest testDeckMenuPropertiesSetupCancelAndScopedStart прошёл (90.236 s): свойства (3 Cards/3 Notes), modal gate Файл→Новая колода, setup Escape/Cancel, пустая child с disabled Start и причиной, создание child/карточки из её меню, scoped вопрос/скрытый ответ/reveal/rating/summary/close, edit Cancel, menu favorite, disabled export/delete. Существующие addChild/move/undo routes сохраняются и покрыты T031 UI suite; новые команды с отсутствующим сервисом отключены."
+    },
+    {
+      "text": "Настройка сессии влияет на выбранное занятие, не скрыто меняет лимиты навсегда.",
+      "passed": true,
+      "evidence": "Четыре deckSetup tests passed на реальных временных SQLite коллекциях: subtree root=6/child=3, temporary cap=1 и new/review квоты, invalid input, Cancel/stop, сохранённая preference revision/value до и после reopen, persisted session ID/scope/limit, обычная следующая сессия использует постоянные настройки. Review quota и learning/relearning bypass проверены реальными FSRS оценками и TestClock на сохранённом dueAt. Empty/stale/outside/moved child и активная сессия отклоняются без создания лишней сессии. UI повторно открывает setup после Escape и видит исходное new=20, затем реально учит только созданную child карточку."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter deckSetup",
+      "result": "passed",
+      "details": "/tmp/anki-T032-targeted-verified.log: 4 tests passed; real repository, scoped previews, start/rate/finish/reopen, quota/session limits, learning bypass, empty/stale/active rejection, draft/cancel/default preference invariance and initial note deck."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T032-offline-verified.log; build/checks/run-rdagfrzb/summary.json: networkDenied=true; package tests223 (Core30, Infrastructure160, Features30, DesignSystem3) and XCTest worker1 passed, native arm64 app build passed; synthetic seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testDeckMenuPropertiesSetupCancelAndScopedStart -resultBundlePath build/T032-ui.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T032-ui.log: TEST SUCCEEDED, 1 test / 0 failures, 90.236 s. Реальные меню, свойства, Cancel/Escape, unchanged defaults, disabled empty Start, child note routing и scoped study/reveal/rating/summary. Системные разрешения не менялись."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T032; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T032 done после локальной приёмки. /tmp/anki-T032-quality.log: graph/reports/generated state,26 Python tests,2492 local links,48/48 original PNG hashes, budget/workflow route policy passed; whitespace clean."
+    }
+  ],
+  "limitations": [
+    "Экспорт колоды и удаление остаются недоступны до соответствующих задач; экспорт всей коллекции доступен через существующее меню приложения. Проценты изучения и неподдерживаемые даты свойств не выдумываются; показаны путь, описание, реальные собственные счётчики, подколоды и избранное.",
+    "New/review — временные дневные квоты всей коллекции, учитывающие уже выполненное сегодня. Session limit — уникальные new/review карточки; learning/relearning не ограничиваются ими, что явно подписано в форме. Scope включает потомков выбранной колоды. Незавершённое занятие продолжается через Сегодня.",
+    "Новых зависимостей, платных API/сервисов, CI uploads/cache, изменения SQLite-схемы и оригинальных PNG нет. Все данные проверок синтетические; локальные логи/xcresult в ignored build и /tmp не публикуются."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial targeted deckSetup and first offline run",
+      "result": "failed",
+      "details": "Preview invalid scope initially threw StudyQueueError, which writer.read maps to integrityFailure. Validation now uses existing CollectionRepositoryError.invalidHierarchy consistently for preview/start; retained error assertions all pass."
+    },
+    {
+      "command": "Initial review/learning quota test",
+      "result": "failed",
+      "details": "Тест предполагал dueAt relearning через120s. Заменено чтением фактического сохранённого dueAt через публичный LibraryQuery и установкой TestClock на него; assertions learning bypass не ослаблены, 4 targeted и полный offline passed."
+    }
+  ]
+}

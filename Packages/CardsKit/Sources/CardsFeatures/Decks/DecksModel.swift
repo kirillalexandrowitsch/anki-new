@@ -16,6 +16,17 @@ public final class DecksModel {
     public var search = ""
     public var favoritesOnly = false
     public var editor: DeckEditorModel?
+    public var inspectedID: DeckID?
+    public var studySetup: DeckStudySetupModel?
+    private let studyService: (any DeckStudyService)?
+    private let makeStudy: (@MainActor (any StudyReviewSessionService) -> StudySessionModel)?
+    public var canSetupStudy: Bool { studyService != nil && makeStudy != nil }
+    public var inspectedRow: DeckQueryRow? { rows.first { $0.id == inspectedID } }
+    public func setupStudy(_ deck: Deck) {
+        guard active, !isMutating, let studyService, let makeStudy else { return }
+        studySetup = DeckStudySetupModel(root: deck, rows: rows, service: studyService, makeStudy: makeStudy)
+    }
+    public func closeStudySetup() { studySetup?.stop(); studySetup = nil }
     public var moveEditor: DeckMoveModel?
     public private(set) var canUndoMove = false
     private var undoMove: (deck: Deck, parent: DeckID?, commandID: CommandID)?
@@ -27,8 +38,11 @@ public final class DecksModel {
     private var active = true
 
     public init(workspace: DeckWorkspace, clock: any CardsCore.Clock,
-                preferences: (any DeckBrowserPreferencesStore)? = nil) {
+                preferences: (any DeckBrowserPreferencesStore)? = nil,
+                studyService: (any DeckStudyService)? = nil,
+                makeStudy: (@MainActor (any StudyReviewSessionService) -> StudySessionModel)? = nil) {
         self.workspace = workspace; self.clock = clock; self.preferences = preferences
+        self.studyService = studyService; self.makeStudy = makeStudy
         self.browser = preferences?.loadDeckBrowser() ?? .init()
     }
     public var hasFilter: Bool { favoritesOnly || !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -128,7 +142,7 @@ public final class DecksModel {
         }
     }
     public func stop() {
-        active = false; observation?.cancel(); editor?.stop(); moveEditor?.stop()
+        active = false; closeStudySetup(); inspectedID = nil; observation?.cancel(); editor?.stop(); moveEditor?.stop()
         editor = nil; moveEditor = nil; rows = []; hierarchy = DeckHierarchy(rows: []); undoMove = nil; canUndoMove = false
     }
 }
