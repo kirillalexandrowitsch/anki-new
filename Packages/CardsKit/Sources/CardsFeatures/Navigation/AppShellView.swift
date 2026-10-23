@@ -124,7 +124,7 @@ public struct AppShellView: View {
     }
     private var isModal: Bool {
         showsStudy || showsStudyDemo || studyLoading || exporter?.isPresented == true || onboarding?.showsCreator == true ||
-        decks?.editor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true || library?.deletion?.isPresented == true
+        decks?.editor != nil || decks?.moveEditor != nil || library?.launcher.editor != nil || library?.launcher.isLoading == true || library?.deletion?.isPresented == true
     }
 
     private var commands: AppCommandContext {

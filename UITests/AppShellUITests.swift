@@ -56,6 +56,14 @@ final class AppShellUITests: XCTestCase {
             XCTAssertFalse(app.buttons["deckMove.destination." + invalid].exists)
         }
         XCTAssertFalse(app.buttons["deckMove.save"].isEnabled)
+        app.menuBars.menuBarItems["Файл"].click()
+        XCTAssertFalse(app.menuItems["Новая колода"].isEnabled)
+        XCTAssertFalse(app.menuItems["Новая карточка"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        app.menuBars.menuBarItems["Переход"].click()
+        XCTAssertFalse(app.menuItems["Сегодня"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(app.buttons["deckMove.save"].exists)
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
         XCTAssertTrue(app.buttons["deckMove.save"].waitForNonExistence(timeout: 10))
         let favorite = app.buttons["deck.favorite.Leaf"]
