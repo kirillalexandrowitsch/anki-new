@@ -1,6 +1,97 @@
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    /// M1 acceptance uses real editor-created Notes and persisted scheduled reviews.
+    @MainActor func testFirstVerticalCreateFourGradesStatisticsAndReopen() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        func capture(_ name: String) {
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = "T030-" + name
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        func value(_ id: String) -> String {
+            let element = app.descendants(matching: .any).matching(identifier: id).firstMatch
+            XCTAssertTrue(element.waitForExistence(timeout: 10))
+            return (element.value as? String).flatMap { $0.isEmpty ? nil : $0 } ?? element.label
+        }
+        app.staticTexts["navigation.decks"].click()
+        app.buttons["decks.create"].click()
+        let deck = app.textFields["deckEditor.name"]
+        XCTAssertTrue(deck.waitForExistence(timeout: 5))
+        deck.click(); deck.typeText("Synthetic M1 acceptance")
+        app.buttons["deckEditor.save"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Synthetic M1 acceptance"].waitForExistence(timeout: 5))
+        capture("decks")
+        app.staticTexts["navigation.library"].click()
+        for index in 1...4 {
+            let create = app.buttons["editorLauncher.create"]
+            XCTAssertTrue(create.waitForExistence(timeout: 5)); create.click()
+            for (field, text) in [("front", "Synthetic word \(index)"), ("back", "Synthetic answer \(index)")] {
+                let input = app.descendants(matching: .any).matching(identifier: "editor.\(field)").firstMatch
+                XCTAssertTrue(input.waitForExistence(timeout: 5))
+                input.click(); input.typeText(text)
+            }
+            if index == 1 { capture("editor") }
+            app.buttons["editor.save"].click()
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "editor.front").firstMatch.waitForNonExistence(timeout: 5))
+        }
+        XCTAssertEqual(value("library.counts"), "Карточек: 4 · Записей: 4")
+        capture("library")
+        app.staticTexts["navigation.today"].click()
+        let start = app.buttons["study.start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); capture("today"); start.click()
+        for grade in 1...4 {
+            let reveal = app.buttons["study.reveal"]
+            XCTAssertTrue(reveal.waitForExistence(timeout: 10))
+            XCTAssertFalse(app.staticTexts["study.answer"].exists)
+            for hiddenGrade in 1...4 { XCTAssertFalse(app.buttons["study.grade.\(hiddenGrade)"].exists) }
+            // A repeated grade key on the next hidden question cannot rate it.
+            app.typeKey("\(grade)", modifierFlags: [])
+            XCTAssertEqual(value("study.count"), "Подтверждённых оценок: \(grade - 1)")
+            if grade == 1 { capture("question") }
+            reveal.click()
+            XCTAssertTrue(app.staticTexts["study.answer"].waitForExistence(timeout: 5))
+            for visibleGrade in 1...4 { XCTAssertTrue(app.buttons["study.grade.\(visibleGrade)"].isEnabled) }
+            if grade == 1 { capture("answer") }
+            app.buttons["study.grade.\(grade)"].click()
+            let count = NSPredicate { _, _ in
+                app.staticTexts["study.count"].value as? String == "Подтверждённых оценок: \(grade)"
+            }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: count, object: nil)], timeout: 10), .completed)
+        }
+        // Again may become due while a slow machine is running the smoke. End
+        // explicitly in that case; four grades do not mean every Card is learned.
+        if !app.buttons["study.close"].waitForExistence(timeout: 2) {
+            app.buttons["study.exit"].click()
+            XCTAssertTrue(app.buttons["study.exit.confirm"].waitForExistence(timeout: 5))
+            app.buttons["study.exit.confirm"].click()
+        }
+        XCTAssertTrue(app.buttons["study.close"].waitForExistence(timeout: 10))
+        capture("summary")
+        app.buttons["study.close"].click()
+        func checkStats() {
+            app.staticTexts["navigation.statistics"].click()
+            XCTAssertEqual(value("statistics.ratings"), "4")
+            XCTAssertEqual(value("statistics.cards"), "4")
+            for (grade, title) in [(1, "Снова"), (2, "Трудно"), (3, "Хорошо"), (4, "Легко")] {
+                XCTAssertEqual(value("statistics.grade.\(grade)"), "\(title): 1")
+            }
+        }
+        checkStats(); capture("statistics")
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["navigation.statistics"].waitForExistence(timeout: 10))
+        checkStats(); capture("statistics-reopened")
+        app.staticTexts["navigation.library"].click()
+        XCTAssertEqual(value("library.counts"), "Карточек: 4 · Записей: 4")
+    }
+
     @MainActor func testCardDeletionCancelUndoTimeoutAndReopen() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
