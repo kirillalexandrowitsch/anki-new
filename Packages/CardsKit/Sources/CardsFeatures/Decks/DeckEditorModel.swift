@@ -12,11 +12,13 @@ public final class DeckEditorModel: Identifiable {
     public private(set) var nameError: String?
     public private(set) var hasConflict = false
     private let repository: any DeckRepository
+    private let parentID: DeckID?
     private let deckID: DeckID
     private var attempt: (input: DeckInput, commandID: CommandID)?
     private var active = true
 
-    public init(repository: any DeckRepository, original: Deck? = nil) {
+    public init(repository: any DeckRepository, original: Deck? = nil, parentID: DeckID? = nil) {
+        self.parentID = parentID
         self.repository = repository
         self.original = original
         self.deckID = original?.id ?? DeckID()
@@ -50,7 +52,7 @@ public final class DeckEditorModel: Identifiable {
                                                                               commandID: commandID)
             } else {
                 result = try await CreateDeck(repository: repository).execute(captured, id: deckID,
-                                                                              commandID: commandID)
+                                                                              commandID: commandID, parentID: parentID)
             }
             guard active else { return nil }
             active = false

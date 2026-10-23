@@ -81,13 +81,13 @@ import Testing
     let encoder = JSONEncoder()
     encoder.outputFormatting = .sortedKeys
     let request = String(decoding: try encoder.encode(command), as: UTF8.self)
-    #expect(!request.contains("iconKey") && !request.contains("colorKey"))
+    #expect(!request.contains("iconKey") && !request.contains("colorKey") && !request.contains("favorite"))
     // Reproduce the pre-T013 persisted result without either new DTO property.
     try await database.pool.write { db in
         let json = try String.fetchOne(db, sql: "SELECT resultJSON FROM processed_commands")!
         var object = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
         var result = object["result"] as! [String: Any]
-        result.removeValue(forKey: "iconKey"); result.removeValue(forKey: "colorKey")
+        result.removeValue(forKey: "iconKey"); result.removeValue(forKey: "colorKey"); result.removeValue(forKey: "isFavorite")
         object["result"] = result
         let legacy = try JSONSerialization.data(withJSONObject: object, options: .sortedKeys)
         try db.execute(sql: "UPDATE processed_commands SET resultJSON = ?", arguments: [String(decoding: legacy, as: UTF8.self)])

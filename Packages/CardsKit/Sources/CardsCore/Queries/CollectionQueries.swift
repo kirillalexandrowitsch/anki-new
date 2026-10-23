@@ -116,10 +116,11 @@ public struct LibrarySnapshot: Equatable, Sendable {
 public struct DeckQuery: Equatable, Sendable {
     public let filter: CardQueryFilter
     public let nameSearch: String
+    public let hierarchy: Bool
     public let page: QueryPage
-    public init(filter: CardQueryFilter = .all, nameSearch: String = "", page: QueryPage = .first) throws {
+    public init(filter: CardQueryFilter = .all, nameSearch: String = "", page: QueryPage = .first, hierarchy: Bool = false) throws {
         guard nameSearch.count <= 512 else { throw CollectionQueryError.searchTooLong }
-        self.filter = filter; self.nameSearch = nameSearch; self.page = page
+        self.filter = filter; self.nameSearch = nameSearch; self.page = page; self.hierarchy = hierarchy
     }
     public static let all = try! DeckQuery()
 }

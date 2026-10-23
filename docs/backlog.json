@@ -1171,7 +1171,7 @@
       ],
       "verification": "Дерево глубиной несколько уровней, move/undo при поддержке команды и пустой фильтр.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M2",
       "stateIDs": [
         "base-02",
@@ -1181,7 +1181,10 @@
         "03.4",
         "04.3",
         "21.4"
-      ]
+      ],
+      "startedAt": "2026-10-23T10:47:52.732479+00:00",
+      "completedAt": "2026-10-23T11:01:14.709228+00:00",
+      "report": "docs/task-reports/T031.json"
     },
     {
       "id": "T032",
@@ -4038,7 +4041,7 @@
       "stateID": "base-02",
       "taskID": "T031",
       "kind": "base",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "base-03",
@@ -4116,25 +4119,25 @@
       "stateID": "03.1",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "03.2",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "03.3",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "03.4",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "04.1",
@@ -4152,7 +4155,7 @@
       "stateID": "04.3",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "04.4",
@@ -4566,7 +4569,7 @@
       "stateID": "21.4",
       "taskID": "T031",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "22.1",
