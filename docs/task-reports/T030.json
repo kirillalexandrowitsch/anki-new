@@ -1,0 +1,70 @@
+{
+  "taskID": "T030",
+  "summary": "Принята первая рабочая вертикаль M1: общий XCUITest create deck/4 Notes/reveal/4 grades/stats/reopen, file-backed integration CSV и exact native backup restore в отдельную коллекцию, ручная Release arm64 приёмка и протокол с 13 синтетическими screenshots. Product sources/контракты и критерии не менялись.",
+  "criteria": [
+    {
+      "text": "Сквозной сценарий работает offline и сохраняет данные.",
+      "passed": true,
+      "evidence": "docs/acceptance/T030/README.md: локальный XCUITest прошёл (1 test/0 failures, 103.952 s), реальный Release arm64 создан/запущен/перезапущен в отдельном sandbox bundle ID; 4 оценки/4 Card/[1,1,1,1]/75% сохранены. Полный scripts/check.py --deny-network passed (run-86ikilau, networkDenied=true): 216 Swift Testing tests + XCTest worker, arm64 app build. firstVerticalFourGradesRetryReopenCSVAndExactBackup сравнивает все строки/колонки SQL, Notes и байты media после штатного restore в отдельную коллекцию и повторного open. Ручной CSV содержит 4 записи с Unicode/quotes/LF; UI backup hashes и все 28 SQL таблиц совпадают с source."
+    },
+    {
+      "text": "Нет незакрытых дефектов потери данных или двойной оценки.",
+      "passed": true,
+      "evidence": "Новый integration отправляет каждую grade-команду дважды: ровно 4 эффективные оценки/4 уникальные Card, [1,1,1,1], 4000 ms. XCUITest посылает grade key до каждого reveal и проверяет неизменный count; ручной Release подтверждает скрытый ответ/недоступность grades. Полный offline suite включает concurrent replay, different-command race/stale revision, rollback, lost acknowledgement/reopen, before/after commit process crash, atomic Undo, checkpoint/restart; все passed. Source и восстановленные таблицы/Notes/media совпадают. Незакрытых дефектов потери данных/двойной оценки в проверенном объёме нет; visual/function gaps перечислены отдельно в протоколе."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter firstVertical",
+      "result": "passed",
+      "details": "/tmp/anki-T030-integration.log: 1 test passed. Четыре grade paths, повтор команд, reopening, Unicode/multiline/examples/tags CSV, shared PNG, exact 28-table backup restore/reopen."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T030-offline.log; build/checks/run-86ikilau/summary.json: networkDenied=true, Core30/Infrastructure153/Features30/DesignSystem3, XCTest worker1 passed, arm64 app build passed; seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testFirstVerticalCreateFourGradesStatisticsAndReopen -resultBundlePath build/T030-smoke.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T030-smoke.log: TEST SUCCEEDED; 1 test, 0 failures, 103.952 s. Настоящие editor-created Notes, 4 grades, hidden keyboard gates, persisted statistics/library. Screenshots в локальном xcresult."
+    },
+    {
+      "command": "xcodebuild -project AnkiNew.xcodeproj -scheme AnkiNew -configuration Release build -destination 'platform=macOS,arch=arm64' -derivedDataPath build/T030-release -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PRODUCT_BUNDLE_IDENTIFIER=local.anki-new.acceptance.T030",
+      "result": "passed",
+      "details": "/tmp/anki-T030-release-build.log: BUILD SUCCEEDED; file executable = Mach-O 64-bit arm64; ad-hoc signature, App Sandbox без network entitlements."
+    },
+    {
+      "command": "Native CUA Release acceptance; Python csv.reader/zipfile/SHA256/read-only SQLite verification",
+      "result": "passed",
+      "details": "docs/acceptance/T030/README.md и screenshots/: 1 deck/4 Notes/4 grades, reveal gates, stats75%, Cmd-Q/reopen, CSV и backup через NSSavePanel. CSV 4 rows/9 columns, quotes/Unicode/LF preserved; backup все SHA256/byteCounts valid, 28 SQL таблиц совпадают с source включая 4 reviews/4 schedules. Архив SHA256 61f86df8cc966ea468c2ce5a52fcb9469c6baf9a0e6cdd09bae7a58ad781c22d. Приложение закрыто, личная коллекция не открывалась."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testFirstVerticalCreateFourGradesStatisticsAndReopen -only-testing:AnkiNewUITests/AppShellUITests/testExportNativeSavePanelCancelAndVerifiedCSVSuccess -resultBundlePath build/T030-smoke-final.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T030-smoke-final.log: TEST SUCCEEDED, 2 tests/0 failures. Финальная версия smoke учитывает реальное наступление due Again на медленной машине через штатное досрочное завершение; все 4 grades/counts/stats/reopen assertions сохранены. SavePanel cancel/success regression passed."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/tasks.py finish T030; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "Финальная версия integration дополнительно проверяет полный набор NoteIDs CSV и неизменность source после restore. /tmp/anki-T030-offline-final.log, build/checks/run-fk_d3b4u/summary.json: networkDenied=true, все 216 Swift Testing tests + XCTest worker passed, app build passed. /tmp/anki-T030-quality-final.log: 26 Python tests, 2492 local links, 48/48 original design PNG hashes, graph/generated state/reports passed; diff clean."
+    }
+  ],
+  "limitations": [
+    "M1 принят только в проверенном объёме. Полный дизайн/локализация/импорт/restore UI/APKG и функции M2–M5 остаются задачами backlog; конкретные visual differences и screenshots перечислены в протоколе.",
+    "Штатный restore проверен сервисным integration test с полным dump и byte equality media; пользовательский мастер восстановления пока отсутствует. Ручной Release backup отдельно проверен по hashes и 28 SQL таблицам; CSV не является копией прогресса.",
+    "Новые зависимости/платежи/AI API/CI uploads/cache/изменения оригинальных PNG отсутствуют. Снимки содержат только синтетические данные; логи/CSV/архивы/SQLite/xcresult не коммитятся."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial firstVertical integration compile",
+      "result": "failed",
+      "details": "Исправлен неправильный query port: статистика доступна через StatsWorkspace.queries, не CollectionQueryService. Затем targeted и полный offline passed."
+    },
+    {
+      "command": "sandbox-exec -p '(version 1)(allow default)(deny network*)' Release executable",
+      "result": "failed",
+      "details": "Sandboxed .app завершился SIGTRAP при запуске внутри дополнительного sandbox-exec; запуск не засчитан. Штатный .app успешно запущен через native CUA в своём App Sandbox, network entitlement отсутствует. Жёсткий OS deny-network подтверждён отдельным check.py, системные сетевые настройки не менялись."
+    }
+  ]
+}
