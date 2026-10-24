@@ -8,13 +8,17 @@ public struct TodayView: View {
     private let opening: Bool
     private let openingFailed: Bool
     private let start: () -> Void
+    private let discovery: DiscoveryModel?
+    private let openCard: (CardID) -> Void
     private let openDecks: () -> Void
     private let openLibrary: () -> Void
     private let demo: () -> Void
 
     public init(model: TodayModel, onboarding: OnboardingModel? = nil, opening: Bool, openingFailed: Bool, start: @escaping () -> Void,
+                discovery: DiscoveryModel? = nil, openCard: @escaping (CardID) -> Void = { _ in },
                 openDecks: @escaping () -> Void, openLibrary: @escaping () -> Void, demo: @escaping () -> Void) {
         self.onboarding = onboarding
+        self.discovery = discovery; self.openCard = openCard
         self.model = model; self.opening = opening; self.openingFailed = openingFailed
         self.start = start; self.openDecks = openDecks; self.openLibrary = openLibrary; self.demo = demo
     }
@@ -71,6 +75,7 @@ public struct TodayView: View {
                 } else {
                     ProgressView("Загрузка Сегодня…").accessibilityIdentifier("today.loading")
                 }
+                if let discovery { DailyWordView(model: discovery, open: openCard) }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Пробное занятие на трёх примерах. Данные вашей коллекции не меняются.")
                         .foregroundStyle(.secondary)

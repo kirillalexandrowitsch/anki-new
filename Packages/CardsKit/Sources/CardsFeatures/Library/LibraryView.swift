@@ -22,6 +22,9 @@ public struct LibraryView: View {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Найти слово, перевод или пример", text: $model.search)
                     .textFieldStyle(.roundedBorder).accessibilityIdentifier("library.search")
+                if model.isShowingCard {
+                    Button("Все карточки") { model.showAll(search: "") }.accessibilityIdentifier("library.allCards")
+                }
                 if !model.search.isEmpty {
                     Button("Очистить поиск", systemImage: "xmark.circle") { model.search = "" }
                         .labelStyle(.iconOnly).accessibilityIdentifier("library.clearSearch")
@@ -38,13 +41,15 @@ public struct LibraryView: View {
             if model.isLoading { ProgressView("Загрузка карточек…") }
             else if model.errorMessage == nil && model.rows.isEmpty {
                 ContentUnavailableView {
-                    Label(model.search.isEmpty ? "У вас пока нет карточек" : "Ничего не найдено",
+                    Label(model.isShowingCard ? "Карточка больше недоступна" : model.search.isEmpty ? "У вас пока нет карточек" : "Ничего не найдено",
                           systemImage: model.search.isEmpty ? "rectangle.on.rectangle" : "magnifyingglass")
                 } description: {
-                    Text(model.search.isEmpty ? "Добавьте первую карточку в свою колоду."
+                    Text(model.isShowingCard ? "Карточка могла быть удалена. Откройте все карточки." : model.search.isEmpty ? "Добавьте первую карточку в свою колоду."
                          : "Попробуйте другое слово или очистите поиск.")
                 } actions: {
-                    if model.search.isEmpty {
+                    if model.isShowingCard {
+                        Button("Все карточки") { model.showAll(search: "") }
+                    } else if model.search.isEmpty {
                         Button("Добавить первую карточку") { createNote() }
                             .disabled(commands?.isEnabled(.newNote) == false || launcher.isLoading)
                             .accessibilityIdentifier("library.emptyCreate")
