@@ -57,7 +57,7 @@
 | [04.1 · Новая колода](../design-references/sheets/sheet-04.png) | [T013](tasks/T013.md) | Готово |
 | [04.2 · Редактировать колоду](../design-references/sheets/sheet-04.png) | [T013](tasks/T013.md) | Готово |
 | [04.3 · Переместить колоду](../design-references/sheets/sheet-04.png) | [T031](tasks/T031.md) | Готово |
-| [04.4 · Удалить колоду?](../design-references/sheets/sheet-04.png) | [T033](tasks/T033.md) | Запланировано |
+| [04.4 · Удалить колоду?](../design-references/sheets/sheet-04.png) | [T033](tasks/T033.md) | Готово |
 
 ## 05 · Меню и параметры колоды
 

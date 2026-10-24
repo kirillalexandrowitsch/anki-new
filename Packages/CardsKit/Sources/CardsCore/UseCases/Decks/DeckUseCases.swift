@@ -47,8 +47,10 @@ public struct DeckWorkspace: Sendable {
     public let generation: UUID
     public let repository: any DeckRepository
     public let queries: any CollectionQueryService
-    public init(generation: UUID, repository: any DeckRepository, queries: any CollectionQueryService) {
-        self.generation = generation; self.repository = repository; self.queries = queries
+    public let deletions: (any DeckDeletionService)?
+    public init(generation: UUID, repository: any DeckRepository, queries: any CollectionQueryService,
+                deletions: (any DeckDeletionService)? = nil) {
+        self.generation = generation; self.repository = repository; self.queries = queries; self.deletions = deletions
     }
 }
 
