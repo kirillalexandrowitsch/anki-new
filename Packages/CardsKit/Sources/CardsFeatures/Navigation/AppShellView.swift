@@ -122,14 +122,6 @@ public struct AppShellView: View {
                         notifications.isPresented.toggle()
                     }.frame(width: 32, height: 26)
                         .disabled(isModal)
-                        .popover(isPresented: Binding(get: { notifications.isPresented }, set: { notifications.isPresented = $0 }), arrowEdge: .bottom) {
-                            NotificationsView(model: notifications) { event in
-                                switch event {
-                                case .backupSucceeded, .backupFailed: exporter?.present()
-                                case .reminderScheduled: model.selection = .today
-                                }
-                            }
-                        }
                 }
             }
         }
@@ -139,6 +131,8 @@ public struct AppShellView: View {
                     Color.clear.contentShape(Rectangle()).onTapGesture { discovery.searchPresented = false }
                     searchView(discovery).resultsPanel.padding(.top, 8).padding(.trailing, 16)
                 }
+            } else if let notifications, notifications.isPresented, !isModal {
+                NotificationsPopover(model: notifications, open: openNotification)
             }
         }
         .onChange(of: isModal) { _, value in
@@ -214,6 +208,14 @@ public struct AppShellView: View {
         switch destination {
         case .card(let id): model.selection = .library; library?.showCard(id)
         case .deck(let id): model.selection = .decks; decks?.showDeck(id)
+        }
+    }
+
+    private func openNotification(_ event: LocalNotificationEvent) {
+        guard !isModal else { return }
+        switch event {
+        case .backupSucceeded, .backupFailed: exporter?.format = .cardsbackup; exporter?.present()
+        case .reminderScheduled: model.selection = .today
         }
     }
 

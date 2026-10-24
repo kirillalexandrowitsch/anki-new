@@ -1,8 +1,28 @@
 import CardsCore
 import SwiftUI
 
+/// Shares the proven in-window presentation of global search, with explicit
+/// collection state observation and no native toolbar popover lifecycle.
+struct NotificationsPopover: View {
+    @Bindable var model: NotificationsModel
+    let open: (LocalNotificationEvent) -> Void
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .topTrailing) {
+                Color.clear.contentShape(Rectangle()).onTapGesture { model.isPresented = false }
+                NotificationsView(model: model, maxListHeight: max(100, min(360, geometry.size.height - 168)), open: open)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(nsColor: .separatorColor)))
+                    .shadow(radius: 12, y: 5)
+                    .padding(.top, 8).padding(.trailing, 16)
+            }
+        }
+    }
+}
+
 struct NotificationsView: View {
     @Bindable var model: NotificationsModel
+    var maxListHeight: CGFloat = 360
     let open: (LocalNotificationEvent) -> Void
 
     var body: some View {
@@ -25,11 +45,10 @@ struct NotificationsView: View {
             else if model.messages.isEmpty && model.error == nil {
                 VStack(spacing: 12) {
                     Image(systemName: "bell").font(.largeTitle).foregroundStyle(.secondary)
-                    Text("Пока нет уведомлений").font(.headline)
+                    Text("Пока нет уведомлений").font(.headline).accessibilityIdentifier("notifications.empty")
                     Text("Здесь появятся результаты локальных операций и запланированные напоминания.")
                         .foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }.frame(maxWidth: .infinity).padding(.vertical, 24)
-                    .accessibilityIdentifier("notifications.empty")
             } else if !model.messages.isEmpty {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -47,7 +66,7 @@ struct NotificationsView: View {
                             Divider()
                         }
                     }
-                }.frame(height: min(360, CGFloat(model.messages.count) * 154))
+                }.frame(height: min(maxListHeight, CGFloat(model.messages.count) * 154))
             }
             Button {
                 let ids = model.messages.filter { $0.readAt == nil }.map(\.id)

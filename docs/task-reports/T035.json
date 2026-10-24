@@ -1,6 +1,6 @@
 {
   "taskID": "T035",
-  "summary": "Реализован внутренний центр уведомлений коллекции: типизированные backup success/error и reminderScheduled, последние 100 сообщений, persisted readAt, наблюдение SQLite, badge, пустой/наполненный popover, mark all read и переход в связанный раздел. Backup публикует сообщение только после фактического результата; reminder не утверждает доставку системного баннера.",
+  "summary": "Реализован внутренний центр уведомлений коллекции: типизированные backup success/error и reminderScheduled, последние 100 сообщений, persisted readAt, наблюдение SQLite, badge, пустой/наполненный popover внутри окна, mark all read и переход в связанный раздел. Backup публикует сообщение только после фактического результата; reminder не утверждает доставку системного баннера.",
   "criteria": [
     {
       "text": "Read state сохраняется между запусками.",
@@ -53,6 +53,16 @@
       "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -resultBundlePath build/T035-ui-native-diagnostics.xcresult",
       "result": "passed",
       "details": "/tmp/anki-T035-ui-native-diagnostics.log: TEST SUCCEEDED, 1 test/0 failures, 85.955 s. Новый fixed numeric marker фактически выдал matches=1/hittable=1/frames=1 и был прочитан Diagnostics. CI сохраняет только три числа; AX labels, frames и содержимое не экспортируются. /tmp/anki-T035-quality-native.log: quality passed, 27 Python tests (включая privacy/rejection test для bounded numeric diagnostics), 2492 links, PNG48/48."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -only-testing:AnkiNewUITests/AppShellUITests/testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord -resultBundlePath build/T035-ui-panel-final.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T035-ui-panel-final.log: TEST SUCCEEDED, 2 tests/0 failures, 133.547 s. In-window popover с прямым Observation state; native кнопка по-прежнему matches=1/hittable=1/frames=1. Все assertions empty/cancel/success/unread reopen/read route/error/file preservation/mark all/Escape/read relaunch и search/daily word сохранены. Final panel screenshot проверен визуально: тексты и footer без обрезки."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "/tmp/anki-T035-offline-panel.log; build/checks/run-gsgt4t1m/summary.json: финальная in-window версия — 237 package tests, arm64 app build, networkDenied=true, неизменный fixture fingerprint passed. /tmp/anki-T035-quality-panel-final.log: quality passed, 27 Python tests, 2492 local links, PNG48/48; whitespace clean."
     }
   ],
   "limitations": [
@@ -80,6 +90,16 @@
       "command": "python3 scripts/deliver.py --task T035; gh run view 40098526234 --log-failed",
       "result": "failed",
       "details": "Повторный macos-15 CI: quality и package tests passed; остановка на добавленном assertion count=1 (AppShellUITests.swift:64). Это подтверждает несколько AX matches даже внутри toolbar, поэтому одного query scope недостаточно. Сам SwiftUI toolbar Button заменён на native NSButton/NSViewRepresentable (как существующий SearchInput): identifier назначен только реальному NSButton, а не SwiftUI toolbar/popover wrapper. Assertion единственности, enabled/hittable и все проверки поведения сохранены; никаких skip/ослабления обязательного CI."
+    },
+    {
+      "command": "python3 scripts/deliver.py --task T035; gh run view 40112110202 --log-failed; gh run view 40112110202 --log",
+      "result": "failed",
+      "details": "Native macos-15 CI подтвердил matches=1/hittable=1/frames=1: AX identity исправлена без снятия assertions. Следующий отказ AppShellUITests.swift:73 — не появился notifications.empty после click. Панель переведена на in-window overlay (уже проверенный T034 pattern), с прямым Observation-чтением isPresented вместо lifecycle NSPopover; высота списка ограничена окном, empty ID назначен только заголовку. Исходные проверки раскрытия, cancel, backup outcomes, read/reopen и Escape сохранены. Между попытками доставщик также безопасно остановился на одном transient GitHub API TLS timeout; идемпотентный restart не создавал новый commit/run."
+    },
+    {
+      "command": "Initial local in-window compile (build/T035-ui-panel.xcresult)",
+      "result": "failed",
+      "details": "Swift type-check timeout у большого AppShellView; панель выделена в самостоятельный NotificationsPopover и callback openNotification. Финальная сборка, два UI-теста и полный offline suite прошли. Backup route теперь сразу выбирает Cardsbackup."
     }
   ]
 }
