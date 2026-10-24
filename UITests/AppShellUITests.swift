@@ -47,6 +47,68 @@ final class AppShellUITests: XCTestCase {
         field.typeKey("v", modifierFlags: .command)
     }
 
+    @MainActor func testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        XCTAssertTrue(app.staticTexts["dailyWord.empty"].waitForExistence(timeout: 10))
+        let search = app.textFields["globalSearch.field"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        pasteUnicode("\"*:^(){}", into: search)
+        XCTAssertTrue(app.staticTexts["globalSearch.empty"].waitForExistence(timeout: 10))
+        app.buttons["globalSearch.create"].click()
+        XCTAssertTrue(app.buttons["editor.save"].waitForExistence(timeout: 10))
+        app.buttons["editor.close"].click()
+        app.staticTexts["navigation.today"].click()
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.click(); name.typeText("Hello Deck")
+        app.checkBoxes["onboarding.demo"].click(); app.buttons["onboarding.save"].click()
+        XCTAssertTrue(name.waitForNonExistence(timeout: 10))
+        let word = app.staticTexts["dailyWord.front"]
+        XCTAssertTrue(word.waitForExistence(timeout: 10))
+        let original = word.value as? String
+        app.buttons["dailyWord.another"].click()
+        let changed = NSPredicate { _, _ in word.exists && word.value as? String != original }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: changed, object: nil)], timeout: 10), .completed)
+        pasteUnicode("Hell", into: search)
+        search.typeText("o")
+        XCTAssertEqual(search.value as? String, "Hello")
+        XCTAssertTrue(app.buttons["globalSearch.result.1"].waitForExistence(timeout: 10))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(app.buttons["globalSearch.result.1"].waitForNonExistence(timeout: 5))
+        search.typeKey(.downArrow, modifierFlags: [])
+        XCTAssertTrue(app.buttons["globalSearch.result.1"].waitForExistence(timeout: 5))
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "T034 global search"; shot.lifetime = .keepAlways; add(shot)
+        // Card first, Deck second. Native arrows and Return open the Deck's existing properties route.
+        app.typeKey(.downArrow, modifierFlags: [])
+        let selectedDeck = NSPredicate { _, _ in app.buttons["globalSearch.result.1"].value as? String == "Выбрано" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: selectedDeck, object: nil)], timeout: 5), .completed)
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.buttons["deckProperties.close"].waitForExistence(timeout: 10))
+        app.buttons["deckProperties.close"].click()
+        pasteUnicode("Good", into: search)
+        XCTAssertTrue(app.buttons["globalSearch.result.0"].waitForExistence(timeout: 10))
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.buttons["library.allCards"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 1 · Записей: 1")
+        XCTAssertTrue(app.buttons["library.select.Good morning"].exists)
+        app.buttons["library.allCards"].click()
+        let all = NSPredicate { _, _ in app.staticTexts["library.counts"].value as? String == "Карточек: 3 · Записей: 3" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: all, object: nil)], timeout: 10), .completed)
+        app.staticTexts["navigation.today"].click()
+        XCTAssertTrue(app.buttons["dailyWord.audio"].waitForExistence(timeout: 5))
+        app.buttons["dailyWord.open"].click()
+        XCTAssertTrue(app.buttons["library.allCards"].waitForExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["dailyWord.front"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["dailyWord.front"].value as? String, original)
+    }
+
     @MainActor func testDeckDeletionNamesScopeCancelEscapeNestedCommitAndRelaunch() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

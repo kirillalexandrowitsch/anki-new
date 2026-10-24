@@ -12,9 +12,16 @@ public final class LibraryModel {
     public private(set) var isLoading = true
     public private(set) var errorMessage: String?
     public var selection: CardID?
-    public var search = "" {
-        didSet { if search != oldValue { offset = 0; restart() } }
+    public var isShowingCard: Bool { targetCard != nil }
+    private var targetCard: CardID?
+    public func showAll(search text: String) { targetCard = nil; search = text; offset = 0; restart() }
+    public func showCard(_ id: CardID) {
+        search = ""; targetCard = id; offset = 0; restart()
     }
+    public var search = "" {
+        didSet { if search != oldValue { targetCard = nil; offset = 0; restart() } }
+    }
+    public let discovery: DiscoveryModel?
     public let launcher: EditorLauncherModel
     public let deletion: CardDeletionModel?
     public private(set) var inspectedNote: SavedBasicNote?
@@ -27,6 +34,10 @@ public final class LibraryModel {
     public init(workspace: EditorWorkspace, clock: any CardsCore.Clock,
                 audio: (any AudioPlayback)? = nil, preferences: AudioPreferences? = nil) {
         self.workspace = workspace
+        if let service = workspace.queries as? any DiscoveryQueryService {
+            discovery = DiscoveryModel(service: service, generation: workspace.generation, clock: clock,
+                audio: audio.flatMap { audio in preferences.map { AudioPreviewModel(service: audio, preferences: $0, generation: workspace.generation) } })
+        } else { discovery = nil }
         deletion = workspace.deletions.map { CardDeletionModel(service: $0) }
         launcher = EditorLauncherModel(workspace: workspace, clock: clock, audio: audio, preferences: preferences)
     }
@@ -62,7 +73,7 @@ public final class LibraryModel {
         var installed: QueryObservation<LibrarySnapshot>?
         defer { installed?.cancel() }
         do {
-            let query = try LibraryQuery(filter: CardQueryFilter(search: search), page: QueryPage(offset: offset))
+            let query = try LibraryQuery(filter: CardQueryFilter(search: search, cardID: targetCard), page: QueryPage(offset: offset))
             let source = try await workspace.queries.observeLibrary(query)
             installed = source
             guard active, !Task.isCancelled, request == requestID else { return }
@@ -110,6 +121,7 @@ public final class LibraryModel {
         observation?.cancel()
         inspectionID = UUID()
         launcher.stop()
+        discovery?.stop()
         deletion?.stop()
         rows = []; selection = nil; inspectedNote = nil
     }

@@ -16,6 +16,8 @@ public final class DecksModel {
     public var search = ""
     public var favoritesOnly = false
     public var editor: DeckEditorModel?
+    private var requestedDeck: DeckID?
+    public func showDeck(_ id: DeckID) { resetFilters(); requestedDeck = id; reload() }
     public var inspectedID: DeckID?
     public var studySetup: DeckStudySetupModel?
     public let deletion: DeckDeletionModel?
@@ -138,6 +140,10 @@ public final class DecksModel {
                 if let inspectedID, !snapshot.rows.contains(where: { $0.id == inspectedID }) { self.inspectedID = nil }
                 if let undoMove, !snapshot.rows.contains(where: { $0.id == undoMove.deck.id }) {
                     self.undoMove = nil; canUndoMove = false
+                }
+                if let requestedDeck {
+                    inspectedID = snapshot.rows.first { $0.id == requestedDeck }?.id
+                    self.requestedDeck = nil
                 }
                 rows = snapshot.rows; hierarchy = DeckHierarchy(rows: snapshot.rows); deckCount = snapshot.deckCount; isLoading = false
             }

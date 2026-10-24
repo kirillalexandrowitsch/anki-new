@@ -22,17 +22,19 @@ public enum LibrarySort: String, CaseIterable, Sendable {
 
 public struct CardQueryFilter: Equatable, Sendable {
     public let search: String
+    public let cardID: CardID?
     public let deckID: DeckID?
     public let includeDescendants: Bool
     public let noteTypeID: NoteTypeID?
     public let tagID: TagID?
     public let phase: SchedulePhase?
     public let suspended: Bool?
-    public init(search: String = "", deckID: DeckID? = nil, includeDescendants: Bool = false,
+    public init(search: String = "", cardID: CardID? = nil, deckID: DeckID? = nil, includeDescendants: Bool = false,
                 noteTypeID: NoteTypeID? = nil, tagID: TagID? = nil,
                 phase: SchedulePhase? = nil, suspended: Bool? = nil) throws {
         guard search.count <= 512 else { throw CollectionQueryError.searchTooLong }
         self.search = search
+        self.cardID = cardID
         self.deckID = deckID
         self.includeDescendants = includeDescendants
         self.noteTypeID = noteTypeID

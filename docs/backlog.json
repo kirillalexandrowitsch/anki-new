@@ -1282,13 +1282,16 @@
       ],
       "verification": "Keyboard поиск/переход, zero results, коллекция из одной записи и смена дня.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M2",
       "stateIDs": [
         "02.1",
         "02.2",
         "02.4"
-      ]
+      ],
+      "startedAt": "2026-10-24T03:43:22.975591+00:00",
+      "completedAt": "2026-10-24T04:03:37.995113+00:00",
+      "report": "docs/task-reports/T034.json"
     },
     {
       "id": "T035",
@@ -4101,13 +4104,13 @@
       "stateID": "02.1",
       "taskID": "T034",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "02.2",
       "taskID": "T034",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "02.3",
@@ -4119,7 +4122,7 @@
       "stateID": "02.4",
       "taskID": "T034",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "03.1",
