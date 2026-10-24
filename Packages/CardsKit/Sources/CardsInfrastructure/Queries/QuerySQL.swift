@@ -28,6 +28,7 @@ enum QuerySQL {
 
     static func scope(_ filter: CardQueryFilter) -> Scope {
         var scope = Scope()
+        if let card = filter.cardID { scope.add("c.id = ?", [key(card)]) }
         if let pattern = searchPattern(filter.search) {
             scope.add("n.rowid IN (SELECT rowid FROM notes_fts WHERE notes_fts MATCH ?)", [pattern])
         }

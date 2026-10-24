@@ -1,3 +1,4 @@
+import CardsCore
 import CardsDesignSystem
 import SwiftUI
 
@@ -85,7 +86,8 @@ public struct AppShellView: View {
                     if let today {
                         TodayView(model: today, onboarding: onboarding, opening: studyLoading, openingFailed: studyError, start: {
                             commands.perform(.startStudy)
-                        }, openDecks: { commands.perform(.decks) }, openLibrary: { commands.perform(.library) },
+                        }, discovery: library?.discovery, openCard: { id in openResult(.card(id)) },
+                           openDecks: { commands.perform(.decks) }, openLibrary: { commands.perform(.library) },
                            demo: { showsStudyDemo = true })
                     } else { ProgressView("Загрузка Сегодня…") }
                 } else if model.selection == .statistics {
@@ -102,6 +104,23 @@ public struct AppShellView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(CardsColor.window.color)
         }
+        .task(id: library?.discovery?.searchID) { await library?.discovery?.observeSearch() }
+        .toolbar {
+            if let discovery = library?.discovery {
+                ToolbarItem(placement: .primaryAction) {
+                    searchView(discovery).disabled(isModal)
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let discovery = library?.discovery, discovery.searchPresented, !isModal {
+                ZStack(alignment: .topTrailing) {
+                    Color.clear.contentShape(Rectangle()).onTapGesture { discovery.searchPresented = false }
+                    searchView(discovery).resultsPanel.padding(.top, 8).padding(.trailing, 16)
+                }
+            }
+        }
+        .onChange(of: isModal) { _, value in if value { library?.discovery?.searchPresented = false } }
         // Keep modal presenters at the window root; a welcome child must not compete
         // with the study sheets on macOS 15.
         .sheet(isPresented: Binding(get: { onboarding?.showsCreator ?? false },
@@ -122,7 +141,7 @@ public struct AppShellView: View {
         .focusedSceneValue(\.appCommandContext, commands)
         .tint(CardsColor.accent.color)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refreshDate(); today?.reload(); statistics?.reload() }
+            if phase == .active { model.refreshDate(); today?.reload(); statistics?.reload(); library?.discovery?.refreshDay() }
         }
     }
     private var isModal: Bool {
@@ -154,6 +173,22 @@ public struct AppShellView: View {
             default: break
             }
         })
+    }
+
+    private func searchView(_ discovery: DiscoveryModel) -> GlobalSearchView {
+        GlobalSearchView(model: discovery, open: openResult, allCards: { text in
+            model.selection = .library; library?.showAll(search: text)
+        }, allDecks: { text in
+            model.selection = .decks; decks?.resetFilters(); decks?.search = text
+        }, create: { commands.perform(.newNote) })
+    }
+
+    private func openResult(_ destination: SearchDestination) {
+        guard !isModal else { return }
+        switch destination {
+        case .card(let id): model.selection = .library; library?.showCard(id)
+        case .deck(let id): model.selection = .decks; decks?.showDeck(id)
+        }
     }
 
     private func startStudy() {

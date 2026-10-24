@@ -1,0 +1,55 @@
+{
+  "taskID": "T034",
+  "summary": "Реализованы глобальный toolbar-поиск Card/Deck и локальное слово дня. Буквальные FTS/LIKE запросы наблюдаются одним snapshot с debounce и защитой от поздних ответов. Нативный ввод и in-window popover поддерживают стрелки/Return/Escape, пустое состояние и прежние маршруты по stable ID. Слово выбирается детерминированно по локальному дню из уникальных Basic Note; Другое слово исключает текущую Note, произношение использует общий AudioPreviewModel.",
+  "criteria": [
+    {
+      "text": "Поиск по panel-like special symbols безопасен и не блокирует UI.",
+      "passed": true,
+      "evidence": "Четыре discovery integration tests passed: кавычки/скобки/FTS/SQL-подобный ввод, буквальные %_, лимит 513 символов с явной ошибкой, устаревший debounce, наблюдение commit. Native XCUITest passed: ввод special symbols → empty action → Cancel; обычное допечатывание Hell→Hello, Escape/reopen, Down/Return → существующие свойства Deck, Return → Card Good morning, счётчики 1/1 и возврат ко всем 3/3. 107 Card/9 Deck проверяют лимит 6 строк/группу и переход к Card вне первой страницы. Финальный screenshot проверен визуально: обе группы, подсветка, команды и слово дня читаемы без обрезки."
+    },
+    {
+      "text": "Без подходящих локальных слов показывается пустое состояние без внешнего запроса.",
+      "passed": true,
+      "evidence": "discoveryDailyEmptySingleUniqueNotesDeterministicDayAndExclusion и discoveryDayRefreshAlternativeAndSingleWordModel passed: пустая SQLite, одна Note (Another disabled), два слова, общие варианты одной Note, исключение всей Note, соседние дни и reopen, локальная полночь Europe/Moscow, удаление последней альтернативы. Native UI показывает dailyWord.empty в новой коллекции; после явного добавления демо проверяет смену слова, общий audio control и восстановление детерминированного слова после relaunch. Полный check.py --deny-network passed; app sandbox не содержит network entitlement; внешнего источника у Core-порта нет."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter discovery",
+      "result": "passed",
+      "details": "/tmp/anki-T034-discovery-verified.log: 4 tests passed, 1.435 s. Реальные временные SQLite, live observations, safe symbols/length/late query, bounded groups, stable CardID beyond page 100, single/unique Note, deterministic local day/reopen, alternative deletion recovery и stop/stale writer."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord -only-testing:AnkiNewUITests/AppShellUITests/testMainCommandsKeyboardMenusAndButtonsShareRoutesAndModalGates -resultBundlePath build/T034-ui-final.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T034-ui-final.log: TEST SUCCEEDED; 2 tests/0 failures, 99.223 s. T034 native search/typing/empty action/Cancel/Escape/arrows/Return/Card+Deck/daily word/relaunch и общая регрессия menu/keyboard/modal gates. Screenshot T034 global search из ignored xcresult визуально проверен: без обрезки. Тесты восстанавливают исходный input source и все типы/элементы clipboard после синтетической вставки."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T034-offline.log; build/checks/run-h6flb031/summary.json: networkDenied=true; 233 Swift Testing package tests (Core30/Infrastructure170/Features30/DesignSystem3), XCTest worker1; native arm64 app build passed. Fixture seed12 fingerprint b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T034; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T034 done после фактической приёмки; /tmp/anki-T034-quality.log: graph/reports/generated state, 26 Python tests, 2492 local links, 48/48 original PNG hashes и budget/workflow policy passed; whitespace clean."
+    }
+  ],
+  "limitations": [
+    "Слово дня поддерживает сохранённый Basic Note plain envelope v1 с непустыми front/back и активной Card/Deck. Suspended/buried допустимы как словарный материал; учебные квоты и прогресс не меняются. Это локальный календарный день, отдельно от study rollover. Выбор Другое слово хранится в памяти окна и сбрасывается при смене дня/перезапуске.",
+    "Popover реализован внутри окна под toolbar, чтобы обновления результатов не закрывали нативный field editor. Preview ограничен шестью строками каждой группы; полная выдача открывается в прежних экранах. Поиск сохраняет буквальную семантику T010, advanced query AST не добавлен.",
+    "Новых зависимостей, миграций, платных API/сервисов, CI uploads/cache и изменений оригинальных PNG нет. Все коллекции синтетические; логи/xcresult/screenshots остаются в ignored build и /tmp. Личные данные и содержимое clipboard не записываются в репозиторий."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial discovery compile and targeted tests",
+      "result": "failed",
+      "details": "Исправлены отсутствующий await у async GRDB read, фактический тип staleContext и расчёт календарного дня: ordinality в Foundation не менялся на локальной полуночи; теперь локальные Y/M/D отображаются на UTC ordinal. Финальные 4 targeted и полный offline passed."
+    },
+    {
+      "command": "Initial local T034 XCUITest runs (build/T034-ui*.xcresult)",
+      "result": "failed",
+      "details": "Выявлены потеря keyboard routing и закрытие native toolbar popover при обновлении текста. Финальная in-window панель и NSTextFieldDelegate сохраняют field editor; исходные assertions special symbols, ordinary typing, Escape, стрелки, Return и переходы сохранены. Исправлены selectors собственных новых проверок (editor.close, library.select.Good morning) и ошибочный вызов helper для первичного onboarding после уже завершённого onboarding. Финальный двухтестовый прогон прошёл без ошибок."
+    }
+  ]
+}
