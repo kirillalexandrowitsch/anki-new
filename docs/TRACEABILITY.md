@@ -32,10 +32,10 @@
 
 | ID и состояние | Основная задача | Статус |
 |---|---|---|
-| [02.1 · Глобальный поиск](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Запланировано |
-| [02.2 · Ничего не найдено](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Запланировано |
+| [02.1 · Глобальный поиск](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Готово |
+| [02.2 · Ничего не найдено](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Готово |
 | [02.3 · Уведомления](../design-references/sheets/sheet-02.png) | [T035](tasks/T035.md) | Запланировано |
-| [02.4 · Другое слово дня](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Запланировано |
+| [02.4 · Другое слово дня](../design-references/sheets/sheet-02.png) | [T034](tasks/T034.md) | Готово |
 
 ## 03 · Виды списка колод
 
