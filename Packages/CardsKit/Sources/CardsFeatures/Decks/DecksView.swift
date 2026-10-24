@@ -98,6 +98,10 @@ public struct DecksView: View {
         .sheet(isPresented: Binding(get: { model.inspectedID != nil }, set: { if !$0 { model.inspectedID = nil } }), onDismiss: restoreFocus) {
             DeckPropertiesView(model: model) { model.inspectedID = nil }
         }
+        .sheet(isPresented: Binding(get: { model.deletion?.isPresented ?? false },
+                                   set: { if !$0 { model.deletion?.cancel() } }), onDismiss: { returnFocus = .create; restoreFocus() }) {
+            if let deletion = model.deletion { DeckDeletionView(model: deletion) }
+        }
         .sheet(item: $model.studySetup, onDismiss: { model.closeStudySetup(); restoreFocus() }) { setup in
             DeckStudySetupView(model: setup) { model.closeStudySetup() }
         }
@@ -177,7 +181,10 @@ public struct DecksView: View {
                     }.accessibilityIdentifier("deck.move")
                     Divider()
                     Button("Экспорт колоды — пока недоступен") {}.disabled(true)
-                    Button("Удаление колоды — пока недоступно") {}.disabled(true)
+                    Button("Удалить колоду…", role: .destructive) {
+                        focus = nil
+                        Task { await model.deletion?.prepare(deckID: row.id) }
+                    }.disabled(model.deletion == nil).accessibilityIdentifier("deck.delete")
                 } label: { Image(systemName: "ellipsis") }
                 .menuStyle(.borderlessButton).fixedSize().disabled(model.isMutating)
                 .accessibilityLabel("Действия с колодой \(row.deck.name.displayValue)")

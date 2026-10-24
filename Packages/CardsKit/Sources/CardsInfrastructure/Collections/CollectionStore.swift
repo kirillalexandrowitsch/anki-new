@@ -175,7 +175,8 @@ public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, Edito
 
     public func deckWorkspace(generation: UUID) throws -> DeckWorkspace {
         try DeckWorkspace(generation: generation, repository: decks(generation: generation),
-                          queries: queries(generation: generation))
+                          queries: queries(generation: generation),
+                          deletions: SQLiteDeckDeletion(writer: writer(generation: generation), clock: clock))
     }
 
     public func decks(generation: UUID) throws -> any DeckRepository {

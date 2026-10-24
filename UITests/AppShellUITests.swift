@@ -1,6 +1,124 @@
+import AppKit
+import Carbon
 import XCTest
 
 final class AppShellUITests: XCTestCase {
+    private var originalInputSource: TISInputSource?
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        // XCTest synthesizes Latin keystrokes against the active system layout.
+        // Keep synthetic English fixtures reliable on the owner's Russian keyboard,
+        // and restore the exact input source after each test without changing preferences.
+        originalInputSource = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
+        let sources = TISCreateInputSourceList(nil, false).takeRetainedValue() as! [TISInputSource]
+        let latin = try XCTUnwrap(sources.first { source in
+            guard let raw = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else { return false }
+            let id = Unmanaged<CFString>.fromOpaque(raw).takeUnretainedValue() as String
+            return ["com.apple.keylayout.ABC", "com.apple.keylayout.US"].contains(id)
+        })
+        XCTAssertEqual(TISSelectInputSource(latin), noErr)
+    }
+
+    override func tearDownWithError() throws {
+        if let originalInputSource { XCTAssertEqual(TISSelectInputSource(originalInputSource), noErr) }
+        originalInputSource = nil
+        try super.tearDownWithError()
+    }
+
+    @MainActor private func pasteUnicode(_ text: String, into field: XCUIElement) {
+        // Native Paste accepts Unicode without XCTest mapping Cyrillic to a Latin layout.
+        // Keep the user's clipboard in memory only and restore all items/types immediately.
+        let clipboard = NSPasteboard.general
+        let saved = (clipboard.pasteboardItems ?? []).map { item in
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { copy.setData(data, forType: type) }
+            }
+            return copy
+        }
+        defer { clipboard.clearContents(); clipboard.writeObjects(saved) }
+        clipboard.clearContents()
+        XCTAssertTrue(clipboard.setString(text, forType: .string))
+        field.click()
+        let focused = NSPredicate { _, _ in field.value(forKey: "hasKeyboardFocus") as? Bool == true }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)], timeout: 5), .completed)
+        field.typeKey("a", modifierFlags: .command)
+        field.typeKey("v", modifierFlags: .command)
+    }
+
+    @MainActor func testDeckDeletionNamesScopeCancelEscapeNestedCommitAndRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        defer { app.terminate() }
+        dismissWelcome(in: app)
+        app.buttons["onboarding.create"].click()
+        let name = app.textFields["onboarding.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        app.activate(); name.click(); name.typeText("Delete Root")
+        XCTAssertEqual(name.value as? String, "Delete Root")
+        app.checkBoxes["onboarding.demo"].click()
+        app.buttons["onboarding.save"].click()
+        XCTAssertTrue(name.waitForNonExistence(timeout: 10))
+        app.staticTexts["navigation.decks"].click()
+        XCTAssertTrue(app.buttons["decks.grid"].waitForExistence(timeout: 10))
+        app.buttons["decks.grid"].click()
+        func action(_ deck: String, _ title: String) {
+            let menu = app.descendants(matching: .any).matching(identifier: "deck.actions." + deck).firstMatch
+            XCTAssertTrue(menu.waitForExistence(timeout: 10)); menu.click()
+            XCTAssertTrue(app.menuItems[title].waitForExistence(timeout: 5)); app.menuItems[title].click()
+        }
+        func saveDeck(_ value: String) {
+            let field = app.textFields["deckEditor.name"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5)); field.click(); field.typeText(value)
+            app.buttons["deckEditor.save"].click()
+            XCTAssertTrue(field.waitForNonExistence(timeout: 5))
+        }
+        action("Delete Root", "Добавить подколоду"); saveDeck("Delete Child")
+        action("Delete Child", "Добавить подколоду"); saveDeck("Delete Leaf")
+        app.buttons["decks.create"].click(); saveDeck("Keep Outside")
+        action("Delete Root", "Удалить колоду…")
+        let confirm = app.buttons["deckDelete.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        let ready = NSPredicate { _, _ in confirm.isEnabled }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 10), .completed)
+        XCTAssertTrue((app.staticTexts["deckDelete.scope"].value as? String ?? "").contains("Delete Root"))
+        XCTAssertEqual(app.staticTexts["deckDelete.decks"].value as? String, "Подколод: 2")
+        XCTAssertEqual(app.staticTexts["deckDelete.cards"].value as? String, "Карточек: 3")
+        XCTAssertEqual(app.staticTexts["deckDelete.notes"].value as? String, "Затронуто записей: 3")
+        let confirmation = XCTAttachment(screenshot: app.screenshot())
+        confirmation.name = "T033 deletion scope confirmation"; confirmation.lifetime = .keepAlways
+        add(confirmation)
+        app.menuBars.menuBarItems["Файл"].click()
+        XCTAssertFalse(app.menuItems["Новая колода"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["deck.edit.Delete Root"].exists)
+        action("Delete Root", "Удалить колоду…")
+        XCTAssertTrue(app.buttons["deckDelete.cancel"].waitForExistence(timeout: 5))
+        app.buttons["deckDelete.cancel"].click()
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: 5))
+        action("Delete Root", "Удалить колоду…")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 10), .completed)
+        confirm.click()
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["deck.edit.Keep Outside"].waitForExistence(timeout: 5))
+        for deck in ["Delete Root", "Delete Child", "Delete Leaf"] { XCTAssertFalse(app.buttons["deck.edit." + deck].exists) }
+        app.staticTexts["navigation.library"].click()
+        XCTAssertTrue(app.buttons["library.emptyCreate"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["library.counts"].value as? String, "Карточек: 0 · Записей: 0")
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["navigation.decks"].waitForExistence(timeout: 10))
+        app.staticTexts["navigation.decks"].click()
+        XCTAssertTrue(app.buttons["deck.edit.Keep Outside"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["deck.edit.Delete Root"].exists)
+    }
+
     @MainActor func testDeckMenuPropertiesSetupCancelAndScopedStart() throws {
         let app = XCUIApplication()
         continueAfterFailure = false
@@ -13,8 +131,10 @@ final class AppShellUITests: XCTestCase {
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         app.activate(); name.click(); name.typeText("Setup Root")
+        XCTAssertEqual(name.value as? String, "Setup Root")
         app.checkBoxes["onboarding.demo"].click()
         app.buttons["onboarding.save"].click()
+        XCTAssertTrue(name.waitForNonExistence(timeout: 10))
         app.staticTexts["navigation.decks"].click()
         func element(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
         func action(_ deck: String, _ title: String) {
@@ -85,7 +205,7 @@ final class AppShellUITests: XCTestCase {
         let menu = element("deck.actions.Setup Root")
         XCTAssertTrue(menu.waitForExistence(timeout: 5)); menu.click()
         XCTAssertFalse(app.menuItems["Экспорт колоды — пока недоступен"].isEnabled)
-        XCTAssertFalse(app.menuItems["Удаление колоды — пока недоступно"].isEnabled)
+        XCTAssertTrue(app.menuItems["Удалить колоду…"].isEnabled)
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
         action("Setup Root", "В избранное")
         let favorite = app.buttons["deck.favorite.Setup Root"]
@@ -1201,9 +1321,7 @@ final class AppShellUITests: XCTestCase {
         gallery.radioButtons["Поля и переключатели"].click()
         let field = gallery.textFields.firstMatch
         XCTAssertTrue(field.exists)
-        field.click()
-        field.typeKey("a", modifierFlags: .command)
-        field.typeText("Проверка IPA /test/")
+        pasteUnicode("Проверка IPA /test/", into: field)
         XCTAssertEqual(field.value as? String, "Проверка IPA /test/")
         XCTAssertFalse(gallery.textFields.element(boundBy: 3).isEnabled)
         XCTAssertTrue(gallery.staticTexts["Введите название, чтобы продолжить."].exists)

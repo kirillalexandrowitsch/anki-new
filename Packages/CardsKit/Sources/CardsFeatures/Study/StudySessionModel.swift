@@ -170,8 +170,14 @@ extension StudyAudioPlayer {
             await readNext()
         } catch {
             guard !isStopped, operation == token else { return }
-            phase = .answer
-            errorMessage = "Не удалось сохранить оценку. Повторите ту же команду."
+            if error as? CollectionRepositoryError == .reviewUnavailable {
+                pendingCommand = nil
+                await readNext()
+                reviewMessage = "Карточка больше недоступна. Очередь обновлена."
+            } else {
+                phase = .answer
+                errorMessage = "Не удалось сохранить оценку. Повторите ту же команду."
+            }
         }
     }
 
@@ -333,6 +339,28 @@ extension StudyAudioPlayer {
 
     public func heartbeat(systemIdleSeconds: TimeInterval) async {
         guard !isStopped, !isFinished, !isFinishing else { return }
+        if let availability = service as? any StudyAvailabilityService, let presentation,
+           [.question, .answer, .paused].contains(phase), pendingCommand == nil, pendingUndo == nil,
+           !isReading, !showsExitConfirmation, checkpointError == nil {
+            let token = operation, cardID = presentation.cardID
+            do {
+                let available = try await availability.isAvailable(cardID: cardID)
+                guard !isStopped, operation == token, self.presentation?.cardID == cardID,
+                      [.question, .answer, .paused].contains(phase), pendingCommand == nil, pendingUndo == nil else { return }
+                if !available {
+                    let wasPaused = phase == .paused
+                    tick(); restoringPaused = wasPaused
+                    await readNext()
+                    restoringPaused = false
+                    if wasPaused, phase == .question { pausedPhase = .question; phase = .paused; lastTick = nil; saveCheckpoint() }
+                    return
+                }
+            } catch {
+                // A read failure is not an empty queue. Keep the presentation and allow retry.
+                errorMessage = "Не удалось проверить доступность карточки. Повторите проверку."
+                return
+            }
+        }
         tick(systemIdleSeconds: systemIdleSeconds)
         guard [.question, .answer].contains(phase), checkpointError == nil else { return }
         saveCheckpoint(); _ = await flushCheckpoint()
