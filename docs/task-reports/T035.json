@@ -33,6 +33,11 @@
       "command": "python3 scripts/tasks.py finish T035; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T035 done после фактической приёмки. /tmp/anki-T035-quality.log: graph/reports/generated state, 26 Python tests, 2492 local links, 48/48 PNG hashes, budget/workflow policy passed; whitespace clean."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -resultBundlePath build/T035-ui-scoped.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T035-ui-scoped.log: TEST SUCCEEDED, 1 test/0 failures, 86.309 s. Toolbar query исключает Touch Bar, проверяет count=1/visible/enabled; Replace выбирается в save sheet. Полный исходный сценарий empty/cancel/success/unread reopen/row route/error/file preservation/mark all/read relaunch сохранён и прошёл. Финальный screenshot с уточнённым текстом backup error визуально проверен без обрезки. python3 scripts/ci.py quality (/tmp/anki-T035-quality-scoped.log) повторно passed: 26 Python tests, 2492 links, PNG48/48."
     }
   ],
   "limitations": [
@@ -50,6 +55,11 @@
       "command": "Initial T035 native UI test (build/T035-ui.xcresult)",
       "result": "failed",
       "details": "После успешного backup/relaunch UI-тест нашёл две кнопки «Заменить» (Touch Bar и save sheet). Уточнён selector реальной sheet-кнопки action-button-1. Финальный прогон сохраняет исходные assertions и проходит с 0 failures."
+    },
+    {
+      "command": "python3 scripts/deliver.py --task T035; gh run view 40096737150 --log-failed",
+      "result": "failed",
+      "details": "PR #122, первый CI macos-15: quality и 237 package tests passed; app UI testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch остановился на первом bell.click (AppShellUITests.swift:62). Merge не выполнен. App-wide selector заменён на фактический toolbar, Replace ограничен save sheet вместо платформенного action-button ID; это исключает дубли Touch Bar. Добавлены assertions единственности, enabled и hittable, все исходные проверки поведения сохранены. Sanitized CI log не содержит исходной AX-ошибки, поэтому причина неоднозначности рассматривается как гипотеза до повторного runner-прогона."
     }
   ]
 }

@@ -57,8 +57,13 @@ final class AppShellUITests: XCTestCase {
                                "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
         app.launch()
         dismissWelcome(in: app)
-        let bell = app.buttons["notifications.toggle"]
+        // macOS exposes toolbar actions in the Touch Bar as well. Address the
+        // actual toolbar control rather than an app-wide ambiguous button query.
+        let bell = app.toolbars.buttons["notifications.toggle"]
         XCTAssertTrue(bell.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.toolbars.buttons.matching(identifier: "notifications.toggle").count, 1)
+        XCTAssertTrue(bell.isEnabled)
+        XCTAssertTrue(bell.isHittable)
         bell.click()
         XCTAssertTrue(app.descendants(matching: .any)["notifications.empty"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["notifications.markAll"].isEnabled)
@@ -115,7 +120,7 @@ final class AppShellUITests: XCTestCase {
         app.buttons["notifications.close"].click()
         // The native Replace choice reaches the real no-overwrite rejection in CollectionStore.
         openExport(); saveBackup()
-        let replace = app.buttons["action-button-1"]
+        let replace = app.sheets.buttons["Заменить"]
         XCTAssertTrue(replace.waitForExistence(timeout: 5)); replace.click()
         XCTAssertTrue(app.staticTexts["export.error"].waitForExistence(timeout: 10))
         XCTAssertEqual(try Data(contentsOf: file), original)
