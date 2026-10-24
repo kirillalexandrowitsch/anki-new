@@ -16,7 +16,7 @@ struct CollectionRegistry: Codable {
 }
 
 /// All filesystem/SQLite work runs on this actor, never on the UI actor.
-public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, DeckStudyWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, DeckStudyWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess, LocalNotificationAccess {
     private let root: URL
     private let clock: any CardsCore.Clock
     private var active: OwnedCollection?
@@ -226,6 +226,10 @@ public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, Edito
         SQLiteCollectionInfoRepository(writer: try writer(generation: generation))
     }
 
+    public func notifications(generation: UUID) throws -> any LocalNotificationRepository {
+        SQLiteLocalNotifications(writer: try writer(generation: generation), clock: clock)
+    }
+
     public func queries(generation: UUID) throws -> any CollectionQueryService {
         SQLiteCollectionQueries(writer: try writer(generation: generation), generation: generation)
     }
@@ -261,6 +265,20 @@ public actor CollectionStore: CollectionExportAccess, DeckWorkspaceAccess, Edito
             throw CollectionBackupError.staleContext
         }
         guard !operationInProgress else { throw CollectionBackupError.operationInProgress }
+        let history = SQLiteLocalNotifications(writer: owned.writer, clock: clock)
+        do {
+            try await performBackup(to: destination, owned: owned)
+        } catch {
+            if !(error is CancellationError), error as? CollectionRepositoryError != .cancelled {
+                try? await history.record(id: UUID(), event: .backupFailed)
+            }
+            throw error
+        }
+        // The archive is already published. History persistence cannot change its outcome.
+        try? await history.record(id: UUID(), event: .backupSucceeded)
+    }
+
+    private func performBackup(to destination: URL, owned: OwnedCollection) async throws {
         guard BackupFiles.outside(destination, root: root),
               !FileManager.default.fileExists(atPath: destination.path) else {
             throw CollectionBackupError.invalidDestination

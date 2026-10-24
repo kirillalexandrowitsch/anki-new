@@ -1,0 +1,55 @@
+{
+  "taskID": "T035",
+  "summary": "Реализован внутренний центр уведомлений коллекции: типизированные backup success/error и reminderScheduled, последние 100 сообщений, persisted readAt, наблюдение SQLite, badge, пустой/наполненный popover, mark all read и переход в связанный раздел. Backup публикует сообщение только после фактического результата; reminder не утверждает доставку системного баннера.",
+  "criteria": [
+    {
+      "text": "Read state сохраняется между запусками.",
+      "passed": true,
+      "evidence": "notificationReadSnapshotRetentionAndReopen passed: readAt записывается один раз, переживает close/open, snapshot mark-all не отмечает параллельный arrival; старые порты/observer отклонены после close. Нативный XCUITest passed: просмотр оставляет unread после relaunch; выбор сообщения сохраняет read и открывает экспорт; mark all + повторный relaunch сохраняет read для обоих результатов backup."
+    },
+    {
+      "text": "Сообщение о запланированном reminder не утверждает доставку системного баннера.",
+      "passed": true,
+      "evidence": "Проверены Core LocalNotificationEvent.reminderScheduled(nextFireAt:), versioned payload и UI-тексты NotificationsModel/NotificationsView: «Напоминание запланировано», время расписания и явное «Системный баннер может быть отложен или подавлен настройками macOS». notificationBackupActualOutcomesAndSnapshotBoundary проверяет сохранение reminder с readAt в реальном архиве, restore и reopen. Планировщик ОС относится к T045; T035 не запрашивает разрешение и не создаёт фиктивных напоминаний."
+    }
+  ],
+  "checks": [
+    {
+      "command": "swift test --package-path Packages/CardsKit --skip-update --disable-automatic-resolution --filter notification",
+      "result": "passed",
+      "details": "/tmp/anki-T035-notifications.log: 4 integration tests passed, 0.140 s. File-backed SQLite, bounded history/равные timestamps/idempotent ID, atomic rollback prune/read, live model + error/retry/stop, actual backup success/error/cancel/stale. После расширения backup-проверки сохранённого reminder все четыре повторно прошли в финальном offline suite."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -only-testing:AnkiNewUITests/AppShellUITests/testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord -resultBundlePath build/T035-ui-final.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T035-ui-final.log: TEST SUCCEEDED, 2 tests/0 failures, 133.246 s. Empty popover, native Save cancellation, verified backup success, unread reopen, row→read+export, реальный no-overwrite error после Replace с сохранностью файла, mark all, Escape и read relaunch. Регрессия поиска/reveal routes/daily word прошла. Пустой и наполненный screenshots извлечены из ignored xcresult и визуально проверены: заголовки, тексты, статусы и кнопки читаемы без обрезки. После прогона уточнён только статический текст ошибки: «Резервное копирование не завершено» учитывает возможный отказ fsync после публикации; финальный код собран offline."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T035-offline.log; build/checks/run-leathz_e/summary.json: networkDenied=true, package tests и arm64 app build passed. 237 Swift Testing tests (Core30/Infrastructure174/Features30/DesignSystem3), XCTest worker1; fixture seed12 SHA256 b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "python3 scripts/tasks.py finish T035; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
+      "result": "passed",
+      "details": "T035 done после фактической приёмки. /tmp/anki-T035-quality.log: graph/reports/generated state, 26 Python tests, 2492 local links, 48/48 PNG hashes, budget/workflow policy passed; whitespace clean."
+    }
+  ],
+  "limitations": [
+    "Системное расписание/authorization остаётся T045. Здесь хранится типизированное сообщение о факте планирования для будущего caller, без обещания показа баннера и без автоматических fake reminders.",
+    "История ограничена 100 сообщениями на коллекцию; архив содержит историю на момент snapshot. Запись нового результата backup выполняется после операции отдельной транзакцией; её отказ не меняет фактический результат файла, который остаётся видим в UI экспорта.",
+    "Новых зависимостей, миграций, платных API/сервисов, CI uploads/cache и изменений оригинальных PNG нет. Данные синтетические; логи/screenshots/xcresult находятся только в ignored build и /tmp. В сообщениях нет путей, имён файлов, содержимого коллекции или технических ошибок."
+  ],
+  "failedChecks": [
+    {
+      "command": "Initial compile and full package run",
+      "result": "failed",
+      "details": "Исправлены self.error в catch и отсутствующий await у async GRDB read в новом тесте. Полный suite выявил старое ожидание неизменности живой БД после backup: оно уточнено под новый контракт отдельного сообщения после snapshot; проверки полного равенства всех таблиц архива/restore сохранены, сообщение проверяется отдельно. Повторный полный и финальный offline suite passed."
+    },
+    {
+      "command": "Initial T035 native UI test (build/T035-ui.xcresult)",
+      "result": "failed",
+      "details": "После успешного backup/relaunch UI-тест нашёл две кнопки «Заменить» (Touch Bar и save sheet). Уточнён selector реальной sheet-кнопки action-button-1. Финальный прогон сохраняет исходные assertions и проходит с 0 failures."
+    }
+  ]
+}

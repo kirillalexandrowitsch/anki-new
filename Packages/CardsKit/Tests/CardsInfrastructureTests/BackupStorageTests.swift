@@ -91,7 +91,15 @@ private struct BackupFixture {
     let expected = try f.dump(original)
     #expect(FileManager.default.fileExists(atPath: f.directory(original).appendingPathComponent("collection.sqlite-wal").path))
     try await store.createBackup(to: f.archive, generation: original.generation)
-    #expect(try f.dump(original) == expected)
+    var live = try f.dump(original)
+    var snapshot = expected
+    // The successful operation is recorded only after the verified snapshot is published.
+    let liveHistory = live.removeValue(forKey: "local_notifications")
+    snapshot.removeValue(forKey: "local_notifications")
+    #expect(live == snapshot)
+    #expect(liveHistory?.count == 1)
+    let notifications = try await store.notifications(generation: original.generation)
+    #expect(try await notifications.messages().map(\.event) == [.backupSucceeded])
     let paths = try f.payloads().keys
     #expect(Set(paths) == Set(["manifest.json", "collection.json", "collection.sqlite", asset.relativePath]))
     let targetRoot = f.base.appendingPathComponent("other")

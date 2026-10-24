@@ -21,9 +21,12 @@ public struct AppShellView: View {
     private let statistics: StatisticsModel?
     private let today: TodayModel?
     private let library: LibraryModel?
+    private let notifications: NotificationsModel?
 
     public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, statistics: StatisticsModel? = nil, onboarding: OnboardingModel? = nil,
-                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil) {
+                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil,
+                notifications: NotificationsModel? = nil) {
+        self.notifications = notifications
         self.exporter = exporter
         self.model = model
         self.decks = decks
@@ -105,10 +108,31 @@ public struct AppShellView: View {
             .background(CardsColor.window.color)
         }
         .task(id: library?.discovery?.searchID) { await library?.discovery?.observeSearch() }
+        .task(id: notifications?.reloadID) { await notifications?.observe() }
         .toolbar {
             if let discovery = library?.discovery {
                 ToolbarItem(placement: .primaryAction) {
                     searchView(discovery).disabled(isModal)
+                }
+            }
+            if let notifications {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        library?.discovery?.searchPresented = false
+                        notifications.isPresented.toggle()
+                    } label: {
+                        Label("Уведомления", systemImage: notifications.unreadCount > 0 ? "bell.badge" : "bell")
+                    }.accessibilityIdentifier("notifications.toggle")
+                        .accessibilityValue("Непрочитанных: \(notifications.unreadCount)")
+                        .disabled(isModal)
+                        .popover(isPresented: Binding(get: { notifications.isPresented }, set: { notifications.isPresented = $0 }), arrowEdge: .bottom) {
+                            NotificationsView(model: notifications) { event in
+                                switch event {
+                                case .backupSucceeded, .backupFailed: exporter?.present()
+                                case .reminderScheduled: model.selection = .today
+                                }
+                            }
+                        }
                 }
             }
         }
@@ -120,7 +144,12 @@ public struct AppShellView: View {
                 }
             }
         }
-        .onChange(of: isModal) { _, value in if value { library?.discovery?.searchPresented = false } }
+        .onChange(of: isModal) { _, value in
+            if value { library?.discovery?.searchPresented = false; notifications?.isPresented = false }
+        }
+        .onChange(of: library?.discovery?.searchPresented) { _, value in
+            if value == true { notifications?.isPresented = false }
+        }
         // Keep modal presenters at the window root; a welcome child must not compete
         // with the study sheets on macOS 15.
         .sheet(isPresented: Binding(get: { onboarding?.showsCreator ?? false },
