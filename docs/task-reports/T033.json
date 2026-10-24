@@ -33,12 +33,18 @@
       "command": "python3 scripts/tasks.py finish T033; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
       "details": "T033 done после фактической приёмки; /tmp/anki-T033-quality.log: graph/reports/generated state, 26 Python tests, 2492 local links, 48/48 original PNG hashes and budget/workflow policy passed; whitespace clean."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testDesignGalleryNativeControlsAndAppearances -test-iterations 3 -resultBundlePath build/T033-gallery-repair.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T033-gallery-repair.log: TEST SUCCEEDED; 3 iterations, 0 failures, 51.629 s. All original gallery assertions retained: exact Cyrillic/IPA value, native Tab and Latin typing, validation, enabled/disabled buttons, dark/enlarged/contrast states. Unicode uses native Paste after focus assertion, clipboard items/types restored from memory immediately; no clipboard content logged or persisted."
     }
   ],
   "limitations": [
     "Удаление колоды не имеет пользовательской отмены, что явно написано до подтверждения. Логическое удаление и batch с purgeAfter через7 дней не выполняют физический purge; медиа, расписания и история сохранены. SQLite-схема не менялась.",
     "Новых зависимостей, платных API/сервисов, CI uploads/cache и изменений оригинальных PNG нет. Все коллекции синтетические. Локальные логи/xcresult/screenshots в ignored build и /tmp не публикуются.",
-    "UI tests временно выбирают установленную ABC/US раскладку для синтетического латинского ввода и восстанавливают исходный input source после каждого теста; настройки macOS и системные разрешения не меняются."
+    "UI tests временно выбирают установленную ABC/US раскладку для синтетического латинского ввода и восстанавливают исходный input source после каждого теста; настройки macOS и системные разрешения не меняются.",
+    "Исправляющий commit T033 после merge в dev меняет только механизм ввода в существующей UI-проверке галереи и этот отчёт; пользовательские app-сценарии удаления не менялись. Буфер обмена восстанавливается после вставки, не записывается в файлы/логи."
   ],
   "failedChecks": [
     {
@@ -50,6 +56,11 @@
       "command": "Initial local T033 and T032 UI acceptance",
       "result": "failed",
       "details": "Активная Russian раскладка пропускала латинские keystrokes XCTest, имя оставалось пробелом и onboarding Save был disabled. Добавлены временный выбор ABC с восстановлением и явные assertions имени/закрытия формы. Критерии удаления сохранены."
+    },
+    {
+      "command": "gh run view 40027673373 --log-failed (PR #116 macos)",
+      "result": "failed",
+      "details": "229 package tests passed; app-tests failed in testDesignGalleryNativeControlsAndAppearances at AppShellUITests.swift:1304 during Cyrillic typeText. Original test passed locally in diagnostic run, indicating intermittent UI event synthesis. Replaced layout-dependent Unicode synthesis with native Paste and explicit focus readiness; exact value and all other assertions remain. Three local iterations then passed; no workflow/check criteria changed."
     }
   ]
 }

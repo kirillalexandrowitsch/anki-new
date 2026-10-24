@@ -1,3 +1,4 @@
+import AppKit
 import Carbon
 import XCTest
 
@@ -23,6 +24,27 @@ final class AppShellUITests: XCTestCase {
         if let originalInputSource { XCTAssertEqual(TISSelectInputSource(originalInputSource), noErr) }
         originalInputSource = nil
         try super.tearDownWithError()
+    }
+
+    @MainActor private func pasteUnicode(_ text: String, into field: XCUIElement) {
+        // Native Paste accepts Unicode without XCTest mapping Cyrillic to a Latin layout.
+        // Keep the user's clipboard in memory only and restore all items/types immediately.
+        let clipboard = NSPasteboard.general
+        let saved = (clipboard.pasteboardItems ?? []).map { item in
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { copy.setData(data, forType: type) }
+            }
+            return copy
+        }
+        defer { clipboard.clearContents(); clipboard.writeObjects(saved) }
+        clipboard.clearContents()
+        XCTAssertTrue(clipboard.setString(text, forType: .string))
+        field.click()
+        let focused = NSPredicate { _, _ in field.value(forKey: "hasKeyboardFocus") as? Bool == true }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)], timeout: 5), .completed)
+        field.typeKey("a", modifierFlags: .command)
+        field.typeKey("v", modifierFlags: .command)
     }
 
     @MainActor func testDeckDeletionNamesScopeCancelEscapeNestedCommitAndRelaunch() throws {
@@ -1299,9 +1321,7 @@ final class AppShellUITests: XCTestCase {
         gallery.radioButtons["Поля и переключатели"].click()
         let field = gallery.textFields.firstMatch
         XCTAssertTrue(field.exists)
-        field.click()
-        field.typeKey("a", modifierFlags: .command)
-        field.typeText("Проверка IPA /test/")
+        pasteUnicode("Проверка IPA /test/", into: field)
         XCTAssertEqual(field.value as? String, "Проверка IPA /test/")
         XCTAssertFalse(gallery.textFields.element(boundBy: 3).isEnabled)
         XCTAssertTrue(gallery.staticTexts["Введите название, чтобы продолжить."].exists)
