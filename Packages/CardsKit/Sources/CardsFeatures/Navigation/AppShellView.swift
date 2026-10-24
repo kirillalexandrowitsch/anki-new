@@ -117,13 +117,10 @@ public struct AppShellView: View {
             }
             if let notifications {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
+                    NotificationsButton(unreadCount: notifications.unreadCount) {
                         library?.discovery?.searchPresented = false
                         notifications.isPresented.toggle()
-                    } label: {
-                        Label("Уведомления", systemImage: notifications.unreadCount > 0 ? "bell.badge" : "bell")
-                    }.accessibilityIdentifier("notifications.toggle")
-                        .accessibilityValue("Непрочитанных: \(notifications.unreadCount)")
+                    }.frame(width: 32, height: 26)
                         .disabled(isModal)
                         .popover(isPresented: Binding(get: { notifications.isPresented }, set: { notifications.isPresented = $0 }), arrowEdge: .bottom) {
                             NotificationsView(model: notifications) { event in

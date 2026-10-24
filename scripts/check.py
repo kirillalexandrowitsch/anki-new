@@ -42,6 +42,7 @@ class Diagnostics:
         self.categories = set()
         self.test_counts = set()
         self.fingerprints = set()
+        self.notification_controls = set()
 
     def consume(self, output):
         # No redaction heuristic: free-form messages/values never enter the result.
@@ -71,11 +72,16 @@ class Diagnostics:
             digest = re.fullmatch(r'ANKI_FIXTURE_V1_SHA256=([a-f0-9]{64})', line.strip())
             if digest:
                 self.fingerprints.add(digest[1])
+            control = re.fullmatch(r'ANKI_UI_NOTIFICATIONS matches=(\d{1,3}) hittable=(\d{1,3}) frames=(\d{1,3})', line.strip())
+            if control:
+                self.notification_controls.add(tuple(map(int, control.groups())))
 
     def result(self):
         return dict(locations=[dict(file=f, line=r, column=c) for f, r, c in sorted(self.locations)],
                     failedTests=sorted(self.failed_tests), categories=sorted(self.categories),
-                    testCounts=sorted(self.test_counts), fixtureFingerprints=sorted(self.fingerprints))
+                    testCounts=sorted(self.test_counts), fixtureFingerprints=sorted(self.fingerprints),
+                    notificationControls=[dict(matches=m, hittable=h, frames=f)
+                                          for m, h, f in sorted(self.notification_controls)])
 
 
 def run_stage(phase, command, *, deny_network=False, timeout=1200, inventory=None):

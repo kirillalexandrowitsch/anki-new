@@ -38,6 +38,21 @@
       "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -resultBundlePath build/T035-ui-scoped.xcresult",
       "result": "passed",
       "details": "/tmp/anki-T035-ui-scoped.log: TEST SUCCEEDED, 1 test/0 failures, 86.309 s. Toolbar query исключает Touch Bar, проверяет count=1/visible/enabled; Replace выбирается в save sheet. Полный исходный сценарий empty/cancel/success/unread reopen/row route/error/file preservation/mark all/read relaunch сохранён и прошёл. Финальный screenshot с уточнённым текстом backup error визуально проверен без обрезки. python3 scripts/ci.py quality (/tmp/anki-T035-quality-scoped.log) повторно passed: 26 Python tests, 2492 links, PNG48/48."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -only-testing:AnkiNewUITests/AppShellUITests/testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord -resultBundlePath build/T035-ui-native.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T035-ui-native.log: TEST SUCCEEDED, 2 tests/0 failures, 134.556 s. Native NSButton с AX identifier только на реальном контроле; count=1/enabled/hittable сохранены. Полный notification flow и search/daily word regression passed. Native screenshot визуально проверен: без обрезки."
+    },
+    {
+      "command": "python3 scripts/check.py --deny-network",
+      "result": "passed",
+      "details": "/tmp/anki-T035-offline-native.log; build/checks/run-rq3ol0sr/summary.json: финальная native версия — 237 package tests и arm64 build passed, networkDenied=true, fixture SHA256 b26e3aaf1403290e361fffd5d3c5c6cab64780d079420a80632560d2763b4e86."
+    },
+    {
+      "command": "xcodebuild test -project AnkiNew.xcodeproj -scheme AnkiNew -destination 'platform=macOS,arch=arm64' -derivedDataPath build/check-derived -clonedSourcePackagesDirPath build/check-packages -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= -only-testing:AnkiNewUITests/AppShellUITests/testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch -resultBundlePath build/T035-ui-native-diagnostics.xcresult",
+      "result": "passed",
+      "details": "/tmp/anki-T035-ui-native-diagnostics.log: TEST SUCCEEDED, 1 test/0 failures, 85.955 s. Новый fixed numeric marker фактически выдал matches=1/hittable=1/frames=1 и был прочитан Diagnostics. CI сохраняет только три числа; AX labels, frames и содержимое не экспортируются. /tmp/anki-T035-quality-native.log: quality passed, 27 Python tests (включая privacy/rejection test для bounded numeric diagnostics), 2492 links, PNG48/48."
     }
   ],
   "limitations": [
@@ -60,6 +75,11 @@
       "command": "python3 scripts/deliver.py --task T035; gh run view 40096737150 --log-failed",
       "result": "failed",
       "details": "PR #122, первый CI macos-15: quality и 237 package tests passed; app UI testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch остановился на первом bell.click (AppShellUITests.swift:62). Merge не выполнен. App-wide selector заменён на фактический toolbar, Replace ограничен save sheet вместо платформенного action-button ID; это исключает дубли Touch Bar. Добавлены assertions единственности, enabled и hittable, все исходные проверки поведения сохранены. Sanitized CI log не содержит исходной AX-ошибки, поэтому причина неоднозначности рассматривается как гипотеза до повторного runner-прогона."
+    },
+    {
+      "command": "python3 scripts/deliver.py --task T035; gh run view 40098526234 --log-failed",
+      "result": "failed",
+      "details": "Повторный macos-15 CI: quality и package tests passed; остановка на добавленном assertion count=1 (AppShellUITests.swift:64). Это подтверждает несколько AX matches даже внутри toolbar, поэтому одного query scope недостаточно. Сам SwiftUI toolbar Button заменён на native NSButton/NSViewRepresentable (как существующий SearchInput): identifier назначен только реальному NSButton, а не SwiftUI toolbar/popover wrapper. Assertion единственности, enabled/hittable и все проверки поведения сохранены; никаких skip/ослабления обязательного CI."
     }
   ]
 }

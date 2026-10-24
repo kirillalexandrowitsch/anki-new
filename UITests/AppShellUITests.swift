@@ -61,7 +61,12 @@ final class AppShellUITests: XCTestCase {
         // actual toolbar control rather than an app-wide ambiguous button query.
         let bell = app.toolbars.buttons["notifications.toggle"]
         XCTAssertTrue(bell.waitForExistence(timeout: 10))
-        XCTAssertEqual(app.toolbars.buttons.matching(identifier: "notifications.toggle").count, 1)
+        let candidates = app.toolbars.buttons.matching(identifier: "notifications.toggle").allElementsBoundByIndex
+        // Only fixed control identity and numeric diagnostics; never dump AX labels/content.
+        let visible = candidates.filter(\.isHittable)
+        let frames = Set(visible.map { NSStringFromRect($0.frame) })
+        print("ANKI_UI_NOTIFICATIONS matches=\(candidates.count) hittable=\(visible.count) frames=\(frames.count)")
+        XCTAssertEqual(candidates.count, 1)
         XCTAssertTrue(bell.isEnabled)
         XCTAssertTrue(bell.isHittable)
         bell.click()

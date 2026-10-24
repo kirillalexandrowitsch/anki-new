@@ -72,6 +72,16 @@ sys.exit(17)
             with self.assertRaisesRegex(ValueError, 'missing-checkouts'):
                 check.require_resolved_checkouts(resolved, root / 'missing')
 
+    def test_ui_control_diagnostics_keep_only_bounded_numeric_counts(self):
+        diagnostics = check.Diagnostics((set(), set()))
+        diagnostics.consume('ANKI_UI_NOTIFICATIONS matches=2 hittable=1 frames=1\n'
+                            'ANKI_UI_NOTIFICATIONS matches=2 hittable=1 frames=1 private text\n'
+                            'ANKI_UI_NOTIFICATIONS matches=1000 hittable=1 frames=1\n'
+                            'AX label=private collection contents\n')
+        result = diagnostics.result()
+        self.assertEqual(result['notificationControls'], [dict(matches=2, hittable=1, frames=1)])
+        self.assertNotIn('private', json.dumps(result))
+
     def test_ci_uses_shared_check_with_app_tests(self):
         with patch.object(ci, 'run') as run:
             ci.check_app(ci.ROOT, ci.validate_workflow(ci.ROOT))
