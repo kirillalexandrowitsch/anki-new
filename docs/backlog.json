@@ -1317,11 +1317,14 @@
       ],
       "verification": "Пустой/наполненный popover, операция с ошибкой, mark read и reopen.",
       "size": "M",
-      "status": "planned",
+      "status": "done",
       "milestone": "M2",
       "stateIDs": [
         "02.3"
-      ]
+      ],
+      "startedAt": "2026-10-24T12:56:50.125750+00:00",
+      "completedAt": "2026-10-24T13:06:20.540085+00:00",
+      "report": "docs/task-reports/T035.json"
     },
     {
       "id": "T036",
@@ -4116,7 +4119,7 @@
       "stateID": "02.3",
       "taskID": "T035",
       "kind": "core",
-      "status": "planned"
+      "status": "done"
     },
     {
       "stateID": "02.4",

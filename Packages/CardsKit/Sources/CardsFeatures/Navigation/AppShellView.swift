@@ -21,9 +21,12 @@ public struct AppShellView: View {
     private let statistics: StatisticsModel?
     private let today: TodayModel?
     private let library: LibraryModel?
+    private let notifications: NotificationsModel?
 
     public init(model: AppShellModel, decks: DecksModel? = nil, library: LibraryModel? = nil, today: TodayModel? = nil, statistics: StatisticsModel? = nil, onboarding: OnboardingModel? = nil,
-                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil) {
+                makeStudy: (@MainActor () async throws -> StudySessionModel)? = nil, exporter: CollectionExportModel? = nil,
+                notifications: NotificationsModel? = nil) {
+        self.notifications = notifications
         self.exporter = exporter
         self.model = model
         self.decks = decks
@@ -105,10 +108,20 @@ public struct AppShellView: View {
             .background(CardsColor.window.color)
         }
         .task(id: library?.discovery?.searchID) { await library?.discovery?.observeSearch() }
+        .task(id: notifications?.reloadID) { await notifications?.observe() }
         .toolbar {
             if let discovery = library?.discovery {
                 ToolbarItem(placement: .primaryAction) {
                     searchView(discovery).disabled(isModal)
+                }
+            }
+            if let notifications {
+                ToolbarItem(placement: .primaryAction) {
+                    NotificationsButton(unreadCount: notifications.unreadCount) {
+                        library?.discovery?.searchPresented = false
+                        notifications.isPresented.toggle()
+                    }.frame(width: 32, height: 26)
+                        .disabled(isModal)
                 }
             }
         }
@@ -118,9 +131,16 @@ public struct AppShellView: View {
                     Color.clear.contentShape(Rectangle()).onTapGesture { discovery.searchPresented = false }
                     searchView(discovery).resultsPanel.padding(.top, 8).padding(.trailing, 16)
                 }
+            } else if let notifications, notifications.isPresented, !isModal {
+                NotificationsPopover(model: notifications, open: openNotification)
             }
         }
-        .onChange(of: isModal) { _, value in if value { library?.discovery?.searchPresented = false } }
+        .onChange(of: isModal) { _, value in
+            if value { library?.discovery?.searchPresented = false; notifications?.isPresented = false }
+        }
+        .onChange(of: library?.discovery?.searchPresented) { _, value in
+            if value == true { notifications?.isPresented = false }
+        }
         // Keep modal presenters at the window root; a welcome child must not compete
         // with the study sheets on macOS 15.
         .sheet(isPresented: Binding(get: { onboarding?.showsCreator ?? false },
@@ -188,6 +208,14 @@ public struct AppShellView: View {
         switch destination {
         case .card(let id): model.selection = .library; library?.showCard(id)
         case .deck(let id): model.selection = .decks; decks?.showDeck(id)
+        }
+    }
+
+    private func openNotification(_ event: LocalNotificationEvent) {
+        guard !isModal else { return }
+        switch event {
+        case .backupSucceeded, .backupFailed: exporter?.format = .cardsbackup; exporter?.present()
+        case .reminderScheduled: model.selection = .today
         }
     }
 

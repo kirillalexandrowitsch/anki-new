@@ -106,13 +106,18 @@ final class CompositionRoot {
         }
     }
 
+    func makeNotificationsModel(context: CollectionContext) async throws -> NotificationsModel {
+        guard let provider = access as? any LocalNotificationAccess else { throw CollectionAccessError.staleContext }
+        return try await NotificationsModel(repository: provider.notifications(generation: context.generation))
+    }
+
     func makeShellModel() -> AppShellModel {
         AppShellModel(clock: clock, audio: audio, preferences: audioPreferences)
     }
 }
 
 /// Resolve sandbox paths lazily, keeping filesystem errors visible in coordinator state.
-private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, DeckStudyWorkspaceAccess, AudioMediaAccess, StatsWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess {
+private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAccess, EditorWorkspaceAccess, StudyWorkspaceAccess, DeckStudyWorkspaceAccess, AudioMediaAccess, StatsWorkspaceAccess, TodayWorkspaceAccess, OnboardingWorkspaceAccess, PreferencesWorkspaceAccess, LocalNotificationAccess {
     let clock: any CardsCore.Clock
     var store: CollectionStore?
 
@@ -139,6 +144,11 @@ private actor DefaultCollectionAccess: CollectionExportAccess, DeckWorkspaceAcce
     func deckWorkspace(generation: UUID) async throws -> DeckWorkspace {
         guard let store else { throw CollectionAccessError.staleContext }
         return try await store.deckWorkspace(generation: generation)
+    }
+
+    func notifications(generation: UUID) async throws -> any LocalNotificationRepository {
+        guard let store else { throw CollectionAccessError.staleContext }
+        return try await store.notifications(generation: generation)
     }
 
     func editorWorkspace(generation: UUID) async throws -> EditorWorkspace {

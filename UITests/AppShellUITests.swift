@@ -47,6 +47,108 @@ final class AppShellUITests: XCTestCase {
         field.typeKey("v", modifierFlags: .command)
     }
 
+    @MainActor func testNotificationsEmptyBackupSuccessErrorReadRoutesAndRelaunch() throws {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        defer { app.terminate(); try? FileManager.default.removeItem(at: temporary) }
+        app.launchArguments = ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU",
+                               "-ApplePersistenceIgnoreState", "YES", "-CollectionTestID", UUID().uuidString]
+        app.launch()
+        dismissWelcome(in: app)
+        // macOS exposes toolbar actions in the Touch Bar as well. Address the
+        // actual toolbar control rather than an app-wide ambiguous button query.
+        let bell = app.toolbars.buttons["notifications.toggle"]
+        XCTAssertTrue(bell.waitForExistence(timeout: 10))
+        let candidates = app.toolbars.buttons.matching(identifier: "notifications.toggle").allElementsBoundByIndex
+        // Only fixed control identity and numeric diagnostics; never dump AX labels/content.
+        let visible = candidates.filter(\.isHittable)
+        let frames = Set(visible.map { NSStringFromRect($0.frame) })
+        print("ANKI_UI_NOTIFICATIONS matches=\(candidates.count) hittable=\(visible.count) frames=\(frames.count)")
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertTrue(bell.isEnabled)
+        XCTAssertTrue(bell.isHittable)
+        bell.click()
+        XCTAssertTrue(app.staticTexts["notifications.empty"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["notifications.markAll"].isEnabled)
+        let empty = XCTAttachment(screenshot: app.screenshot()); empty.name = "T035 empty notifications"; empty.lifetime = .keepAlways; add(empty)
+        app.buttons["notifications.close"].click()
+
+        func openExport() {
+            app.menuBars.menuBarItems["Файл"].click(); app.menuItems["Экспортировать…"].click()
+            XCTAssertTrue(app.buttons["export.save"].waitForExistence(timeout: 5))
+            app.popUpButtons["export.format"].click()
+            app.menuItems["Cardsbackup — точная копия"].click()
+        }
+        func saveBackup() {
+            app.buttons["export.save"].click()
+            XCTAssertTrue(app.textFields["saveAsNameTextField"].waitForExistence(timeout: 5))
+            app.typeKey("g", modifierFlags: [.command, .shift])
+            let folder = app.textFields["PathTextField"]
+            XCTAssertTrue(folder.waitForExistence(timeout: 5))
+            folder.click(); folder.typeKey("a", modifierFlags: .command); folder.typeText(temporary.path + "/")
+            folder.typeKey(.return, modifierFlags: [])
+            if !folder.waitForNonExistence(timeout: 2) { folder.typeKey(.return, modifierFlags: []) }
+            XCTAssertTrue(folder.waitForNonExistence(timeout: 5))
+            app.buttons["OKButton"].click()
+        }
+        openExport()
+        app.buttons["export.save"].click()
+        XCTAssertTrue(app.textFields["saveAsNameTextField"].waitForExistence(timeout: 5))
+        app.typeKey(.escape, modifierFlags: [])
+        app.buttons["Отмена"].click()
+        bell.click()
+        XCTAssertTrue(app.staticTexts["notifications.empty"].waitForExistence(timeout: 5))
+        app.buttons["notifications.close"].click()
+        openExport(); saveBackup()
+        XCTAssertTrue(app.buttons["export.complete"].waitForExistence(timeout: 15))
+        let file = temporary.appendingPathComponent("Collection.cardsbackup")
+        let original = try Data(contentsOf: file)
+        XCTAssertFalse(original.isEmpty)
+        app.buttons["export.complete"].click()
+        bell.click()
+        let success = app.buttons["notifications.row.backupSucceeded"]
+        XCTAssertTrue(success.waitForExistence(timeout: 5))
+        XCTAssertEqual(success.value as? String, "Не прочитано")
+        app.buttons["notifications.close"].click()
+        app.terminate(); app.launch()
+        XCTAssertTrue(bell.waitForExistence(timeout: 10)); bell.click()
+        XCTAssertTrue(success.waitForExistence(timeout: 5))
+        XCTAssertEqual(success.value as? String, "Не прочитано") // Merely viewing never marks read.
+        success.click()
+        XCTAssertTrue(app.buttons["export.save"].waitForExistence(timeout: 5)) // Related section route.
+        app.buttons["Отмена"].click()
+        bell.click()
+        XCTAssertTrue(success.waitForExistence(timeout: 5))
+        XCTAssertEqual(success.value as? String, "Прочитано")
+        app.buttons["notifications.close"].click()
+        // The native Replace choice reaches the real no-overwrite rejection in CollectionStore.
+        openExport(); saveBackup()
+        let replace = app.sheets.buttons["Заменить"]
+        XCTAssertTrue(replace.waitForExistence(timeout: 5)); replace.click()
+        XCTAssertTrue(app.staticTexts["export.error"].waitForExistence(timeout: 10))
+        XCTAssertEqual(try Data(contentsOf: file), original)
+        app.buttons["Отмена"].click()
+        bell.click()
+        let failure = app.buttons["notifications.row.backupFailed"]
+        XCTAssertTrue(failure.waitForExistence(timeout: 5))
+        XCTAssertEqual(failure.value as? String, "Не прочитано")
+        XCTAssertEqual(app.buttons.matching(identifier: "notifications.row.backupSucceeded").count, 1)
+        let filled = XCTAttachment(screenshot: app.screenshot()); filled.name = "T035 actual backup outcomes"; filled.lifetime = .keepAlways; add(filled)
+        app.buttons["notifications.markAll"].click()
+        let read = NSPredicate { _, _ in failure.exists && failure.value as? String == "Прочитано" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: read, object: nil)], timeout: 5), .completed)
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(failure.waitForNonExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(bell.waitForExistence(timeout: 10)); bell.click()
+        XCTAssertTrue(failure.waitForExistence(timeout: 5))
+        XCTAssertEqual(failure.value as? String, "Прочитано")
+        XCTAssertEqual(success.value as? String, "Прочитано")
+        XCTAssertFalse(app.buttons["notifications.markAll"].isEnabled)
+    }
+
     @MainActor func testGlobalSearchEmptySpecialSymbolsKeyboardRoutesAndLocalDailyWord() throws {
         let app = XCUIApplication()
         continueAfterFailure = false

@@ -89,7 +89,11 @@ import Testing
     let expected = try dump(root, reopened)
     let backup = directory.url.appendingPathComponent("vertical.cardsbackup")
     try await store.export(to: backup, format: .cardsbackup, generation: reopened.generation)
-    #expect(try dump(root, reopened) == expected)
+    let liveAfterBackup = try dump(root, reopened)
+    var expectedLive = expected
+    expectedLive["local_notifications"] = liveAfterBackup["local_notifications"]
+    #expect(liveAfterBackup == expectedLive)
+    #expect(try await store.notifications(generation: reopened.generation).messages().map(\.event) == [.backupSucceeded])
     let targetRoot = directory.url.appendingPathComponent("separate-collection")
     let target = CollectionStore(root: targetRoot, clock: clock)
     let empty = try await target.open()
@@ -97,7 +101,7 @@ import Testing
     let restored = try await target.restoreBackup(from: backup, generation: empty.generation)
     #expect(restored.id == reopened.id)
     #expect(try dump(targetRoot, restored) == expected)
-    #expect(try dump(root, reopened) == expected)
+    #expect(try dump(root, reopened) == liveAfterBackup)
     let restoredMedia = try await target.media(generation: restored.generation)
     #expect(try Data(contentsOf: await restoredMedia.fileURL(id: asset.id)) == Data(contentsOf: png))
     let restoredQueries = try await target.statsWorkspace(generation: restored.generation).queries
