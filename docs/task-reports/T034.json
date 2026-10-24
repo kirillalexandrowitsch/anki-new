@@ -32,7 +32,7 @@
     {
       "command": "python3 scripts/tasks.py finish T034; python3 scripts/tasks.py check; python3 scripts/ci.py quality; git diff --check",
       "result": "passed",
-      "details": "T034 done после фактической приёмки; /tmp/anki-T034-quality.log: graph/reports/generated state, 26 Python tests, 2493 local links, 48/48 original PNG hashes и budget/workflow policy passed; whitespace clean."
+      "details": "T034 done после фактической приёмки; /tmp/anki-T034-quality.log: graph/reports/generated state, 26 Python tests, 2492 local links, 48/48 original PNG hashes и budget/workflow policy passed; whitespace clean."
     }
   ],
   "limitations": [
